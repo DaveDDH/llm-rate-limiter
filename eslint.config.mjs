@@ -8,17 +8,10 @@ export default defineConfig([
   {
     ignores: [
       'coverage/**',
-      '.jest-cache-parallel/**',
       'dist/**',
       'node_modules/**',
-      'test-utils/**',
       '*.config.js',
       '*.config.ts',
-      'jest.config.parallel.js',
-      '**/flowGenerator/**',
-      '**/*.test.ts',
-      '**/*.spec.ts',
-      '**/__tests__/**',
     ],
   },
   { files: ['**/*.{js,mjs,cjs,ts,mts,cts}'], plugins: { js }, extends: ['js/recommended'] },
