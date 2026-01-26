@@ -84,11 +84,11 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
       return;
     }
     const initialCapacity = this.calculateMemoryCapacityKB();
-    this.memorySemaphore = new Semaphore(initialCapacity, `${this.label}/Memory`, this.config.onLog);
+    const semaphore = new Semaphore(initialCapacity, `${this.label}/Memory`, this.config.onLog);
+    this.memorySemaphore = semaphore;
     const intervalMs = this.config.memory.recalculationIntervalMs ?? DEFAULT_RECALCULATION_INTERVAL_MS;
     this.memoryRecalculationIntervalId = setInterval(() => {
-      // memorySemaphore is guaranteed non-null here since we only create the interval when memory is configured
-      const semaphore = this.memorySemaphore as Semaphore;
+      // Use captured reference - semaphore is guaranteed to exist in this closure
       const { max: currentMax } = semaphore.getStats();
       const newCapacity = this.calculateMemoryCapacityKB();
       if (newCapacity !== currentMax) {
@@ -99,15 +99,16 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
 
   private calculateMemoryCapacityKB(): number {
     // This method is only called when memory config exists (from initializeMemoryLimiter)
-    const memory = this.config.memory as { freeMemoryRatio?: number };
+    const { config } = this;
+    const { memory, minCapacity, maxCapacity } = config;
     const freeKB = getAvailableMemoryKB();
-    const ratio = memory.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
+    const ratio = memory?.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
     const calculated = Math.floor(freeKB * ratio);
 
     // Apply minCapacity and maxCapacity from main config
-    let clamped = Math.max(this.config.minCapacity ?? DEFAULT_MIN_CAPACITY, calculated);
-    if (this.config.maxCapacity !== undefined) {
-      clamped = Math.min(clamped, this.config.maxCapacity);
+    let clamped = Math.max(minCapacity ?? DEFAULT_MIN_CAPACITY, calculated);
+    if (maxCapacity !== undefined) {
+      clamped = Math.min(clamped, maxCapacity);
     }
     return clamped;
   }
@@ -158,13 +159,15 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
   }
 
   private getMinTimeUntilCapacity(): number {
+    // This method is only called when hasTimeWindowCapacity() returns false,
+    // which means at least one counter doesn't have capacity, so times is never empty
     const requestCounters = [this.rpmCounter, this.rpdCounter].filter((c) => c !== null);
     const tokenCounters = [this.tpmCounter, this.tpdCounter].filter((c) => c !== null);
     const times = [
       ...requestCounters.filter((c) => !c.hasCapacityFor(this.estimatedNumberOfRequests)).map((c) => c.getTimeUntilReset()),
       ...tokenCounters.filter((c) => !c.hasCapacityFor(this.estimatedUsedTokens)).map((c) => c.getTimeUntilReset()),
     ];
-    return times.length > ZERO ? Math.min(...times) : ZERO;
+    return Math.min(...times);
   }
 
   private reserveResources(): void {
@@ -185,13 +188,13 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
     const tokenRefund = Math.max(ZERO, this.estimatedUsedTokens - actualTokens);
 
     if (requestRefund > ZERO) {
-      this.rpmCounter?.subtract(requestRefund);
-      this.rpdCounter?.subtract(requestRefund);
+      if (this.rpmCounter !== null) this.rpmCounter.subtract(requestRefund);
+      if (this.rpdCounter !== null) this.rpdCounter.subtract(requestRefund);
     }
 
     if (tokenRefund > ZERO) {
-      this.tpmCounter?.subtract(tokenRefund);
-      this.tpdCounter?.subtract(tokenRefund);
+      if (this.tpmCounter !== null) this.tpmCounter.subtract(tokenRefund);
+      if (this.tpdCounter !== null) this.tpdCounter.subtract(tokenRefund);
     }
   }
 

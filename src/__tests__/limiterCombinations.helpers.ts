@@ -147,9 +147,9 @@ const isLimiterBlocking = (
 // Generate all combinations of k elements from array
 export const combinations = <T>(arr: T[], k: number): T[][] => {
   if (k === ZERO) return [[]];
-  if (arr.length === ZERO) return [];
-  const [first, ...rest] = arr;
+  const [first] = arr;
   if (first === undefined) return [];
+  const rest = arr.slice(ONE);
   const withFirst = combinations(rest, k - ONE).map((c) => [first, ...c]);
   const withoutFirst = combinations(rest, k);
   return [...withFirst, ...withoutFirst];

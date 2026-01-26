@@ -18,16 +18,51 @@ export const BYTES_PER_KB = 1024;
 /** Bytes in a megabyte */
 export const BYTES_PER_MB = BYTES_PER_KB * BYTES_PER_KB;
 
-let devHeapLimitBytes: number | null = null;
-if (process.env.NODE_ENV !== 'production') {
-  /**
-   * Parse --max-old-space-size from NODE_OPTIONS for dev mode.
-   * Returns the limit in bytes, or null if not set or in production.
-   */
-  const nodeOptions = process.env.NODE_OPTIONS ?? '';
+const TEN = 10;
+
+/**
+ * Parse --max-old-space-size from NODE_OPTIONS.
+ * Returns the limit in bytes, or null if not set.
+ * Exported for testing purposes.
+ */
+export const parseMaxOldSpaceSize = (nodeOptions: string): number | null => {
   const match = /--max-old-space-size=(?<size>\d+)/v.exec(nodeOptions);
-  if (match?.groups?.size !== undefined) devHeapLimitBytes = parseInt(match.groups.size, 10) * BYTES_PER_MB;
-}
+  if (match?.groups?.size !== undefined) {
+    return parseInt(match.groups.size, TEN) * BYTES_PER_MB;
+  }
+  return null;
+};
+
+/**
+ * Calculate available memory based on dev heap limit.
+ * Exported for testing purposes.
+ */
+export const calculateAvailableMemory = (
+  devHeapLimit: number | null,
+  usedHeapSize: number,
+  totalAvailableSize: number
+): number => {
+  if (devHeapLimit !== null) {
+    return devHeapLimit - usedHeapSize;
+  }
+  return totalAvailableSize;
+};
+
+/**
+ * Initialize dev heap limit based on environment.
+ * In production, returns null (use V8's total_available_size).
+ * In dev, parses --max-old-space-size from NODE_OPTIONS.
+ * Exported for testing purposes.
+ */
+export const initDevHeapLimit = (nodeEnv: string | undefined, nodeOptions: string | undefined): number | null => {
+  if (nodeEnv === 'production') {
+    return null;
+  }
+  return parseMaxOldSpaceSize(nodeOptions ?? '');
+};
+
+// Initialize devHeapLimitBytes at module load time
+const devHeapLimitBytes = initDevHeapLimit(process.env.NODE_ENV, process.env.NODE_OPTIONS);
 
 /**
  * Get the available heap memory in bytes.
@@ -41,11 +76,7 @@ if (process.env.NODE_ENV !== 'production') {
  */
 export const getAvailableMemoryBytes = (): number => {
   const { total_available_size: available, used_heap_size: used } = v8.getHeapStatistics();
-
-  // In dev with --max-old-space-size, calculate remaining from configured limit
-  // In production, use V8's total_available_size which works correctly in Docker
-  if (devHeapLimitBytes !== null) return devHeapLimitBytes - used;
-  return available;
+  return calculateAvailableMemory(devHeapLimitBytes, used, available);
 };
 
 /**

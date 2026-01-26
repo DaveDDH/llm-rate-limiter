@@ -72,7 +72,7 @@ describe('LLMRateLimiter - queueJob tracking', () => {
   });
 });
 
-describe('LLMRateLimiter - queueJob refund', () => {
+describe('LLMRateLimiter - queueJob refund basic', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
 
   afterEach(() => { limiter?.stop(); limiter = undefined; });
@@ -98,6 +98,109 @@ describe('LLMRateLimiter - queueJob refund', () => {
     });
     await limiter.queueJob(() => createMockJobResult('job-1', ACTUAL_REQUESTS));
     expect(limiter.getStats().requestsPerMinute?.current).toBe(ACTUAL_REQUESTS);
+  });
+});
+
+describe('LLMRateLimiter - queueJob no refund', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+
+  afterEach(() => { limiter?.stop(); limiter = undefined; });
+
+  it('should not refund when actual tokens equals estimated', async () => {
+    const TPM_LIMIT = 100000;
+    limiter = createLLMRateLimiter({
+      tokensPerMinute: TPM_LIMIT,
+      resourcesPerEvent: { estimatedUsedTokens: MOCK_TOTAL_TOKENS },
+    });
+    await limiter.queueJob(() => createMockJobResult('job-1'));
+    expect(limiter.getStats().tokensPerMinute?.current).toBe(MOCK_TOTAL_TOKENS);
+  });
+
+  it('should not refund when actual requests equals estimated', async () => {
+    const RPM_LIMIT = 60;
+    limiter = createLLMRateLimiter({
+      requestsPerMinute: RPM_LIMIT,
+      resourcesPerEvent: { estimatedNumberOfRequests: DEFAULT_REQUEST_COUNT },
+    });
+    await limiter.queueJob(() => createMockJobResult('job-1', DEFAULT_REQUEST_COUNT));
+    expect(limiter.getStats().requestsPerMinute?.current).toBe(DEFAULT_REQUEST_COUNT);
+  });
+
+  it('should not refund when actual exceeds estimated', async () => {
+    const TPM_LIMIT = 100000;
+    const LOW_ESTIMATE = 50;
+    limiter = createLLMRateLimiter({
+      tokensPerMinute: TPM_LIMIT,
+      resourcesPerEvent: { estimatedUsedTokens: LOW_ESTIMATE },
+    });
+    await limiter.queueJob(() => createMockJobResult('job-1'));
+    expect(limiter.getStats().tokensPerMinute?.current).toBe(LOW_ESTIMATE);
+  });
+});
+
+describe('LLMRateLimiter - queueJob refund single counter', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+
+  afterEach(() => { limiter?.stop(); limiter = undefined; });
+
+  it('should refund requests with only RPM configured (no RPD)', async () => {
+    const RPM_LIMIT = 60;
+    const ESTIMATED_REQUESTS = 5;
+    const ACTUAL_REQUESTS = 2;
+    limiter = createLLMRateLimiter({
+      requestsPerMinute: RPM_LIMIT,
+      resourcesPerEvent: { estimatedNumberOfRequests: ESTIMATED_REQUESTS },
+    });
+    await limiter.queueJob(() => createMockJobResult('job-1', ACTUAL_REQUESTS));
+    expect(limiter.getStats().requestsPerMinute?.current).toBe(ACTUAL_REQUESTS);
+    expect(limiter.getStats().requestsPerDay).toBeUndefined();
+  });
+
+  it('should refund tokens with only TPM configured (no TPD)', async () => {
+    const TPM_LIMIT = 100000;
+    const ESTIMATED_TOKENS = 300;
+    limiter = createLLMRateLimiter({
+      tokensPerMinute: TPM_LIMIT,
+      resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS },
+    });
+    await limiter.queueJob(() => createMockJobResult('job-1'));
+    expect(limiter.getStats().tokensPerMinute?.current).toBe(MOCK_TOTAL_TOKENS);
+    expect(limiter.getStats().tokensPerDay).toBeUndefined();
+  });
+});
+
+describe('LLMRateLimiter - queueJob refund dual counters', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+
+  afterEach(() => { limiter?.stop(); limiter = undefined; });
+
+  it('should refund requests with both RPM and RPD configured', async () => {
+    const RPM_LIMIT = 60;
+    const RPD_LIMIT = 1000;
+    const ESTIMATED_REQUESTS = 5;
+    const ACTUAL_REQUESTS = 2;
+    limiter = createLLMRateLimiter({
+      requestsPerMinute: RPM_LIMIT,
+      requestsPerDay: RPD_LIMIT,
+      resourcesPerEvent: { estimatedNumberOfRequests: ESTIMATED_REQUESTS },
+    });
+    await limiter.queueJob(() => createMockJobResult('job-1', ACTUAL_REQUESTS));
+    expect(limiter.getStats().requestsPerMinute?.current).toBe(ACTUAL_REQUESTS);
+    expect(limiter.getStats().requestsPerDay?.current).toBe(ACTUAL_REQUESTS);
+  });
+
+  it('should refund tokens with both TPM and TPD configured', async () => {
+    const TPM_LIMIT = 100000;
+    const TPD_LIMIT = 1000000;
+    const ESTIMATED_TOKENS = 300;
+    limiter = createLLMRateLimiter({
+      tokensPerMinute: TPM_LIMIT,
+      tokensPerDay: TPD_LIMIT,
+      resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS },
+    });
+    await limiter.queueJob(() => createMockJobResult('job-1'));
+    expect(limiter.getStats().tokensPerMinute?.current).toBe(MOCK_TOTAL_TOKENS);
+    expect(limiter.getStats().tokensPerDay?.current).toBe(MOCK_TOTAL_TOKENS);
   });
 });
 

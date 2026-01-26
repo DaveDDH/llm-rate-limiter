@@ -1,9 +1,14 @@
 import {
+  buildHighLimitConfig,
+  combinations,
   createLLMRateLimiter,
   createMockJobResult,
   DEFAULT_REQUEST_COUNT,
   ESTIMATED_MEMORY_KB,
   FREE_MEMORY_RATIO,
+  getBlockingReason,
+  HIGH_CONCURRENCY,
+  HIGH_RPM,
   LONG_JOB_DELAY_MS,
   MEMORY_MAX_CAPACITY_KB,
   MOCK_TOTAL_TOKENS,
@@ -25,6 +30,41 @@ import {
 } from './limiterCombinations.helpers.js';
 
 import type { LLMJobResult } from './limiterCombinations.helpers.js';
+
+describe('EdgeCase - getBlockingReason returns null', () => {
+  it('should return null when no limiter is blocking', () => {
+    const limiter = createLLMRateLimiter({
+      requestsPerMinute: HIGH_RPM,
+      resourcesPerEvent: { estimatedNumberOfRequests: DEFAULT_REQUEST_COUNT },
+    });
+    const result = getBlockingReason(limiter, ['rpm']);
+    expect(result).toBeNull();
+    limiter.stop();
+  });
+});
+
+describe('EdgeCase - buildHighLimitConfig with concurrency only', () => {
+  it('should build config without resourcesPerEvent when only concurrency is set', () => {
+    const config = buildHighLimitConfig(['concurrency']);
+    expect(config.maxConcurrentRequests).toBe(HIGH_CONCURRENCY);
+    expect(config.resourcesPerEvent).toBeUndefined();
+    const limiter = createLLMRateLimiter(config);
+    expect(limiter.hasCapacity()).toBe(true);
+    limiter.stop();
+  });
+});
+
+describe('EdgeCase - combinations helper edge cases', () => {
+  it('should return empty array for non-positive k with non-empty array', () => {
+    const result = combinations(['a', 'b', 'c'], ZERO);
+    expect(result).toEqual([[]]);
+  });
+
+  it('should return empty array for empty input array', () => {
+    const result = combinations([], TWO);
+    expect(result).toEqual([]);
+  });
+});
 
 describe('EdgeCase - memory and concurrency exhausted', () => {
   it('should report no capacity when both are exhausted', async () => {
