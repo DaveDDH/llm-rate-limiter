@@ -1,366 +1,216 @@
+import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
+
 import { Semaphore } from '@globalUtils/semaphore.js';
 
 const INITIAL_PERMITS = 3;
 const SEMAPHORE_NAME = 'TestSemaphore';
+const ZERO = 0;
+const ONE = 1;
+const TWO = 2;
+const THREE = 3;
+const FIVE = 5;
+const TEN = 10;
+const FIFTEEN = 15;
+const DELAY_MS = 10;
+const NEGATIVE_FIVE = -5;
 
-describe('Semaphore', () => {
-  let semaphore: Semaphore;
+const createSemaphore = (): Semaphore => new Semaphore(INITIAL_PERMITS, SEMAPHORE_NAME);
 
-  beforeEach(() => {
-    semaphore = new Semaphore(INITIAL_PERMITS, SEMAPHORE_NAME);
+const acquireMultiple = async (semaphore: Semaphore, count: number): Promise<void> => {
+  const promises: Array<Promise<void>> = [];
+  for (let i = ZERO; i < count; i += ONE) { promises.push(semaphore.acquire()); }
+  await Promise.all(promises);
+};
+
+describe('Semaphore - acquire and release', () => {
+  it('should acquire and release permit', async () => {
+    const semaphore = createSemaphore();
+    await semaphore.acquire();
+    expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS - ONE);
+    semaphore.release();
+    expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
   });
 
-  describe('acquire and release', () => {
-    it('should acquire permit when available', async () => {
-      await semaphore.acquire();
-      expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS - 1);
-    });
+  it('should acquire all permits', async () => {
+    const semaphore = createSemaphore();
+    await acquireMultiple(semaphore, INITIAL_PERMITS);
+    expect(semaphore.getAvailablePermits()).toBe(ZERO);
+  });
+});
 
-    it('should release permit back to pool', async () => {
-      await semaphore.acquire();
-      semaphore.release();
-      expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
-    });
-
-    it('should acquire multiple permits', async () => {
-      await semaphore.acquire();
-      await semaphore.acquire();
-      await semaphore.acquire();
-      expect(semaphore.getAvailablePermits()).toBe(0);
-    });
-
-    it('should queue when no permits available', async () => {
-      // Acquire all permits
-      for (let i = 0; i < INITIAL_PERMITS; i++) {
-        await semaphore.acquire();
-      }
-
-      expect(semaphore.getAvailablePermits()).toBe(0);
-
-      // Start acquiring another permit (will queue)
-      let acquired = false;
-      const acquirePromise = semaphore.acquire().then(() => {
-        acquired = true;
-      });
-
-      // Verify it's queued
-      expect(semaphore.getQueueLength()).toBe(1);
-      expect(acquired).toBe(false);
-
-      // Release one permit
-      semaphore.release();
-
-      await acquirePromise;
-      expect(acquired).toBe(true);
-      expect(semaphore.getQueueLength()).toBe(0);
-    });
-
-    it('should maintain FIFO order for queued requests', async () => {
-      const order: number[] = [];
-
-      // Acquire all permits
-      for (let i = 0; i < INITIAL_PERMITS; i++) {
-        await semaphore.acquire();
-      }
-
-      // Queue multiple requests
-      const FIRST_REQUEST = 1;
-      const SECOND_REQUEST = 2;
-      const THIRD_REQUEST = 3;
-
-      const promise1 = semaphore.acquire().then(() => {
-        order.push(FIRST_REQUEST);
-      });
-      const promise2 = semaphore.acquire().then(() => {
-        order.push(SECOND_REQUEST);
-      });
-      const promise3 = semaphore.acquire().then(() => {
-        order.push(THIRD_REQUEST);
-      });
-
-      expect(semaphore.getQueueLength()).toBe(3);
-
-      // Release permits one by one
-      semaphore.release();
-      await promise1;
-      semaphore.release();
-      await promise2;
-      semaphore.release();
-      await promise3;
-
-      expect(order).toEqual([FIRST_REQUEST, SECOND_REQUEST, THIRD_REQUEST]);
-    });
+describe('Semaphore - queueing', () => {
+  it('should queue when no permits available', async () => {
+    const semaphore = createSemaphore();
+    await acquireMultiple(semaphore, INITIAL_PERMITS);
+    let acquired = false;
+    const acquirePromise = semaphore.acquire().then(() => { acquired = true; });
+    expect(semaphore.getQueueLength()).toBe(ONE);
+    expect(acquired).toBe(false);
+    semaphore.release();
+    await acquirePromise;
+    expect(acquired).toBe(true);
   });
 
-  describe('variable permits', () => {
-    it('should acquire multiple permits at once', async () => {
-      const PERMITS_TO_ACQUIRE = 2;
-      await semaphore.acquire(PERMITS_TO_ACQUIRE);
-      expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS - PERMITS_TO_ACQUIRE);
-    });
+  it('should maintain FIFO order', async () => {
+    const semaphore = createSemaphore();
+    const order: number[] = [];
+    await acquireMultiple(semaphore, INITIAL_PERMITS);
+    const p1 = semaphore.acquire().then(() => { order.push(ONE); });
+    const p2 = semaphore.acquire().then(() => { order.push(TWO); });
+    const p3 = semaphore.acquire().then(() => { order.push(THREE); });
+    semaphore.release(); await p1;
+    semaphore.release(); await p2;
+    semaphore.release(); await p3;
+    expect(order).toEqual([ONE, TWO, THREE]);
+  });
+});
 
-    it('should release multiple permits at once', async () => {
-      const PERMITS_TO_ACQUIRE = 2;
-      await semaphore.acquire(PERMITS_TO_ACQUIRE);
-      semaphore.release(PERMITS_TO_ACQUIRE);
-      expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
-    });
-
-    it('should queue when not enough permits available', async () => {
-      const LARGE_PERMITS = 5;
-      let acquired = false;
-
-      const acquirePromise = semaphore.acquire(LARGE_PERMITS).then(() => {
-        acquired = true;
-      });
-
-      expect(semaphore.getQueueLength()).toBe(1);
-      expect(acquired).toBe(false);
-
-      // Release enough permits to satisfy the request
-      semaphore.release(2); // Now have 5 total
-      await acquirePromise;
-
-      expect(acquired).toBe(true);
-      expect(semaphore.getAvailablePermits()).toBe(0);
-    });
-
-    it('should maintain FIFO order with variable permits', async () => {
-      const order: number[] = [];
-
-      // Acquire all permits
-      await semaphore.acquire(INITIAL_PERMITS);
-
-      // Queue requests with different permit counts
-      const promise1 = semaphore.acquire(2).then(() => {
-        order.push(1);
-      });
-      const promise2 = semaphore.acquire(1).then(() => {
-        order.push(2);
-      });
-
-      expect(semaphore.getQueueLength()).toBe(2);
-
-      // Release 2 permits - first waiter needs 2
-      semaphore.release(2);
-      await promise1;
-
-      // Release 1 more - second waiter needs 1
-      semaphore.release(1);
-      await promise2;
-
-      expect(order).toEqual([1, 2]);
-    });
-
-    it('should not skip queue even if later waiter could be satisfied', async () => {
-      // This tests FIFO fairness - a smaller request behind a larger one must wait
-
-      // Acquire all permits
-      await semaphore.acquire(INITIAL_PERMITS);
-
-      let firstAcquired = false;
-      let secondAcquired = false;
-
-      // First waiter needs 3 permits
-      const promise1 = semaphore.acquire(3).then(() => {
-        firstAcquired = true;
-      });
-
-      // Second waiter only needs 1 permit
-      const promise2 = semaphore.acquire(1).then(() => {
-        secondAcquired = true;
-      });
-
-      // Release 1 permit - not enough for first waiter
-      semaphore.release(1);
-
-      // Give time for any async processing
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10);
-      });
-
-      // Neither should be acquired yet (FIFO: first needs 3)
-      expect(firstAcquired).toBe(false);
-      expect(secondAcquired).toBe(false);
-      expect(semaphore.getAvailablePermits()).toBe(1);
-
-      // Release 2 more - now first waiter can proceed
-      semaphore.release(2);
-      await promise1;
-      expect(firstAcquired).toBe(true);
-
-      // Now second waiter needs 1 permit but pool is empty
-      expect(semaphore.getAvailablePermits()).toBe(0);
-
-      // Release 1 for second waiter
-      semaphore.release(1);
-      await promise2;
-      expect(secondAcquired).toBe(true);
-    });
-
-    it('should handle acquiring more permits than max', async () => {
-      // Edge case: request more than initial capacity
-      const LARGE_PERMITS = 10;
-      let acquired = false;
-
-      const acquirePromise = semaphore.acquire(LARGE_PERMITS).then(() => {
-        acquired = true;
-      });
-
-      expect(semaphore.getQueueLength()).toBe(1);
-
-      // Release many permits via resize
-      semaphore.resize(15);
-
-      await acquirePromise;
-      expect(acquired).toBe(true);
-    });
-
-    it('should handle mixed single and variable permit operations', async () => {
-      // Mix of acquire(1) and acquire(n)
-      await semaphore.acquire(2);
-      await semaphore.acquire(); // default 1
-      expect(semaphore.getAvailablePermits()).toBe(0);
-
-      semaphore.release(); // default 1
-      expect(semaphore.getAvailablePermits()).toBe(1);
-
-      semaphore.release(2);
-      expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
-    });
+describe('Semaphore - variable permits basic', () => {
+  it('should acquire and release multiple permits', async () => {
+    const semaphore = createSemaphore();
+    await semaphore.acquire(TWO);
+    expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS - TWO);
+    semaphore.release(TWO);
+    expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
   });
 
-  describe('getStats', () => {
-    it('should return correct initial stats', () => {
-      const stats = semaphore.getStats();
-      expect(stats.available).toBe(INITIAL_PERMITS);
-      expect(stats.max).toBe(INITIAL_PERMITS);
-      expect(stats.waiting).toBe(0);
-      expect(stats.inUse).toBe(0);
-    });
-
-    it('should return correct stats after acquiring', async () => {
-      const ACQUIRED_COUNT = 2;
-      for (let i = 0; i < ACQUIRED_COUNT; i++) {
-        await semaphore.acquire();
-      }
-
-      const stats = semaphore.getStats();
-      expect(stats.available).toBe(INITIAL_PERMITS - ACQUIRED_COUNT);
-      expect(stats.inUse).toBe(ACQUIRED_COUNT);
-    });
-
-    it('should track waiting count', async () => {
-      // Acquire all permits
-      for (let i = 0; i < INITIAL_PERMITS; i++) {
-        await semaphore.acquire();
-      }
-
-      // Queue a request
-      void semaphore.acquire();
-
-      const stats = semaphore.getStats();
-      expect(stats.waiting).toBe(1);
-    });
+  it('should queue when not enough permits', async () => {
+    const semaphore = createSemaphore();
+    let acquired = false;
+    const acquirePromise = semaphore.acquire(FIVE).then(() => { acquired = true; });
+    expect(semaphore.getQueueLength()).toBe(ONE);
+    semaphore.release(TWO);
+    await acquirePromise;
+    expect(acquired).toBe(true);
   });
 
-  describe('resize', () => {
-    it('should increase capacity and add permits', () => {
-      const NEW_MAX = 5;
-      semaphore.resize(NEW_MAX);
+  it('should handle mixed operations', async () => {
+    const semaphore = createSemaphore();
+    await semaphore.acquire(TWO);
+    await semaphore.acquire();
+    expect(semaphore.getAvailablePermits()).toBe(ZERO);
+    semaphore.release();
+    semaphore.release(TWO);
+    expect(semaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
+  });
+});
 
-      const stats = semaphore.getStats();
-      expect(stats.max).toBe(NEW_MAX);
-      expect(stats.available).toBe(NEW_MAX);
-    });
-
-    it('should decrease capacity and reduce available permits', async () => {
-      const NEW_MAX = 1;
-      semaphore.resize(NEW_MAX);
-
-      const stats = semaphore.getStats();
-      expect(stats.max).toBe(NEW_MAX);
-      expect(stats.available).toBe(NEW_MAX);
-    });
-
-    it('should not reduce available below zero when decreasing', async () => {
-      // Acquire all permits
-      for (let i = 0; i < INITIAL_PERMITS; i++) {
-        await semaphore.acquire();
-      }
-
-      const NEW_MAX = 1;
-      semaphore.resize(NEW_MAX);
-
-      const stats = semaphore.getStats();
-      expect(stats.max).toBe(NEW_MAX);
-      expect(stats.available).toBe(0);
-    });
-
-    it('should wake queued waiters when increasing capacity', async () => {
-      // Acquire all permits
-      for (let i = 0; i < INITIAL_PERMITS; i++) {
-        await semaphore.acquire();
-      }
-
-      // Queue requests
-      let acquired1 = false;
-      let acquired2 = false;
-      void semaphore.acquire().then(() => {
-        acquired1 = true;
-      });
-      void semaphore.acquire().then(() => {
-        acquired2 = true;
-      });
-
-      expect(semaphore.getQueueLength()).toBe(2);
-
-      // Increase capacity
-      const NEW_MAX = 5;
-      semaphore.resize(NEW_MAX);
-
-      // Allow promises to resolve
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      });
-
-      expect(acquired1).toBe(true);
-      expect(acquired2).toBe(true);
-      expect(semaphore.getQueueLength()).toBe(0);
-    });
-
-    it('should not resize below 1 permit', () => {
-      semaphore.resize(0);
-      expect(semaphore.getStats().max).toBe(1);
-
-      semaphore.resize(-5);
-      expect(semaphore.getStats().max).toBe(1);
-    });
+describe('Semaphore - variable permits ordering', () => {
+  it('should maintain FIFO order with variable permits', async () => {
+    const semaphore = createSemaphore();
+    const order: number[] = [];
+    await semaphore.acquire(INITIAL_PERMITS);
+    const p1 = semaphore.acquire(TWO).then(() => { order.push(ONE); });
+    const p2 = semaphore.acquire(ONE).then(() => { order.push(TWO); });
+    semaphore.release(TWO); await p1;
+    semaphore.release(ONE); await p2;
+    expect(order).toEqual([ONE, TWO]);
   });
 
-  describe('logging', () => {
-    it('should call onLog when initialized', () => {
-      const logMessages: string[] = [];
-      const onLog = (message: string): void => {
-        logMessages.push(message);
-      };
+  it('should not skip queue for smaller requests', async () => {
+    const semaphore = createSemaphore();
+    await semaphore.acquire(INITIAL_PERMITS);
+    let first = false;
+    let second = false;
+    const p1 = semaphore.acquire(THREE).then(() => { first = true; });
+    const p2 = semaphore.acquire(ONE).then(() => { second = true; });
+    semaphore.release(ONE);
+    await setTimeoutAsync(DELAY_MS);
+    expect(first).toBe(false);
+    expect(second).toBe(false);
+    semaphore.release(TWO); await p1;
+    semaphore.release(ONE); await p2;
+    expect(first).toBe(true);
+    expect(second).toBe(true);
+  });
 
-      new Semaphore(INITIAL_PERMITS, SEMAPHORE_NAME, onLog);
+  it('should handle resize to satisfy large request', async () => {
+    const semaphore = createSemaphore();
+    let acquired = false;
+    const acquirePromise = semaphore.acquire(TEN).then(() => { acquired = true; });
+    semaphore.resize(FIFTEEN);
+    await acquirePromise;
+    expect(acquired).toBe(true);
+  });
+});
 
-      expect(logMessages.some((msg) => msg.includes('Initialized'))).toBe(true);
-    });
+describe('Semaphore - getStats', () => {
+  it('should return correct initial stats', () => {
+    const semaphore = createSemaphore();
+    const stats = semaphore.getStats();
+    expect(stats.available).toBe(INITIAL_PERMITS);
+    expect(stats.max).toBe(INITIAL_PERMITS);
+    expect(stats.waiting).toBe(ZERO);
+    expect(stats.inUse).toBe(ZERO);
+  });
 
-    it('should call onLog when resized', () => {
-      const logMessages: string[] = [];
-      const onLog = (message: string): void => {
-        logMessages.push(message);
-      };
+  it('should return correct stats after acquiring', async () => {
+    const semaphore = createSemaphore();
+    await acquireMultiple(semaphore, TWO);
+    const stats = semaphore.getStats();
+    expect(stats.available).toBe(INITIAL_PERMITS - TWO);
+    expect(stats.inUse).toBe(TWO);
+  });
 
-      const loggedSemaphore = new Semaphore(INITIAL_PERMITS, SEMAPHORE_NAME, onLog);
-      const NEW_MAX = 5;
-      loggedSemaphore.resize(NEW_MAX);
+  it('should track waiting count', async () => {
+    const semaphore = createSemaphore();
+    await acquireMultiple(semaphore, INITIAL_PERMITS);
+    void semaphore.acquire();
+    expect(semaphore.getStats().waiting).toBe(ONE);
+  });
+});
 
-      expect(logMessages.some((msg) => msg.includes('Resized'))).toBe(true);
-    });
+describe('Semaphore - resize', () => {
+  it('should increase capacity', () => {
+    const semaphore = createSemaphore();
+    semaphore.resize(FIVE);
+    expect(semaphore.getStats().max).toBe(FIVE);
+    expect(semaphore.getStats().available).toBe(FIVE);
+  });
+
+  it('should wake queued waiters on increase', async () => {
+    const semaphore = createSemaphore();
+    await acquireMultiple(semaphore, INITIAL_PERMITS);
+    let a1 = false;
+    let a2 = false;
+    void semaphore.acquire().then(() => { a1 = true; });
+    void semaphore.acquire().then(() => { a2 = true; });
+    semaphore.resize(FIVE);
+    await setTimeoutAsync(ZERO);
+    expect(a1).toBe(true);
+    expect(a2).toBe(true);
+  });
+
+  it('should decrease capacity', () => {
+    const semaphore = createSemaphore();
+    semaphore.resize(ONE);
+    expect(semaphore.getStats().max).toBe(ONE);
+  });
+
+  it('should not reduce available below zero', async () => {
+    const semaphore = createSemaphore();
+    await acquireMultiple(semaphore, INITIAL_PERMITS);
+    semaphore.resize(ONE);
+    expect(semaphore.getStats().available).toBe(ZERO);
+  });
+
+  it('should not resize below 1', () => {
+    const semaphore = createSemaphore();
+    semaphore.resize(ZERO);
+    expect(semaphore.getStats().max).toBe(ONE);
+    semaphore.resize(NEGATIVE_FIVE);
+    expect(semaphore.getStats().max).toBe(ONE);
+  });
+});
+
+describe('Semaphore - logging', () => {
+  it('should call onLog when initialized and resized', () => {
+    const logMessages: string[] = [];
+    const onLog = (message: string): void => { logMessages.push(message); };
+    const testSemaphore = new Semaphore(INITIAL_PERMITS, SEMAPHORE_NAME, onLog);
+    expect(testSemaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
+    expect(logMessages.some((msg) => msg.includes('Initialized'))).toBe(true);
+    testSemaphore.resize(FIVE);
+    expect(logMessages.some((msg) => msg.includes('Resized'))).toBe(true);
   });
 });

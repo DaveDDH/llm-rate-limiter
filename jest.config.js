@@ -6,6 +6,9 @@ const config = {
   coverageProvider: 'v8',
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
+    '^@globalTypes/(.*)\\.js$': '<rootDir>/src/types/$1',
+    '^@globalUtils/(.*)\\.js$': '<rootDir>/src/utils/$1',
+    '^@src/(.*)\\.js$': '<rootDir>/src/$1',
     '^@globalTypes/(.*)$': '<rootDir>/src/types/$1',
     '^@globalUtils/(.*)$': '<rootDir>/src/utils/$1',
     '^@src/(.*)$': '<rootDir>/src/$1',

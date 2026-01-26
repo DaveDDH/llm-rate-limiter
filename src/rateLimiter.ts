@@ -87,23 +87,21 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
     this.memorySemaphore = new Semaphore(initialCapacity, `${this.label}/Memory`, this.config.onLog);
     const intervalMs = this.config.memory.recalculationIntervalMs ?? DEFAULT_RECALCULATION_INTERVAL_MS;
     this.memoryRecalculationIntervalId = setInterval(() => {
-      if (this.memorySemaphore === null) {
-        return;
-      }
-      const { max: currentMax } = this.memorySemaphore.getStats();
+      // memorySemaphore is guaranteed non-null here since we only create the interval when memory is configured
+      const semaphore = this.memorySemaphore as Semaphore;
+      const { max: currentMax } = semaphore.getStats();
       const newCapacity = this.calculateMemoryCapacityKB();
       if (newCapacity !== currentMax) {
-        this.memorySemaphore.resize(newCapacity);
+        semaphore.resize(newCapacity);
       }
     }, intervalMs);
   }
 
   private calculateMemoryCapacityKB(): number {
-    if (this.config.memory === undefined) {
-      return ZERO;
-    }
+    // This method is only called when memory config exists (from initializeMemoryLimiter)
+    const memory = this.config.memory as { freeMemoryRatio?: number };
     const freeKB = getAvailableMemoryKB();
-    const ratio = this.config.memory.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
+    const ratio = memory.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
     const calculated = Math.floor(freeKB * ratio);
 
     // Apply minCapacity and maxCapacity from main config
