@@ -54,7 +54,7 @@ describe('multiModelRateLimiter - error and queueJobForModel', () => {
     const errors: Error[] = [];
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- Testing defensive code that handles non-Error throws
     const jobPromise = limiter.queueJob({ jobId: 'string-error', job: (_, resolve) => { resolve({ modelId: 'default', inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO }); throw 'string error'; }, onError: (err) => { errors.push(err); } });
-    await expect(jobPromise).rejects.toBe('string error');
+    await expect(jobPromise).rejects.toThrow('string error');
     expect(errors[ZERO]?.message).toBe('string error');
     limiter.stop();
   });

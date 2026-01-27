@@ -220,3 +220,58 @@ Awesome. Now, this is the current coverage report:
 ...
 
 Please, add tests so we have 100% coverage on everything, statements, branches, funcs, lines
+
+---
+
+Awesome, thank you. I have a question: how can we extend this system to also be in sync when the user has a distributed system. For example, imagina the user has several instances of the same server (thus, same rate-limiter, but different instances). Turns out the LLM provider has a fixed limit, meaning that the rates do not care about the server that consumes it, those rates are static whether they are reached from 1 or 100 instances. In this case, the user requires a way of synching the current usage across instances (distributed) and our rate limiter must somehow communicate with that logic to know before-hand how many slots are available, BUT, when the rate-limiter uses one of those slots, we distributed system must be aware that one slot less is available, so other instance cannot claim that same slot.
+
+Analyzing our current API design and our implementation, how could we extend it to allow our users to synch their different instances?
+Do not implement nothing, just help me plan the best way to do this.
+
+---
+
+Awesome, thanks. I was thinking about creating new properties for the initialization of the 'createLLMRateLimiter' function, the 'acquire' and 'release' callbacks.
+
+Something like:
+
+```
+const rateLimiter = createRateLimiter({
+  acquire: async (availability: Availability) => boolean,
+  release: async (availability: Availability) => void,
+  // Other already existing fields
+  ...
+});
+```
+
+This 'acquire' and 'release' callbacks would be optional.
+If not provided, everything must work as it currently does. Nevertheless, if they are provided, we must call them before acquiring and releasing resources respectively, and wait for them to resolve. This will allow the user to control resources across different instances. For example, a LLM has a fixed rate, that is shared across all instances, we need to support that. In order to do that, the user will implement custom logic inside the acquire function (maybe a redis lock, or whatever, we don't care) to synchronize the resources across instances. We must do this because we only have local data, meaning we do not know what is happening in other instances. By providing the 'acquire' callback and having to wait for it before (like a lock), we can ensure our local instance is safe to proceed, because whatever logic the user puts inside of it must only resolve when the distributed system "accepts" our request.
+
+Is this the same as any of the options you provided?
+What do you think?
+
+---
+
+One thing, let's use property 'backend' in the initialization. Like:
+```
+const rateLimiter = createRateLimiter({
+  backend: {
+    acquire: ...,
+    release: ...,
+  },
+  // Other already existing fields
+  ...
+});
+```
+
+---
+
+Wait, I thought about another thing: how will an instance know how many available slots it has? The instance does not know, the distributed system knows. If instance A and B calculate slots locally, both could have the same number, but, in reality, the real slots are going to be fewer (ofc, unless memory is limiting mainly). Instances must know the slots so the users can limit the rate at which they feed jobs to each instance's queue. What do you think?
+
+---
+
+For testing, please include some tests that create several rate-limiters (with same limites, but a distributed back-end), so we can check they work properly when there are several instances.
+Please, create dummy back-end that help us test the acquire/release methods, BUT also that the pub/sub event the user can trigger to inform that the availability changed in the distributed system is working, meaning that the rate-limiters are updated.
+
+Finally, let's please implement a load test. This test must create several rate-limiters with a dummy but complete back-end (it must change the availability with the pub/sub), etc., and hundreds/thousands of jobs. The test must check that no individual instance exceeds the limits, BUT it must also check that in total, the limit is never excedeed in addition across instances, even under high loads. This test must exceed the total tokens per minute, so we check that, after 1 minute passes, the instances retry the jobs. Since this test will probably be big, please create several test files and utils for it, so our code is organized.
+
+---

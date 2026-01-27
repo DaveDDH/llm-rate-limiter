@@ -107,6 +107,8 @@ export interface LLMRateLimiterConfigBase<T extends ModelsConfig> {
   onLog?: LogFn;
   /** Callback triggered when available slots change */
   onAvailableSlotsChange?: OnAvailableSlotsChange;
+  /** Backend for distributed rate limiting coordination */
+  backend?: BackendConfig;
 }
 
 // =============================================================================
@@ -138,6 +140,7 @@ export interface LLMRateLimiterConfig {
   label?: string;
   onLog?: LogFn;
   onAvailableSlotsChange?: OnAvailableSlotsChange;
+  backend?: BackendConfig;
 }
 
 // =============================================================================
@@ -302,7 +305,8 @@ export type AvailabilityChangeReason =
   | 'requestsMinute' // RPM changed
   | 'requestsDay' // RPD changed
   | 'concurrentRequests' // Concurrency changed
-  | 'memory'; // Memory changed
+  | 'memory' // Memory changed
+  | 'distributed'; // Distributed backend availability update
 
 /** Relative adjustment values (actual - reserved). Only provided when reason is 'adjustment'. */
 export interface RelativeAvailabilityAdjustment {
@@ -326,6 +330,76 @@ export type OnAvailableSlotsChange = (
   reason: AvailabilityChangeReason,
   adjustment?: RelativeAvailabilityAdjustment
 ) => void;
+
+// =============================================================================
+// Backend (Distributed Rate Limiting) Types
+// =============================================================================
+
+/** Estimated resources for backend acquire (memory excluded - local only) */
+export interface BackendEstimatedResources {
+  /** Estimated number of requests */
+  requests: number;
+  /** Estimated number of tokens */
+  tokens: number;
+}
+
+/** Actual resources used after job completion */
+export interface BackendActualResources {
+  /** Actual number of requests made */
+  requests: number;
+  /** Actual number of tokens used (input + output) */
+  tokens: number;
+}
+
+/** Context passed to backend.acquire callback */
+export interface BackendAcquireContext {
+  /** The model being acquired */
+  modelId: string;
+  /** Job identifier (may be undefined for direct model calls) */
+  jobId: string | undefined;
+  /** Estimated resources for this job */
+  estimated: BackendEstimatedResources;
+}
+
+/** Context passed to backend.release callback */
+export interface BackendReleaseContext {
+  /** The model being released */
+  modelId: string;
+  /** Job identifier (may be undefined for direct model calls) */
+  jobId: string | undefined;
+  /** Estimated resources that were reserved */
+  estimated: BackendEstimatedResources;
+  /** Actual resources used (zero if job failed before execution) */
+  actual: BackendActualResources;
+}
+
+/** Backend configuration for distributed rate limiting */
+export interface BackendConfig {
+  /**
+   * Called before executing a job to acquire distributed capacity.
+   * Return true to proceed, false to try next model (or reject if none left).
+   */
+  acquire: (context: BackendAcquireContext) => Promise<boolean>;
+  /**
+   * Called after job completes (success or failure) to release distributed capacity.
+   * Errors are silently caught - user handles error logging in their implementation.
+   */
+  release: (context: BackendReleaseContext) => Promise<void>;
+}
+
+/** Availability from distributed backend (memory and concurrency are local-only) */
+export interface DistributedAvailability {
+  /** Number of jobs that can be executed */
+  slots: number;
+  /** Available tokens per minute (remaining), null if not tracked */
+  tokensPerMinute?: number | null;
+  /** Available tokens per day (remaining), null if not tracked */
+  tokensPerDay?: number | null;
+  /** Available requests per minute (remaining), null if not tracked */
+  requestsPerMinute?: number | null;
+  /** Available requests per day (remaining), null if not tracked */
+  requestsPerDay?: number | null;
+}
 
 // =============================================================================
 // Job Execution Context
@@ -418,4 +492,12 @@ export interface LLMRateLimiterInstance {
    * Stop all intervals for cleanup.
    */
   stop: () => void;
+
+  /**
+   * Push distributed availability from external backend (e.g., Redis pub/sub).
+   * Emits onAvailableSlotsChange with reason 'distributed'.
+   *
+   * @param availability - Current availability from distributed backend
+   */
+  setDistributedAvailability: (availability: DistributedAvailability) => void;
 }
