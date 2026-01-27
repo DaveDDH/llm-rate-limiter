@@ -15,12 +15,39 @@ export const DELAY_MS_MEDIUM = 50;
 export const RPM_LIMIT_LOW = 1;
 export const RPM_LIMIT_HIGH = 100;
 export const CONCURRENCY_LIMIT = 2;
+export const FOUR = 4;
+export const FIVE = 5;
+export const TEN = 10;
+
+/** Token counts for price tests */
+export const TOKENS_100K = 100000;
+export const TOKENS_200K = 200000;
+export const TOKENS_500K = 500000;
+export const TOKENS_1M = 1000000;
 
 /** Default pricing constants for tests (USD per million tokens) */
 const PRICE_INPUT = 3.0;
 const PRICE_CACHED = 1.5;
 const PRICE_OUTPUT = 15.0;
 export const DEFAULT_PRICING: ModelPricing = { input: PRICE_INPUT, cached: PRICE_CACHED, output: PRICE_OUTPUT };
+
+/** Alternative pricing for tests */
+const PRICE_INPUT_ALT = 5.0;
+const PRICE_CACHED_ALT = 2.0;
+const PRICE_OUTPUT_ALT = 20.0;
+export const ALT_PRICING: ModelPricing = { input: PRICE_INPUT_ALT, cached: PRICE_CACHED_ALT, output: PRICE_OUTPUT_ALT };
+
+/** Cheap pricing for tests */
+const PRICE_INPUT_CHEAP = 0.5;
+const PRICE_CACHED_CHEAP = 0.25;
+const PRICE_OUTPUT_CHEAP = 1.5;
+export const CHEAP_PRICING: ModelPricing = { input: PRICE_INPUT_CHEAP, cached: PRICE_CACHED_CHEAP, output: PRICE_OUTPUT_CHEAP };
+
+/** Expensive pricing for tests */
+const PRICE_INPUT_EXPENSIVE = 30.0;
+const PRICE_CACHED_EXPENSIVE = 15.0;
+const PRICE_OUTPUT_EXPENSIVE = 60.0;
+export const EXPENSIVE_PRICING: ModelPricing = { input: PRICE_INPUT_EXPENSIVE, cached: PRICE_CACHED_EXPENSIVE, output: PRICE_OUTPUT_EXPENSIVE };
 
 let jobIdCounter = ZERO;
 /** Generate a unique job ID for tests */
@@ -61,3 +88,6 @@ export const simpleJob = <T extends LLMJobResult>(result: T): QueueJobOptions<T>
   jobId: generateJobId(),
   job: (jobArgs, resolve) => { const { modelId } = jobArgs; resolve(createMockUsage(modelId)); return result; },
 });
+
+/** Delay constant for long-running jobs in tests (used to hold resources while checking concurrency) */
+export const DELAY_MS_LONG = 100;
