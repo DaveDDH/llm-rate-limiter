@@ -54,7 +54,10 @@ export const calculateAvailableMemory = (
  * In dev, parses --max-old-space-size from NODE_OPTIONS.
  * Exported for testing purposes.
  */
-export const initDevHeapLimit = (nodeEnv: string | undefined, nodeOptions: string | undefined): number | null => {
+export const initDevHeapLimit = (
+  nodeEnv: string | undefined,
+  nodeOptions: string | undefined
+): number | null => {
   if (nodeEnv === 'production') {
     return null;
   }

@@ -73,7 +73,12 @@ export class Semaphore {
 
     // Not enough permits available or queue not empty, wait in queue
     const { promise, resolve } = Promise.withResolvers<undefined>();
-    this.queue.push({ permits, resolve: () => { resolve(undefined); } });
+    this.queue.push({
+      permits,
+      resolve: () => {
+        resolve(undefined);
+      },
+    });
     // Check if we can be served immediately (in case of concurrent releases)
     this.processQueue();
     await promise;

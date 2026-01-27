@@ -9,7 +9,6 @@
  *    - Order array can only contain model IDs that have limits defined
  *    - Order is optional for single model, required for multiple models
  */
-
 import type {
   BaseResourcesPerEvent,
   InternalJobResult,
@@ -84,9 +83,7 @@ type IsSingleModel<T extends ModelsConfig> = keyof T extends infer K
 /**
  * Check if a models config has more than one model.
  */
-export type HasMultipleModels<T extends ModelsConfig> = IsSingleModel<T> extends true
-  ? false
-  : true;
+export type HasMultipleModels<T extends ModelsConfig> = IsSingleModel<T> extends true ? false : true;
 
 // =============================================================================
 // Base Multi-Model Configuration
@@ -108,6 +105,8 @@ export interface LLMRateLimiterConfigBase<T extends ModelsConfig> {
   label?: string;
   /** Optional logging callback */
   onLog?: LogFn;
+  /** Callback triggered when available slots change */
+  onAvailableSlotsChange?: OnAvailableSlotsChange;
 }
 
 // =============================================================================
@@ -121,11 +120,10 @@ export interface LLMRateLimiterConfigBase<T extends ModelsConfig> {
  * - If multiple models are defined, `order` is REQUIRED
  * - The `order` array can only contain model IDs that are defined in `models`
  */
-export type ValidatedLLMRateLimiterConfig<T extends ModelsConfig> =
-  LLMRateLimiterConfigBase<T> &
-    (HasMultipleModels<T> extends true
-      ? { order: ReadonlyArray<ModelIds<T>> }
-      : { order?: ReadonlyArray<ModelIds<T>> });
+export type ValidatedLLMRateLimiterConfig<T extends ModelsConfig> = LLMRateLimiterConfigBase<T> &
+  (HasMultipleModels<T> extends true
+    ? { order: ReadonlyArray<ModelIds<T>> }
+    : { order?: ReadonlyArray<ModelIds<T>> });
 
 /**
  * Loose configuration type for internal use.
@@ -139,6 +137,7 @@ export interface LLMRateLimiterConfig {
   maxCapacity?: number;
   label?: string;
   onLog?: LogFn;
+  onAvailableSlotsChange?: OnAvailableSlotsChange;
 }
 
 // =============================================================================
@@ -221,7 +220,10 @@ export interface JobCallbackContext {
 /**
  * Options for queueJob with delegation support.
  */
-export interface QueueJobOptions<T extends InternalJobResult, Args extends ArgsWithoutModelId = ArgsWithoutModelId> {
+export interface QueueJobOptions<
+  T extends InternalJobResult,
+  Args extends ArgsWithoutModelId = ArgsWithoutModelId,
+> {
   /** Unique identifier for this job (for traceability) */
   jobId: string;
   /** Job function that receives args with modelId, and resolve/reject callbacks */
@@ -266,6 +268,65 @@ export interface LLMRateLimiterStats {
 }
 
 // =============================================================================
+// Availability Change Callback Types
+// =============================================================================
+
+/** Literal type for zero (used in RelativeAvailabilityAdjustment) */
+// eslint incorrectly flags this as magic number but it's a type literal definition
+type ZeroLiteral = (readonly [])['length'];
+
+/** Current availability across all limiters */
+export interface Availability {
+  /** Number of jobs that can be executed (minimum across all limiters) */
+  slots: number;
+  /** Available tokens per minute (remaining), null if not configured */
+  tokensPerMinute: number | null;
+  /** Available tokens per day (remaining), null if not configured */
+  tokensPerDay: number | null;
+  /** Available requests per minute (remaining), null if not configured */
+  requestsPerMinute: number | null;
+  /** Available requests per day (remaining), null if not configured */
+  requestsPerDay: number | null;
+  /** Available concurrent request slots, null if not configured */
+  concurrentRequests: number | null;
+  /** Available memory in KB, null if not configured */
+  memoryKB: number | null;
+}
+
+/** Reason for availability change (in priority order: first applicable wins) */
+export type AvailabilityChangeReason =
+  | 'adjustment' // Job used different resources than reserved
+  | 'tokensMinute' // TPM changed (reservation, refund, or window reset)
+  | 'tokensDay' // TPD changed
+  | 'requestsMinute' // RPM changed
+  | 'requestsDay' // RPD changed
+  | 'concurrentRequests' // Concurrency changed
+  | 'memory'; // Memory changed
+
+/** Relative adjustment values (actual - reserved). Only provided when reason is 'adjustment'. */
+export interface RelativeAvailabilityAdjustment {
+  /** Token difference (actual - reserved). Negative = fewer used than reserved */
+  tokensPerMinute: number;
+  /** Token difference (actual - reserved). Negative = fewer used than reserved */
+  tokensPerDay: number;
+  /** Request difference (actual - reserved). Negative = fewer used than reserved */
+  requestsPerMinute: number;
+  /** Request difference (actual - reserved). Negative = fewer used than reserved */
+  requestsPerDay: number;
+  /** Always 0 for adjustment (memory is not adjusted post-job) */
+  memoryKB: ZeroLiteral;
+  /** Always 0 for adjustment (concurrency is not adjusted post-job) */
+  concurrentRequests: ZeroLiteral;
+}
+
+/** Callback triggered when available slots change */
+export type OnAvailableSlotsChange = (
+  availability: Availability,
+  reason: AvailabilityChangeReason,
+  adjustment?: RelativeAvailabilityAdjustment
+) => void;
+
+// =============================================================================
 // Instance Type
 // =============================================================================
 
@@ -296,10 +357,7 @@ export interface LLMRateLimiterInstance {
    * @param job - Function that returns a job result
    * @returns Promise resolving to job result
    */
-  queueJobForModel: <T extends InternalJobResult>(
-    modelId: string,
-    job: () => Promise<T> | T
-  ) => Promise<T>;
+  queueJobForModel: <T extends InternalJobResult>(modelId: string, job: () => Promise<T> | T) => Promise<T>;
 
   /**
    * Check if any model has capacity (non-blocking).

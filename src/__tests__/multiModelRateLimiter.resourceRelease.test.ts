@@ -1,13 +1,24 @@
 import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
 import { createLLMRateLimiter } from '../multiModelRateLimiter.js';
-
 import type { LLMRateLimiterInstance } from '../multiModelTypes.js';
-import { createMockJobResult, createMockUsage, DEFAULT_PRICING, DELAY_MS_LONG, DELAY_MS_SHORT, generateJobId, ONE, ZERO } from './multiModelRateLimiter.helpers.js';
+import {
+  DEFAULT_PRICING,
+  DELAY_MS_LONG,
+  DELAY_MS_SHORT,
+  ONE,
+  ZERO,
+  createMockJobResult,
+  createMockUsage,
+  generateJobId,
+} from './multiModelRateLimiter.helpers.js';
 
 describe('MultiModelRateLimiter - resource release after resolve', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should free resources only after job resolves', async () => {
     limiter = createLLMRateLimiter({
@@ -37,7 +48,10 @@ describe('MultiModelRateLimiter - resource release after resolve', () => {
 
 describe('MultiModelRateLimiter - resource release after reject', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should free resources only after job rejects without delegation', async () => {
     limiter = createLLMRateLimiter({
@@ -65,7 +79,10 @@ describe('MultiModelRateLimiter - resource release after reject', () => {
 
 describe('MultiModelRateLimiter - resource release per model', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should free resources only for the model that resolved', async () => {
     limiter = createLLMRateLimiter({
@@ -111,7 +128,10 @@ describe('MultiModelRateLimiter - resource release per model', () => {
 
 describe('MultiModelRateLimiter - resource release on delegation', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should free resources for delegated model before trying next', async () => {
     limiter = createLLMRateLimiter({
@@ -128,10 +148,16 @@ describe('MultiModelRateLimiter - resource release on delegation', () => {
       job: ({ modelId }, resolve, reject) => {
         const statsA = localLimiter.getModelStats('model-a');
         const statsB = localLimiter.getModelStats('model-b');
-        concurrencySnapshots.push({ a: statsA.concurrency?.active ?? ZERO, b: statsB.concurrency?.active ?? ZERO });
+        concurrencySnapshots.push({
+          a: statsA.concurrency?.active ?? ZERO,
+          b: statsB.concurrency?.active ?? ZERO,
+        });
         const usage = createMockUsage(modelId);
-        if (modelId === 'model-a') { reject(usage, { delegate: true }); }
-        else { resolve(usage); }
+        if (modelId === 'model-a') {
+          reject(usage, { delegate: true });
+        } else {
+          resolve(usage);
+        }
         return createMockJobResult('result');
       },
     });

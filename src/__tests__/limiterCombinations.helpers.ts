@@ -1,8 +1,12 @@
 import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
 import { createLLMRateLimiter } from '../multiModelRateLimiter.js';
-
-import type { LLMRateLimiterConfig, LLMRateLimiterInstance, ModelRateLimitConfig, UsageEntry } from '../multiModelTypes.js';
+import type {
+  LLMRateLimiterConfig,
+  LLMRateLimiterInstance,
+  ModelRateLimitConfig,
+  UsageEntry,
+} from '../multiModelTypes.js';
 import type { InternalJobResult } from '../types.js';
 
 // Test constants
@@ -65,7 +69,10 @@ export const ZERO_PRICING = { input: ZERO, cached: ZERO, output: ZERO };
 
 // Job ID counter for unique IDs
 let jobIdCounter = ZERO;
-export const generateJobId = (): string => { jobIdCounter += ONE; return `combo-job-${String(jobIdCounter)}`; };
+export const generateJobId = (): string => {
+  jobIdCounter += ONE;
+  return `combo-job-${String(jobIdCounter)}`;
+};
 
 // Mock job result type
 export interface MockJobResult extends InternalJobResult {
@@ -89,23 +96,35 @@ export const createMockUsage = (modelId: string): UsageEntry => ({
 
 const getHighLimitPart = (limiter: LimiterType): Partial<ModelRateLimitConfig> => {
   switch (limiter) {
-    case 'memory': return {}; // memory is top-level, not per-model
-    case 'concurrency': return { maxConcurrentRequests: HIGH_CONCURRENCY };
-    case 'rpm': return { requestsPerMinute: HIGH_RPM };
-    case 'rpd': return { requestsPerDay: HIGH_RPD };
-    case 'tpm': return { tokensPerMinute: HIGH_TPM };
-    case 'tpd': return { tokensPerDay: HIGH_TPD };
+    case 'memory':
+      return {}; // memory is top-level, not per-model
+    case 'concurrency':
+      return { maxConcurrentRequests: HIGH_CONCURRENCY };
+    case 'rpm':
+      return { requestsPerMinute: HIGH_RPM };
+    case 'rpd':
+      return { requestsPerDay: HIGH_RPD };
+    case 'tpm':
+      return { tokensPerMinute: HIGH_TPM };
+    case 'tpd':
+      return { tokensPerDay: HIGH_TPD };
   }
 };
 
 const getBlockingLimitPart = (limiter: LimiterType): Partial<ModelRateLimitConfig> => {
   switch (limiter) {
-    case 'memory': return {}; // memory is top-level, not per-model
-    case 'concurrency': return { maxConcurrentRequests: CONCURRENCY_LIMIT };
-    case 'rpm': return { requestsPerMinute: RPM_LIMIT };
-    case 'rpd': return { requestsPerDay: RPD_LIMIT };
-    case 'tpm': return { tokensPerMinute: TPM_LIMIT };
-    case 'tpd': return { tokensPerDay: TPD_LIMIT };
+    case 'memory':
+      return {}; // memory is top-level, not per-model
+    case 'concurrency':
+      return { maxConcurrentRequests: CONCURRENCY_LIMIT };
+    case 'rpm':
+      return { requestsPerMinute: RPM_LIMIT };
+    case 'rpd':
+      return { requestsPerDay: RPD_LIMIT };
+    case 'tpm':
+      return { tokensPerMinute: TPM_LIMIT };
+    case 'tpd':
+      return { tokensPerDay: TPD_LIMIT };
   }
 };
 
@@ -125,16 +144,16 @@ const buildModelConfig = (limiters: LimiterType[]): ModelRateLimitConfig => {
   };
 
   const base: ModelRateLimitConfig = { ...merged, pricing: ZERO_PRICING };
-  return (hasMemory || hasRequest || hasToken)
-    ? { ...base, resourcesPerEvent: resources }
-    : base;
+  return hasMemory || hasRequest || hasToken ? { ...base, resourcesPerEvent: resources } : base;
 };
 
 // Helper to build config for given limiters with high limits (non-blocking)
 export const buildHighLimitConfig = (limiters: LimiterType[]): LLMRateLimiterConfig => {
   const hasMemory = limiters.includes('memory');
   return {
-    ...(hasMemory ? { memory: { freeMemoryRatio: FREE_MEMORY_RATIO }, maxCapacity: HIGH_MEMORY_MAX_CAPACITY_KB } : {}),
+    ...(hasMemory
+      ? { memory: { freeMemoryRatio: FREE_MEMORY_RATIO }, maxCapacity: HIGH_MEMORY_MAX_CAPACITY_KB }
+      : {}),
     models: { default: buildModelConfig(limiters) },
   };
 };
@@ -149,14 +168,18 @@ export const buildConfigWithBlockingLimiter = (
   const modelConfig = buildModelConfig(activeLimiters);
   const blocking = getBlockingLimitPart(blockingLimiter);
   const memoryConfig = hasMemory
-    ? { memory: { freeMemoryRatio: FREE_MEMORY_RATIO }, maxCapacity: isMemoryBlocking ? MEMORY_MAX_CAPACITY_KB : HIGH_MEMORY_MAX_CAPACITY_KB }
+    ? {
+        memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
+        maxCapacity: isMemoryBlocking ? MEMORY_MAX_CAPACITY_KB : HIGH_MEMORY_MAX_CAPACITY_KB,
+      }
     : {};
   return { ...memoryConfig, models: { default: { ...modelConfig, ...blocking } } };
 };
 
 // Helper to get model stats from the limiter
-const getDefaultModelStats = (limiter: LLMRateLimiterInstance): ReturnType<LLMRateLimiterInstance['getModelStats']> =>
-  limiter.getModelStats('default');
+const getDefaultModelStats = (
+  limiter: LLMRateLimiterInstance
+): ReturnType<LLMRateLimiterInstance['getModelStats']> => limiter.getModelStats('default');
 
 // Helper to check which limiter is blocking
 export const getBlockingReason = (
@@ -165,7 +188,9 @@ export const getBlockingReason = (
 ): LimiterType | null => {
   const stats = getDefaultModelStats(limiter);
   for (const lt of activeLimiters) {
-    if (isLimiterBlocking(stats, lt)) { return lt; }
+    if (isLimiterBlocking(stats, lt)) {
+      return lt;
+    }
   }
   return null;
 };
@@ -175,12 +200,18 @@ const isLimiterBlocking = (
   limiter: LimiterType
 ): boolean => {
   switch (limiter) {
-    case 'memory': return stats.memory !== undefined && stats.memory.availableKB < ESTIMATED_MEMORY_KB;
-    case 'concurrency': return stats.concurrency !== undefined && stats.concurrency.available <= ZERO;
-    case 'rpm': return stats.requestsPerMinute !== undefined && stats.requestsPerMinute.remaining <= ZERO;
-    case 'rpd': return stats.requestsPerDay !== undefined && stats.requestsPerDay.remaining <= ZERO;
-    case 'tpm': return stats.tokensPerMinute !== undefined && stats.tokensPerMinute.remaining <= ZERO;
-    case 'tpd': return stats.tokensPerDay !== undefined && stats.tokensPerDay.remaining <= ZERO;
+    case 'memory':
+      return stats.memory !== undefined && stats.memory.availableKB < ESTIMATED_MEMORY_KB;
+    case 'concurrency':
+      return stats.concurrency !== undefined && stats.concurrency.available <= ZERO;
+    case 'rpm':
+      return stats.requestsPerMinute !== undefined && stats.requestsPerMinute.remaining <= ZERO;
+    case 'rpd':
+      return stats.requestsPerDay !== undefined && stats.requestsPerDay.remaining <= ZERO;
+    case 'tpm':
+      return stats.tokensPerMinute !== undefined && stats.tokensPerMinute.remaining <= ZERO;
+    case 'tpd':
+      return stats.tokensPerDay !== undefined && stats.tokensPerDay.remaining <= ZERO;
   }
 };
 
@@ -245,7 +276,10 @@ export const testTimeWindowBlocker = async (
   expect(newLimiter.hasCapacity()).toBe(true);
   await newLimiter.queueJob({
     jobId: generateJobId(),
-    job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('exhaust-job'); },
+    job: ({ modelId }, resolve) => {
+      resolve(createMockUsage(modelId));
+      return createMockJobResult('exhaust-job');
+    },
   });
   expect(newLimiter.hasCapacity()).toBe(false);
   expect(getBlockingReason(newLimiter, limiters)).toBe(blocker);
@@ -258,7 +292,10 @@ export const queueSimpleJob = async <T extends MockJobResult>(
 ): Promise<T> => {
   const jobResult = await limiter.queueJob({
     jobId: generateJobId(),
-    job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return result; },
+    job: ({ modelId }, resolve) => {
+      resolve(createMockUsage(modelId));
+      return result;
+    },
   });
   return jobResult;
 };

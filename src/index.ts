@@ -7,6 +7,8 @@ export type { TokenUsage, MemoryLimitConfig } from './types.js';
 // Public types from multiModelTypes.ts
 export type {
   ArgsWithoutModelId,
+  Availability,
+  AvailabilityChangeReason,
   JobArgs,
   JobCallbackContext,
   JobRejectOptions,
@@ -20,7 +22,9 @@ export type {
   ModelPricing,
   ModelRateLimitConfig,
   ModelsConfig,
+  OnAvailableSlotsChange,
   QueueJobOptions,
+  RelativeAvailabilityAdjustment,
   UsageEntry,
   UsageEntryWithCost,
   ValidatedLLMRateLimiterConfig,

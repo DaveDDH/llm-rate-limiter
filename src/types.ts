@@ -98,9 +98,7 @@ interface MemoryResources {
 /**
  * Infer required resourcesPerEvent fields based on configured limits.
  */
-export type InferResourcesPerEvent<T> = (T extends
-  | { requestsPerMinute: number }
-  | { requestsPerDay: number }
+export type InferResourcesPerEvent<T> = (T extends { requestsPerMinute: number } | { requestsPerDay: number }
   ? RequestResources
   : Partial<RequestResources>) &
   (T extends { tokensPerMinute: number } | { tokensPerDay: number }

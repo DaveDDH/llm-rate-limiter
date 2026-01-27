@@ -1,13 +1,28 @@
 import { createLLMRateLimiter } from '../multiModelRateLimiter.js';
-
 import type { LLMRateLimiterInstance } from '../multiModelTypes.js';
-import { createMockJobResult, createMockUsage, DEFAULT_PRICING, generateJobId, ONE, RPM_LIMIT_HIGH, THREE, ZERO } from './multiModelRateLimiter.helpers.js';
+import {
+  DEFAULT_PRICING,
+  ONE,
+  RPM_LIMIT_HIGH,
+  THREE,
+  ZERO,
+  createMockJobResult,
+  createMockUsage,
+  generateJobId,
+} from './multiModelRateLimiter.helpers.js';
 
-const MODEL_CONFIG = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
+const MODEL_CONFIG = {
+  requestsPerMinute: RPM_LIMIT_HIGH,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: DEFAULT_PRICING,
+};
 
 describe('MultiModelRateLimiter - job delegation basic', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should delegate to next model when job calls reject with delegate true', async () => {
     limiter = createLLMRateLimiter({
@@ -23,8 +38,11 @@ describe('MultiModelRateLimiter - job delegation basic', () => {
       job: ({ modelId }, resolve, reject) => {
         modelsAttempted.push(modelId);
         const usage = createMockUsage(modelId);
-        if (modelId === 'model-a') { reject(usage, { delegate: true }); }
-        else { resolve(usage); }
+        if (modelId === 'model-a') {
+          reject(usage, { delegate: true });
+        } else {
+          resolve(usage);
+        }
         return createMockJobResult('result');
       },
     });
@@ -35,7 +53,10 @@ describe('MultiModelRateLimiter - job delegation basic', () => {
 
 describe('MultiModelRateLimiter - job delegation chain 3 models', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should delegate through 3 models until one succeeds', async () => {
     limiter = createLLMRateLimiter({
@@ -52,8 +73,11 @@ describe('MultiModelRateLimiter - job delegation chain 3 models', () => {
       job: ({ modelId }, resolve, reject) => {
         modelsAttempted.push(modelId);
         const usage = createMockUsage(modelId);
-        if (modelId === 'model-c') { resolve(usage); }
-        else { reject(usage, { delegate: true }); }
+        if (modelId === 'model-c') {
+          resolve(usage);
+        } else {
+          reject(usage, { delegate: true });
+        }
         return createMockJobResult('result');
       },
     });
@@ -64,7 +88,10 @@ describe('MultiModelRateLimiter - job delegation chain 3 models', () => {
 
 describe('MultiModelRateLimiter - job delegation chain 4 models', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should delegate through 4 models until one succeeds', async () => {
     limiter = createLLMRateLimiter({
@@ -82,8 +109,11 @@ describe('MultiModelRateLimiter - job delegation chain 4 models', () => {
       job: ({ modelId }, resolve, reject) => {
         modelsAttempted.push(modelId);
         const usage = createMockUsage(modelId);
-        if (modelId === 'model-d') { resolve(usage); }
-        else { reject(usage, { delegate: true }); }
+        if (modelId === 'model-d') {
+          resolve(usage);
+        } else {
+          reject(usage, { delegate: true });
+        }
         return createMockJobResult('result');
       },
     });
@@ -94,7 +124,10 @@ describe('MultiModelRateLimiter - job delegation chain 4 models', () => {
 
 describe('MultiModelRateLimiter - job delegation retry', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should retry from first model when all models delegate', async () => {
     limiter = createLLMRateLimiter({
@@ -112,8 +145,11 @@ describe('MultiModelRateLimiter - job delegation retry', () => {
         attemptCount += ONE;
         modelsAttempted.push(modelId);
         const usage = createMockUsage(modelId);
-        if (attemptCount < THREE) { reject(usage, { delegate: true }); }
-        else { resolve(usage); }
+        if (attemptCount < THREE) {
+          reject(usage, { delegate: true });
+        } else {
+          resolve(usage);
+        }
         return createMockJobResult('result');
       },
     });

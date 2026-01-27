@@ -164,4 +164,59 @@ Awesome, now, please include tests to verify that the model scalation works for 
 
 ---
 
-Awesome, now, please add onAvailableSlotsChange to the rate-limiter.
+Awesome, now, please remove the singular createLLMRateLimiter, by default, only the createMultiModelRateLimiter must exist (all singular rate limiters are also multi model rate limiters, so no problem). Nevertheless, do not call the multimodel like that, just call it "createLLMRateLimiter". With this, I mean that we must prevent the user from creating what currently is a 'createLLMRateLimiter' object, instead, the only object the user can create is the 'createMultiModelRateLimiter' (it must be called 'createLLMRateLimiter'). Remember that you have to update all the tests that currently use the singular 'createLLMRateLimiter' so they use the new signature (meaning, the signature of the 'createMultiModelRateLimiter' which now will also be called 'createLLMRateLimiter')
+
+---
+
+Awesome, thank you.
+Question: is the rate limiter being reset after 1 minute and/or 1 day? And, does the queue automatically tries to process pending jobs when the available slots change?
+
+The rate-limiting options for the models include things like 'tokens per minute', this, of course, resets every minute. Nevertheless, the 'tokens per day' should not be affected by the resetting of the 'tokens per minute', meaning that if we have 1000 tpm and 10000 tpd, then, if:
+- Req 1 (100 tokens) at second 0: available
+- Req 2 (100 tokens) at second 10: available
+- Req 3 (800 tokens) at second 20: available
+- Req 4 (100 tokens) at second 30: NOT available
+- Req 4 must be automatically retried at second 61 (or, if another model is available, then delegated): available
+- Req 5 (900 tokens) at second 62: available (at second 60 the tokens per minute were reset)
+- Req 6 (1000 tokens) at second 121: available (at second 120 the tpm were reset again, and so on)
+- More reqs adding up to 9999 tokens...
+- Req n (100 tokens) at second 12000 (still same day): NOT available (even if the tpm is available, the tpd would not, because we reached the 10000 tpd limit -we have used 9999 tokens so far-).
+- Req n must be automatically retried at second 86401 (1 day + 1 second) (or, if another model is available, then delegated): available
+
+Please, in a deep and exhaustive way analyze the current code and tell me if the rate-limiter works as described.
+
+---
+
+Awesome, now, please add onAvailableSlotsChange to the rate-limiter. Basically, the rate-limiter is always calculating how many slots are available (meaning, the number of jobs that can be executed), and it would be useful for the users to have access to this value as it changes.
+It must be something like this:
+
+```
+const rateLimiter = createRateLimiter({
+  onAvailableSlotsChange: (availability: Availability, reason: AvailableSlotChangeReason, adjustment?: RelativeAvailabilityAdjustment) => void,
+  // Other already existing fields
+  ...
+});
+```
+
+'Availability' type must be something like:
+```
+interface Availability {
+  slots: number;
+  tokensPerMinute: number;
+  /* all the other resources current availability */
+  ...
+}
+```
+
+'AvailableSlotChangeReason' can be one of 'adjusment', 'tokensMinute', 'tokensDay', 'requestsMinute', 'requestsDay', 'concurrentRequests', 'memory' in that order (meaning that, if both 'tokensMinute' and 'tokensDay' and 'memory' changed, we must provide only 'tokensMinute'). For example, if at some point the reason is 'memory', it must mean that no other thing changed (because it is the last in order). The 'adjustment' reason must be used when we reserved some resources but the final resource count (returned by the job) was different than the reserved one, then, in this case, the final argument ('adjustment') MUST be provided (in all other cases, it must be undefined). The type 'RelativeAvailabilityAdjustment' is exactly like the Availability type, BUT, it is relative. For example, if we reserved 100 tokensPerMinute and the real job used 50, then we return used minus reserved meaning 50 - 100, meaning -50 (minus 50 will inform the user that we have 50 more), on the other hand, if we reserved 50 but used 100, then it would be 100 - 50 meaning 50, which will inform the user 50 more were used. The same must happen for all the other limiters (except memory, which will always be 0 for the adjusment).
+
+Each time the number of slots change (for any reason), this function must trigger. The 'onAvailableSlotsChange' callback must be optional, meaning the user may not provide it.
+
+Please, include tests to check that, when the number of slots must change, that function is actually triggered (and with a correct value). Keep in mind that the slots may change due to memory, tokens, requests, etc.
+
+---
+
+Awesome. Now, this is the current coverage report:
+...
+
+Please, add tests so we have 100% coverage on everything, statements, branches, funcs, lines

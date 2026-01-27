@@ -1,6 +1,6 @@
 /** Helper functions for LLM Rate Limiter. */
-import type { InternalLimiterConfig } from '../types.js';
 import type { LLMRateLimiterConfig, ModelsConfig } from '../multiModelTypes.js';
+import type { InternalLimiterConfig } from '../types.js';
 
 const ZERO = 0;
 const ONE = 1;

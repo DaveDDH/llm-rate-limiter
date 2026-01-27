@@ -1,19 +1,18 @@
 import {
-  allLimiters,
-  buildHighLimitConfig,
-  combinations,
-  createLLMRateLimiter,
   FIFTY_SEVEN,
   FIVE,
   ONE,
   SIX,
-  testSemaphoreBlocker,
-  testTimeWindowBlocker,
   THREE,
   TWO,
+  allLimiters,
+  buildHighLimitConfig,
+  combinations,
+  createLLMRateLimiter,
+  testSemaphoreBlocker,
+  testTimeWindowBlocker,
 } from './limiterCombinations.helpers.js';
-
-import type { LimiterType, LLMRateLimiterInstance } from './limiterCombinations.helpers.js';
+import type { LLMRateLimiterInstance, LimiterType } from './limiterCombinations.helpers.js';
 
 const FOUR = 4;
 
@@ -50,48 +49,83 @@ const testCombo = (combo: LimiterType[], setLimiter: LimiterSetter): void => {
 
 describe('Combinations of 2 limiters (15)', () => {
   let current: LLMRateLimiterInstance | undefined = undefined;
-  const setLimiter: LimiterSetter = (l) => { current = l; };
-  afterEach(() => { current?.stop(); current = undefined; });
+  const setLimiter: LimiterSetter = (l) => {
+    current = l;
+  };
+  afterEach(() => {
+    current?.stop();
+    current = undefined;
+  });
   const combos = combinations(allLimiters, TWO);
   for (const combo of combos) {
-    describe(combo.join(' + '), () => { testCombo(combo, setLimiter); });
+    describe(combo.join(' + '), () => {
+      testCombo(combo, setLimiter);
+    });
   }
 });
 
 describe('Combinations of 3 limiters (20)', () => {
   let current: LLMRateLimiterInstance | undefined = undefined;
-  const setLimiter: LimiterSetter = (l) => { current = l; };
-  afterEach(() => { current?.stop(); current = undefined; });
+  const setLimiter: LimiterSetter = (l) => {
+    current = l;
+  };
+  afterEach(() => {
+    current?.stop();
+    current = undefined;
+  });
   const combos = combinations(allLimiters, THREE);
   for (const combo of combos) {
-    describe(combo.join(' + '), () => { testCombo(combo, setLimiter); });
+    describe(combo.join(' + '), () => {
+      testCombo(combo, setLimiter);
+    });
   }
 });
 
 describe('Combinations of 4 limiters (15)', () => {
   let current: LLMRateLimiterInstance | undefined = undefined;
-  const setLimiter: LimiterSetter = (l) => { current = l; };
-  afterEach(() => { current?.stop(); current = undefined; });
+  const setLimiter: LimiterSetter = (l) => {
+    current = l;
+  };
+  afterEach(() => {
+    current?.stop();
+    current = undefined;
+  });
   const combos = combinations(allLimiters, FOUR);
   for (const combo of combos) {
-    describe(combo.join(' + '), () => { testCombo(combo, setLimiter); });
+    describe(combo.join(' + '), () => {
+      testCombo(combo, setLimiter);
+    });
   }
 });
 
 describe('Combinations of 5 limiters (6)', () => {
   let current: LLMRateLimiterInstance | undefined = undefined;
-  const setLimiter: LimiterSetter = (l) => { current = l; };
-  afterEach(() => { current?.stop(); current = undefined; });
+  const setLimiter: LimiterSetter = (l) => {
+    current = l;
+  };
+  afterEach(() => {
+    current?.stop();
+    current = undefined;
+  });
   const combos = combinations(allLimiters, FIVE);
   for (const combo of combos) {
-    describe(combo.join(' + '), () => { testCombo(combo, setLimiter); });
+    describe(combo.join(' + '), () => {
+      testCombo(combo, setLimiter);
+    });
   }
 });
 
 describe('All 6 limiters', () => {
   let current: LLMRateLimiterInstance | undefined = undefined;
-  const setLimiter: LimiterSetter = (l) => { current = l; };
-  afterEach(() => { current?.stop(); current = undefined; });
+  const setLimiter: LimiterSetter = (l) => {
+    current = l;
+  };
+  afterEach(() => {
+    current?.stop();
+    current = undefined;
+  });
   const combo = allLimiters;
-  describe(combo.join(' + '), () => { testCombo(combo, setLimiter); });
+  describe(combo.join(' + '), () => {
+    testCombo(combo, setLimiter);
+  });
 });

@@ -1,11 +1,8 @@
 import {
-  createLLMRateLimiter,
-  createMockJobResult,
-  createMockUsage,
+  CONCURRENCY_LIMIT,
   DEFAULT_REQUEST_COUNT,
   ESTIMATED_MEMORY_KB,
   FREE_MEMORY_RATIO,
-  generateJobId,
   LONG_JOB_DELAY_MS,
   MEMORY_MAX_CAPACITY_KB,
   MOCK_TOTAL_TOKENS,
@@ -13,28 +10,42 @@ import {
   RPD_LIMIT,
   RPM_LIMIT,
   SEMAPHORE_ACQUIRE_WAIT_MS,
-  setTimeoutAsync,
   TPD_LIMIT,
   TPM_LIMIT,
   ZERO,
   ZERO_PRICING,
-  CONCURRENCY_LIMIT,
+  createLLMRateLimiter,
+  createMockJobResult,
+  createMockUsage,
+  generateJobId,
+  setTimeoutAsync,
 } from './limiterCombinations.helpers.js';
-
 import type { LLMRateLimiterInstance } from './limiterCombinations.helpers.js';
 
 describe('Individual Limiter - memory blocking', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should block when memory limit is exhausted', async () => {
     limiter = createLLMRateLimiter({
       memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
       maxCapacity: MEMORY_MAX_CAPACITY_KB,
-      models: { default: { resourcesPerEvent: { estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB }, pricing: ZERO_PRICING } },
+      models: {
+        default: { resourcesPerEvent: { estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB }, pricing: ZERO_PRICING },
+      },
     });
     expect(limiter.hasCapacity()).toBe(true);
-    const jobPromise = limiter.queueJob({ jobId: generateJobId(), job: async ({ modelId }, resolve) => { await setTimeoutAsync(LONG_JOB_DELAY_MS); resolve(createMockUsage(modelId)); return createMockJobResult('slow-job'); } });
+    const jobPromise = limiter.queueJob({
+      jobId: generateJobId(),
+      job: async ({ modelId }, resolve) => {
+        await setTimeoutAsync(LONG_JOB_DELAY_MS);
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('slow-job');
+      },
+    });
     await setTimeoutAsync(SEMAPHORE_ACQUIRE_WAIT_MS);
     const stats = limiter.getModelStats('default');
     expect(stats.memory?.activeKB).toBe(ESTIMATED_MEMORY_KB);
@@ -46,15 +57,26 @@ describe('Individual Limiter - memory blocking', () => {
 
 describe('Individual Limiter - memory restore', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should restore capacity after job completes', async () => {
     limiter = createLLMRateLimiter({
       memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
       maxCapacity: MEMORY_MAX_CAPACITY_KB,
-      models: { default: { resourcesPerEvent: { estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB }, pricing: ZERO_PRICING } },
+      models: {
+        default: { resourcesPerEvent: { estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB }, pricing: ZERO_PRICING },
+      },
     });
-    await limiter.queueJob({ jobId: generateJobId(), job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('job-1'); } });
+    await limiter.queueJob({
+      jobId: generateJobId(),
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job-1');
+      },
+    });
     expect(limiter.hasCapacity()).toBe(true);
     const stats = limiter.getModelStats('default');
     expect(stats.memory?.availableKB).toBe(MEMORY_MAX_CAPACITY_KB);
@@ -64,7 +86,10 @@ describe('Individual Limiter - memory restore', () => {
 
 describe('Individual Limiter - concurrency', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should block when concurrency limit is exhausted', async () => {
     limiter = createLLMRateLimiter({
@@ -93,7 +118,10 @@ describe('Individual Limiter - concurrency', () => {
     });
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('job-1'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job-1');
+      },
     });
     expect(limiter.hasCapacity()).toBe(true);
     const stats = limiter.getModelStats('default');
@@ -104,7 +132,10 @@ describe('Individual Limiter - concurrency', () => {
 
 describe('Individual Limiter - rpm', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should block when RPM limit is exhausted', async () => {
     limiter = createLLMRateLimiter({
@@ -119,7 +150,10 @@ describe('Individual Limiter - rpm', () => {
     expect(limiter.hasCapacity()).toBe(true);
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('job-1'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job-1');
+      },
     });
     expect(limiter.hasCapacity()).toBe(false);
     const stats = limiter.getModelStats('default');
@@ -130,7 +164,10 @@ describe('Individual Limiter - rpm', () => {
 
 describe('Individual Limiter - rpd', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should block when RPD limit is exhausted', async () => {
     limiter = createLLMRateLimiter({
@@ -145,7 +182,10 @@ describe('Individual Limiter - rpd', () => {
     expect(limiter.hasCapacity()).toBe(true);
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('job-1'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job-1');
+      },
     });
     expect(limiter.hasCapacity()).toBe(false);
     const stats = limiter.getModelStats('default');
@@ -156,7 +196,10 @@ describe('Individual Limiter - rpd', () => {
 
 describe('Individual Limiter - tpm', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should block when TPM limit is exhausted', async () => {
     limiter = createLLMRateLimiter({
@@ -171,7 +214,10 @@ describe('Individual Limiter - tpm', () => {
     expect(limiter.hasCapacity()).toBe(true);
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('job-1'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job-1');
+      },
     });
     expect(limiter.hasCapacity()).toBe(false);
     const stats = limiter.getModelStats('default');
@@ -182,7 +228,10 @@ describe('Individual Limiter - tpm', () => {
 
 describe('Individual Limiter - tpd', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should block when TPD limit is exhausted', async () => {
     limiter = createLLMRateLimiter({
@@ -197,7 +246,10 @@ describe('Individual Limiter - tpd', () => {
     expect(limiter.hasCapacity()).toBe(true);
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('job-1'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job-1');
+      },
     });
     expect(limiter.hasCapacity()).toBe(false);
     const stats = limiter.getModelStats('default');

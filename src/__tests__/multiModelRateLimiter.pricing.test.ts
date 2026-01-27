@@ -1,18 +1,53 @@
 import { createLLMRateLimiter } from '../multiModelRateLimiter.js';
-
 import type { JobCallbackContext, LLMRateLimiterInstance, UsageEntryWithCost } from '../multiModelTypes.js';
-import { ALT_PRICING, CHEAP_PRICING, DEFAULT_PRICING, EXPENSIVE_PRICING, generateJobId, createMockJobResult, RPM_LIMIT_HIGH, TEN, TOKENS_100K, TOKENS_1M, ZERO, ZERO_CACHED_TOKENS, THREE, ONE, TWO } from './multiModelRateLimiter.helpers.js';
+import {
+  ALT_PRICING,
+  CHEAP_PRICING,
+  DEFAULT_PRICING,
+  EXPENSIVE_PRICING,
+  ONE,
+  RPM_LIMIT_HIGH,
+  TEN,
+  THREE,
+  TOKENS_1M,
+  TOKENS_100K,
+  TWO,
+  ZERO,
+  ZERO_CACHED_TOKENS,
+  createMockJobResult,
+  generateJobId,
+} from './multiModelRateLimiter.helpers.js';
 
-const MODEL_CONFIG = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
-const CHEAP_MODEL_CONFIG = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: CHEAP_PRICING };
-const EXPENSIVE_MODEL_CONFIG = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: EXPENSIVE_PRICING };
-const ALT_MODEL_CONFIG = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: ALT_PRICING };
+const MODEL_CONFIG = {
+  requestsPerMinute: RPM_LIMIT_HIGH,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: DEFAULT_PRICING,
+};
+const CHEAP_MODEL_CONFIG = {
+  requestsPerMinute: RPM_LIMIT_HIGH,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: CHEAP_PRICING,
+};
+const EXPENSIVE_MODEL_CONFIG = {
+  requestsPerMinute: RPM_LIMIT_HIGH,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: EXPENSIVE_PRICING,
+};
+const ALT_MODEL_CONFIG = {
+  requestsPerMinute: RPM_LIMIT_HIGH,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: ALT_PRICING,
+};
 
-const getUsageAt = (ctx: JobCallbackContext | undefined, index: number): UsageEntryWithCost | undefined => ctx?.usage[index];
+const getUsageAt = (ctx: JobCallbackContext | undefined, index: number): UsageEntryWithCost | undefined =>
+  ctx?.usage[index];
 
 describe('MultiModelRateLimiter - pricing input tokens', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should calculate cost correctly for 1M input tokens', async () => {
     limiter = createLLMRateLimiter({
@@ -25,7 +60,9 @@ describe('MultiModelRateLimiter - pricing input tokens', () => {
         resolve({ modelId, inputTokens: TOKENS_1M, outputTokens: ZERO, cachedTokens: ZERO });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     expect(capturedCtx?.totalCost).toBeCloseTo(DEFAULT_PRICING.input);
   });
@@ -33,7 +70,10 @@ describe('MultiModelRateLimiter - pricing input tokens', () => {
 
 describe('MultiModelRateLimiter - pricing output tokens', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should calculate cost correctly for 1M output tokens', async () => {
     limiter = createLLMRateLimiter({
@@ -46,7 +86,9 @@ describe('MultiModelRateLimiter - pricing output tokens', () => {
         resolve({ modelId, inputTokens: ZERO, outputTokens: TOKENS_1M, cachedTokens: ZERO });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     expect(capturedCtx?.totalCost).toBeCloseTo(DEFAULT_PRICING.output);
   });
@@ -54,7 +96,10 @@ describe('MultiModelRateLimiter - pricing output tokens', () => {
 
 describe('MultiModelRateLimiter - pricing cached tokens', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should calculate cost correctly for 1M cached tokens', async () => {
     limiter = createLLMRateLimiter({
@@ -67,7 +112,9 @@ describe('MultiModelRateLimiter - pricing cached tokens', () => {
         resolve({ modelId, inputTokens: ZERO, outputTokens: ZERO, cachedTokens: TOKENS_1M });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     expect(capturedCtx?.totalCost).toBeCloseTo(DEFAULT_PRICING.cached);
   });
@@ -75,7 +122,10 @@ describe('MultiModelRateLimiter - pricing cached tokens', () => {
 
 describe('MultiModelRateLimiter - pricing combined tokens', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should calculate cost correctly for combined tokens', async () => {
     limiter = createLLMRateLimiter({
@@ -88,7 +138,9 @@ describe('MultiModelRateLimiter - pricing combined tokens', () => {
         resolve({ modelId, inputTokens: TOKENS_1M, outputTokens: TOKENS_1M, cachedTokens: TOKENS_1M });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const expectedCost = DEFAULT_PRICING.input + DEFAULT_PRICING.output + DEFAULT_PRICING.cached;
     expect(capturedCtx?.totalCost).toBeCloseTo(expectedCost);
@@ -97,7 +149,10 @@ describe('MultiModelRateLimiter - pricing combined tokens', () => {
 
 describe('MultiModelRateLimiter - pricing fractional', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should calculate cost correctly for 100K tokens (1/10 of 1M)', async () => {
     limiter = createLLMRateLimiter({
@@ -107,10 +162,17 @@ describe('MultiModelRateLimiter - pricing fractional', () => {
     await limiter.queueJob({
       jobId: generateJobId(),
       job: ({ modelId }, resolve) => {
-        resolve({ modelId, inputTokens: TOKENS_100K, outputTokens: TOKENS_100K, cachedTokens: ZERO_CACHED_TOKENS });
+        resolve({
+          modelId,
+          inputTokens: TOKENS_100K,
+          outputTokens: TOKENS_100K,
+          cachedTokens: ZERO_CACHED_TOKENS,
+        });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const expectedCost = (DEFAULT_PRICING.input + DEFAULT_PRICING.output) / TEN;
     expect(capturedCtx?.totalCost).toBeCloseTo(expectedCost);
@@ -127,7 +189,9 @@ describe('MultiModelRateLimiter - pricing fractional', () => {
         resolve({ modelId, inputTokens: ZERO, outputTokens: ZERO, cachedTokens: ZERO });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     expect(capturedCtx?.totalCost).toBe(ZERO);
   });
@@ -135,7 +199,10 @@ describe('MultiModelRateLimiter - pricing fractional', () => {
 
 describe('MultiModelRateLimiter - pricing different models', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should calculate cost using correct model pricing', async () => {
     limiter = createLLMRateLimiter({
@@ -149,10 +216,17 @@ describe('MultiModelRateLimiter - pricing different models', () => {
     await limiter.queueJob({
       jobId: generateJobId(),
       job: ({ modelId }, resolve) => {
-        resolve({ modelId, inputTokens: TOKENS_1M, outputTokens: TOKENS_1M, cachedTokens: ZERO_CACHED_TOKENS });
+        resolve({
+          modelId,
+          inputTokens: TOKENS_1M,
+          outputTokens: TOKENS_1M,
+          cachedTokens: ZERO_CACHED_TOKENS,
+        });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const expectedCheap = CHEAP_PRICING.input + CHEAP_PRICING.output;
     expect(capturedCtx?.totalCost).toBeCloseTo(expectedCheap);
@@ -161,7 +235,10 @@ describe('MultiModelRateLimiter - pricing different models', () => {
 
 describe('MultiModelRateLimiter - pricing with delegation', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should accumulate costs correctly when delegating between different priced models', async () => {
     limiter = createLLMRateLimiter({
@@ -176,11 +253,16 @@ describe('MultiModelRateLimiter - pricing with delegation', () => {
       jobId: generateJobId(),
       job: ({ modelId }, resolve, reject) => {
         const usage = { modelId, inputTokens: TOKENS_1M, outputTokens: ZERO, cachedTokens: ZERO };
-        if (modelId === 'model-a') { reject(usage, { delegate: true }); }
-        else { resolve(usage); }
+        if (modelId === 'model-a') {
+          reject(usage, { delegate: true });
+        } else {
+          resolve(usage);
+        }
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const expectedTotalCost = DEFAULT_PRICING.input + ALT_PRICING.input;
     expect(capturedCtx?.totalCost).toBeCloseTo(expectedTotalCost);
@@ -193,7 +275,10 @@ describe('MultiModelRateLimiter - pricing with delegation', () => {
 
 describe('MultiModelRateLimiter - cost in usage entries', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should include cost in each usage entry', async () => {
     limiter = createLLMRateLimiter({
@@ -206,7 +291,9 @@ describe('MultiModelRateLimiter - cost in usage entries', () => {
         resolve({ modelId, inputTokens: TOKENS_1M, outputTokens: ZERO, cachedTokens: ZERO });
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const costEntry = getUsageAt(capturedCtx, ZERO);
     expect(costEntry?.cost).toBeDefined();
@@ -216,7 +303,10 @@ describe('MultiModelRateLimiter - cost in usage entries', () => {
 
 describe('MultiModelRateLimiter - cost per model after delegation', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should have cost property on each usage entry after delegation', async () => {
     limiter = createLLMRateLimiter({
@@ -232,11 +322,16 @@ describe('MultiModelRateLimiter - cost per model after delegation', () => {
       jobId: generateJobId(),
       job: ({ modelId }, resolve, reject) => {
         const usage = { modelId, inputTokens: TOKENS_1M, outputTokens: ZERO, cachedTokens: ZERO };
-        if (modelId === 'model-c') { resolve(usage); }
-        else { reject(usage, { delegate: true }); }
+        if (modelId === 'model-c') {
+          resolve(usage);
+        } else {
+          reject(usage, { delegate: true });
+        }
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     expect(capturedCtx?.usage).toHaveLength(THREE);
     const usageFirst = getUsageAt(capturedCtx, ZERO);

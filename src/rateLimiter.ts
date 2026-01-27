@@ -124,7 +124,11 @@ class LLMRateLimiter implements InternalLimiterInstance {
     );
   }
 
-  private createCounter(limit: number | undefined, windowMs: number, suffix: string): TimeWindowCounter | null {
+  private createCounter(
+    limit: number | undefined,
+    windowMs: number,
+    suffix: string
+  ): TimeWindowCounter | null {
     if (limit === undefined) return null;
     return new TimeWindowCounter(limit, windowMs, `${this.label}/${suffix}`, this.config.onLog);
   }
@@ -164,8 +168,12 @@ class LLMRateLimiter implements InternalLimiterInstance {
     const requestCounters = [this.rpmCounter, this.rpdCounter].filter((c) => c !== null);
     const tokenCounters = [this.tpmCounter, this.tpdCounter].filter((c) => c !== null);
     const times = [
-      ...requestCounters.filter((c) => !c.hasCapacityFor(this.estimatedNumberOfRequests)).map((c) => c.getTimeUntilReset()),
-      ...tokenCounters.filter((c) => !c.hasCapacityFor(this.estimatedUsedTokens)).map((c) => c.getTimeUntilReset()),
+      ...requestCounters
+        .filter((c) => !c.hasCapacityFor(this.estimatedNumberOfRequests))
+        .map((c) => c.getTimeUntilReset()),
+      ...tokenCounters
+        .filter((c) => !c.hasCapacityFor(this.estimatedUsedTokens))
+        .map((c) => c.getTimeUntilReset()),
     ];
     return Math.min(...times);
   }
@@ -244,7 +252,10 @@ class LLMRateLimiter implements InternalLimiterInstance {
 
   hasCapacity(): boolean {
     // Check memory capacity (in KB)
-    if (this.memorySemaphore !== null && this.memorySemaphore.getAvailablePermits() < this.estimatedUsedMemoryKB) {
+    if (
+      this.memorySemaphore !== null &&
+      this.memorySemaphore.getAvailablePermits() < this.estimatedUsedMemoryKB
+    ) {
       return false;
     }
     // Check concurrency capacity
@@ -258,7 +269,12 @@ class LLMRateLimiter implements InternalLimiterInstance {
     const stats: InternalLimiterStats = {};
     if (this.memorySemaphore !== null) {
       const { inUse, max, available } = this.memorySemaphore.getStats();
-      stats.memory = { activeKB: inUse, maxCapacityKB: max, availableKB: available, systemAvailableKB: Math.round(getAvailableMemoryKB()) };
+      stats.memory = {
+        activeKB: inUse,
+        maxCapacityKB: max,
+        availableKB: available,
+        systemAvailableKB: Math.round(getAvailableMemoryKB()),
+      };
     }
     if (this.concurrencySemaphore !== null) {
       const { inUse, max, available, waiting } = this.concurrencySemaphore.getStats();

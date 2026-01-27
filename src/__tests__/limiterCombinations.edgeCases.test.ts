@@ -1,16 +1,12 @@
 import {
-  buildHighLimitConfig,
-  combinations,
-  createLLMRateLimiter,
-  createMockJobResult,
-  createMockUsage,
+  CONCURRENCY_LIMIT,
   DEFAULT_REQUEST_COUNT,
   ESTIMATED_MEMORY_KB,
   FREE_MEMORY_RATIO,
-  generateJobId,
-  getBlockingReason,
   HIGH_CONCURRENCY,
   HIGH_RPM,
+  HUNDRED,
+  HUNDRED_THOUSAND,
   LONG_JOB_DELAY_MS,
   MEMORY_MAX_CAPACITY_KB,
   MOCK_TOTAL_TOKENS,
@@ -18,17 +14,21 @@ import {
   RPD_LIMIT,
   RPM_LIMIT,
   SEMAPHORE_ACQUIRE_WAIT_MS,
-  setTimeoutAsync,
   TEN,
+  TEN_THOUSAND,
   TPD_LIMIT,
   TPM_LIMIT,
   TWO,
   ZERO,
   ZERO_PRICING,
-  CONCURRENCY_LIMIT,
-  HUNDRED,
-  TEN_THOUSAND,
-  HUNDRED_THOUSAND,
+  buildHighLimitConfig,
+  combinations,
+  createLLMRateLimiter,
+  createMockJobResult,
+  createMockUsage,
+  generateJobId,
+  getBlockingReason,
+  setTimeoutAsync,
 } from './limiterCombinations.helpers.js';
 
 // Unused imports warning: THREE was removed as the tests using it were moved
@@ -53,7 +53,9 @@ describe('EdgeCase - getBlockingReason returns null', () => {
 describe('EdgeCase - buildHighLimitConfig with concurrency only', () => {
   it('should build config without resourcesPerEvent when only concurrency is set', () => {
     const config = buildHighLimitConfig(['concurrency']);
-    const { models: { default: modelConfig } } = config;
+    const {
+      models: { default: modelConfig },
+    } = config;
     expect(modelConfig.maxConcurrentRequests).toBe(HIGH_CONCURRENCY);
     expect(modelConfig.resourcesPerEvent).toBeUndefined();
     const limiter = createLLMRateLimiter(config);
@@ -119,7 +121,10 @@ describe('EdgeCase - rpm and rpd exhausted', () => {
     });
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('exhaust-job'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('exhaust-job');
+      },
     });
     expect(limiter.hasCapacity()).toBe(false);
     const stats = limiter.getModelStats('default');
@@ -143,7 +148,10 @@ describe('EdgeCase - tpm and tpd exhausted', () => {
     });
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('exhaust-job'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('exhaust-job');
+      },
     });
     expect(limiter.hasCapacity()).toBe(false);
     const stats = limiter.getModelStats('default');
@@ -162,14 +170,20 @@ describe('EdgeCase - all time-based limiters exhausted', () => {
           requestsPerDay: RPD_LIMIT,
           tokensPerMinute: TPM_LIMIT,
           tokensPerDay: TPD_LIMIT,
-          resourcesPerEvent: { estimatedNumberOfRequests: DEFAULT_REQUEST_COUNT, estimatedUsedTokens: MOCK_TOTAL_TOKENS },
+          resourcesPerEvent: {
+            estimatedNumberOfRequests: DEFAULT_REQUEST_COUNT,
+            estimatedUsedTokens: MOCK_TOTAL_TOKENS,
+          },
           pricing: ZERO_PRICING,
         },
       },
     });
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('exhaust-job'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('exhaust-job');
+      },
     });
     expect(limiter.hasCapacity()).toBe(false);
     const stats = limiter.getModelStats('default');
@@ -196,10 +210,12 @@ describe('EdgeCase - release memory on error', () => {
         },
       },
     });
-    await expect(limiter.queueJob({
-      jobId: generateJobId(),
-      job: createFailingJob,
-    })).rejects.toThrow('Intentional failure');
+    await expect(
+      limiter.queueJob({
+        jobId: generateJobId(),
+        job: createFailingJob,
+      })
+    ).rejects.toThrow('Intentional failure');
     expect(limiter.hasCapacity()).toBe(true);
     const stats = limiter.getModelStats('default');
     expect(stats.memory?.availableKB).toBe(MEMORY_MAX_CAPACITY_KB);
@@ -220,10 +236,12 @@ describe('EdgeCase - request counters on error', () => {
         },
       },
     });
-    await expect(limiter.queueJob({
-      jobId: generateJobId(),
-      job: createFailingJob,
-    })).rejects.toThrow('Intentional failure');
+    await expect(
+      limiter.queueJob({
+        jobId: generateJobId(),
+        job: createFailingJob,
+      })
+    ).rejects.toThrow('Intentional failure');
     const stats = limiter.getModelStats('default');
     expect(stats.requestsPerMinute?.current).toBe(ONE);
     expect(stats.requestsPerDay?.current).toBe(ONE);
@@ -243,15 +261,15 @@ describe('EdgeCase - token counters on error', () => {
         },
       },
     });
-    await expect(limiter.queueJob({
-      jobId: generateJobId(),
-      job: createFailingJob,
-    })).rejects.toThrow('Intentional failure');
+    await expect(
+      limiter.queueJob({
+        jobId: generateJobId(),
+        job: createFailingJob,
+      })
+    ).rejects.toThrow('Intentional failure');
     const stats = limiter.getModelStats('default');
     expect(stats.tokensPerMinute?.current).toBe(MOCK_TOTAL_TOKENS);
     expect(stats.tokensPerDay?.current).toBe(MOCK_TOTAL_TOKENS);
     limiter.stop();
   });
 });
-
-

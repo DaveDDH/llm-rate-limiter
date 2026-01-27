@@ -42,7 +42,9 @@ describe('memoryUtils - parseMaxOldSpaceSize', () => {
   });
 
   it('should parse max-old-space-size when mixed with other options', () => {
-    const result = parseMaxOldSpaceSize(`--experimental-vm-modules --max-old-space-size=${TEST_HEAP_SIZE_MB_MEDIUM} --other`);
+    const result = parseMaxOldSpaceSize(
+      `--experimental-vm-modules --max-old-space-size=${TEST_HEAP_SIZE_MB_MEDIUM} --other`
+    );
     const EXPECTED_BYTES = TEST_HEAP_SIZE_MB_MEDIUM * EXPECTED_MB;
     expect(result).toBe(EXPECTED_BYTES);
   });
