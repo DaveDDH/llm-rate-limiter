@@ -64,7 +64,11 @@ const getEstimatedMemory = (config: LLMRateLimiterConfig, modelId: string): numb
   config.models[modelId]?.resourcesPerEvent?.estimatedUsedMemoryKB ?? ZERO;
 
 /** Initialize or get the shared memory state */
-const getOrCreateSharedState = (config: LLMRateLimiterConfig, label: string, onLog?: LogFn): SharedMemoryState => {
+const getOrCreateSharedState = (
+  config: LLMRateLimiterConfig,
+  label: string,
+  onLog?: LogFn
+): SharedMemoryState => {
   if (sharedState !== null) {
     sharedState.referenceCount += ONE;
     return sharedState;
@@ -74,7 +78,11 @@ const getOrCreateSharedState = (config: LLMRateLimiterConfig, label: string, onL
   const { minCapacity, maxCapacity } = config;
   const recalculationIntervalMs = config.memory?.recalculationIntervalMs ?? DEFAULT_RECALCULATION_INTERVAL_MS;
 
-  const semaphore = new Semaphore(calculateCapacity(freeMemoryRatio, minCapacity, maxCapacity), `${label}/Memory`, onLog);
+  const semaphore = new Semaphore(
+    calculateCapacity(freeMemoryRatio, minCapacity, maxCapacity),
+    `${label}/Memory`,
+    onLog
+  );
   const availabilityCallbacks = new Set<(reason: AvailabilityChangeReason) => void>();
 
   const intervalId = setInterval(() => {
@@ -118,48 +126,53 @@ const releaseSharedState = (callback?: (reason: AvailabilityChangeReason) => voi
 };
 
 /** Create hasCapacity function */
-const createHasCapacity = (
-  state: SharedMemoryState,
-  config: LLMRateLimiterConfig
-): MemoryManagerInstance['hasCapacity'] => (modelId) =>
-  state.semaphore.getAvailablePermits() >= getEstimatedMemory(config, modelId);
+const createHasCapacity =
+  (state: SharedMemoryState, config: LLMRateLimiterConfig): MemoryManagerInstance['hasCapacity'] =>
+  (modelId) =>
+    state.semaphore.getAvailablePermits() >= getEstimatedMemory(config, modelId);
 
 /** Create acquire function */
-const createAcquire = (
-  state: SharedMemoryState,
-  config: LLMRateLimiterConfig,
-  onAvailabilityChange?: (reason: AvailabilityChangeReason) => void
-): MemoryManagerInstance['acquire'] => async (modelId) => {
-  const mem = getEstimatedMemory(config, modelId);
-  if (mem > ZERO) {
-    await state.semaphore.acquire(mem);
-    onAvailabilityChange?.(MEMORY_REASON);
-  }
-};
+const createAcquire =
+  (
+    state: SharedMemoryState,
+    config: LLMRateLimiterConfig,
+    onAvailabilityChange?: (reason: AvailabilityChangeReason) => void
+  ): MemoryManagerInstance['acquire'] =>
+  async (modelId) => {
+    const mem = getEstimatedMemory(config, modelId);
+    if (mem > ZERO) {
+      await state.semaphore.acquire(mem);
+      onAvailabilityChange?.(MEMORY_REASON);
+    }
+  };
 
 /** Create release function */
-const createRelease = (
-  state: SharedMemoryState,
-  config: LLMRateLimiterConfig,
-  onAvailabilityChange?: (reason: AvailabilityChangeReason) => void
-): MemoryManagerInstance['release'] => (modelId) => {
-  const mem = getEstimatedMemory(config, modelId);
-  if (mem > ZERO) {
-    state.semaphore.release(mem);
-    onAvailabilityChange?.(MEMORY_REASON);
-  }
-};
+const createRelease =
+  (
+    state: SharedMemoryState,
+    config: LLMRateLimiterConfig,
+    onAvailabilityChange?: (reason: AvailabilityChangeReason) => void
+  ): MemoryManagerInstance['release'] =>
+  (modelId) => {
+    const mem = getEstimatedMemory(config, modelId);
+    if (mem > ZERO) {
+      state.semaphore.release(mem);
+      onAvailabilityChange?.(MEMORY_REASON);
+    }
+  };
 
 /** Create getStats function */
-const createGetStats = (state: SharedMemoryState): MemoryManagerInstance['getStats'] => () => {
-  const { inUse, max, available } = state.semaphore.getStats();
-  return {
-    activeKB: inUse,
-    maxCapacityKB: max,
-    availableKB: available,
-    systemAvailableKB: Math.round(getAvailableMemoryKB()),
+const createGetStats =
+  (state: SharedMemoryState): MemoryManagerInstance['getStats'] =>
+  () => {
+    const { inUse, max, available } = state.semaphore.getStats();
+    return {
+      activeKB: inUse,
+      maxCapacityKB: max,
+      availableKB: available,
+      systemAvailableKB: Math.round(getAvailableMemoryKB()),
+    };
   };
-};
 
 /** Create a memory manager instance (shares underlying semaphore with other instances) */
 export const createMemoryManager = (managerConfig: MemoryManagerConfig): MemoryManagerInstance | null => {
