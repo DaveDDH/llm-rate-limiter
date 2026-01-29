@@ -1,27 +1,27 @@
 /** LLM Rate Limiter with per-model limits and automatic fallback. */
-import type { AvailabilityTracker } from '@globalUtils/availabilityTracker.js';
+import type { AvailabilityTracker } from './utils/availabilityTracker.js';
 import {
   type BackendOperationContext,
   acquireBackend,
   isV2Backend,
   releaseBackend,
-} from '@globalUtils/backendHelpers.js';
-import { addUsageWithCost, calculateJobAdjustment, toFullAvailability } from '@globalUtils/costHelpers.js';
+} from './utils/backendHelpers.js';
+import { addUsageWithCost, calculateJobAdjustment, toFullAvailability } from './utils/costHelpers.js';
 import {
   buildModelStats,
   calculateEstimatedResources,
   createAvailabilityTracker,
   getModelLimiterById,
   initializeModelLimiters,
-} from '@globalUtils/initializationHelpers.js';
+} from './utils/initializationHelpers.js';
 import {
   buildErrorCallbackContext,
   isDelegationError,
   waitForModelCapacity,
-} from '@globalUtils/jobExecutionHelpers.js';
-import { executeJobWithCallbacks } from '@globalUtils/jobExecutor.js';
-import { type MemoryManagerInstance, createMemoryManager } from '@globalUtils/memoryManager.js';
-import { getEffectiveOrder, validateMultiModelConfig } from '@globalUtils/multiModelHelpers.js';
+} from './utils/jobExecutionHelpers.js';
+import { executeJobWithCallbacks } from './utils/jobExecutor.js';
+import { type MemoryManagerInstance, createMemoryManager } from './utils/memoryManager.js';
+import { getEffectiveOrder, validateMultiModelConfig } from './utils/multiModelHelpers.js';
 
 import type {
   AllocationInfo,

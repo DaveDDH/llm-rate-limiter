@@ -1,20 +1,23 @@
 {
-  "name": "llm-rate-limiter",
+  "name": "llm-rate-limiter-monorepo",
   "version": "1.0.0",
-  "description": "Closer LLM Rate Limiter utility",
-  "main": "dist/index.js",
+  "private": true,
+  "description": "LLM Rate Limiter monorepo",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "start": "NODE_ENV=production node ./dist/index.js",
-    "build": "rm -rf dist tsconfig.build.tsbuildinfo && tsc --build tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-    "dev": "tsx watch ./src/index.ts",
-    "dev:strict": "NODE_OPTIONS='--max-old-space-size=160' tsx watch ./src/index.ts",
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w @llm-rate-limiter/core",
+    "build:redis": "npm run build -w @llm-rate-limiter/redis",
     "check": "npx eslint . --ext .ts && npm run typecheck",
     "lint": "npx eslint . --ext .ts",
     "lint:fix": "npx eslint . --ext .ts --fix",
     "typecheck": "tsc -b",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest",
-    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' npx jest --watch"
+    "test": "npm run test --workspaces --if-present",
+    "test:core": "npm run test -w @llm-rate-limiter/core",
+    "test:redis": "npm run test -w @llm-rate-limiter/redis"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
@@ -31,6 +34,6 @@
     "typescript-eslint": "^8.33.1"
   },
   "engines": {
-    "node": ">=24.13.0"
+    "node": ">=18.0.0"
   }
 }

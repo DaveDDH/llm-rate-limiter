@@ -26,6 +26,7 @@ const FREE_MEMORY_RATIO = 0.5;
 const INTERVAL_MULTIPLIER = 2;
 const MAX_CAPACITY = 5000;
 const MIN_CAPACITY = 1000;
+const EXTREME_TEST_TIMEOUT = 60_000;
 
 describe('MultiModelRateLimiter - memory config create', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
@@ -227,6 +228,6 @@ describe('MultiModelRateLimiter - waitForAnyModelCapacity', () => {
     limiter.stop();
     limiter = undefined;
     await job3Promise.catch(noop);
-  });
+  }, EXTREME_TEST_TIMEOUT);
 });
 

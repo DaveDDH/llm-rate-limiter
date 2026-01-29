@@ -1,6 +1,6 @@
 import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
-import { Semaphore } from '@globalUtils/semaphore.js';
+import { Semaphore } from '../utils/semaphore.js';
 
 const INITIAL_PERMITS = 3;
 const SEMAPHORE_NAME = 'TestSemaphore';

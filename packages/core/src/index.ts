@@ -28,4 +28,18 @@ export type {
   UsageEntry,
   UsageEntryWithCost,
   ValidatedLLMRateLimiterConfig,
+  // Backend types (V1)
+  BackendConfig,
+  BackendAcquireContext,
+  BackendReleaseContext,
+  BackendEstimatedResources,
+  BackendActualResources,
+  // Backend types (V2 - distributed)
+  DistributedBackendConfig,
+  BackendAcquireContextV2,
+  BackendReleaseContextV2,
+  AllocationInfo,
+  AllocationCallback,
+  Unsubscribe,
+  DistributedAvailability,
 } from './multiModelTypes.js';

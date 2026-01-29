@@ -1,0 +1,27 @@
+/**
+ * Constants for the Redis distributed backend.
+ */
+
+/** Default key prefix for all Redis keys */
+export const DEFAULT_KEY_PREFIX = 'llm-rl:';
+
+/** Key suffixes for Redis data structures */
+export const KEY_SUFFIX_INSTANCES = 'instances';
+export const KEY_SUFFIX_ALLOCATIONS = 'allocations';
+export const KEY_SUFFIX_CONFIG = 'config';
+export const KEY_SUFFIX_CHANNEL = 'channel:allocations';
+
+/** Default heartbeat interval in milliseconds */
+export const DEFAULT_HEARTBEAT_INTERVAL_MS = 5000;
+
+/** Default instance timeout in milliseconds */
+export const DEFAULT_INSTANCE_TIMEOUT_MS = 15000;
+
+/** Default cleanup interval in milliseconds */
+export const DEFAULT_CLEANUP_INTERVAL_MS = 10000;
+
+/** Numeric constants */
+export const ZERO = 0;
+export const ONE = 1;
+export const SUCCESS_RESULT = '1';
+export const FAILURE_RESULT = '0';

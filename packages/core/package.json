@@ -1,0 +1,37 @@
+{
+  "name": "@llm-rate-limiter/core",
+  "version": "1.0.0",
+  "description": "LLM Rate Limiter - Core library for rate limiting LLM API calls",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist tsconfig*.tsbuildinfo && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "typecheck": "tsc -b",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' npx jest --watch"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "llm",
+    "rate-limiter",
+    "openai",
+    "anthropic",
+    "gpt",
+    "claude",
+    "api"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

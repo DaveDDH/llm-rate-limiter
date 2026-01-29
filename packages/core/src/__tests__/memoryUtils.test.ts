@@ -9,7 +9,7 @@ import {
   getUsedMemoryMB,
   initDevHeapLimit,
   parseMaxOldSpaceSize,
-} from '@globalUtils/memoryUtils.js';
+} from '../utils/memoryUtils.js';
 
 const BYTES_IN_KB = 1024;
 const EXPECTED_KB = BYTES_IN_KB;

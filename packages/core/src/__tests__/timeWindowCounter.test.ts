@@ -1,6 +1,6 @@
 import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
-import { TimeWindowCounter } from '@globalUtils/timeWindowCounter.js';
+import { TimeWindowCounter } from '../utils/timeWindowCounter.js';
 
 const WINDOW_MS = 1000;
 const LIMIT = 5;

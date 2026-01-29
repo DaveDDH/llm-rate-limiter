@@ -7,10 +7,10 @@
  * - Tracks actual usage after job execution and refunds the difference
  * - Strict compile-time type safety for resourcesPerEvent requirements
  */
-import { validateConfig } from '@globalUtils/configValidation.js';
-import { getAvailableMemoryKB } from '@globalUtils/memoryUtils.js';
-import { Semaphore } from '@globalUtils/semaphore.js';
-import { TimeWindowCounter } from '@globalUtils/timeWindowCounter.js';
+import { validateConfig } from './utils/configValidation.js';
+import { getAvailableMemoryKB } from './utils/memoryUtils.js';
+import { Semaphore } from './utils/semaphore.js';
+import { TimeWindowCounter } from './utils/timeWindowCounter.js';
 
 import type {
   InternalJobResult,

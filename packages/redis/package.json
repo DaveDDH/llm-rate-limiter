@@ -1,0 +1,39 @@
+{
+  "name": "@llm-rate-limiter/redis",
+  "version": "1.0.0",
+  "description": "Redis distributed backend for @llm-rate-limiter/core",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist tsconfig*.tsbuildinfo && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -b",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' npx jest --watch"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "llm",
+    "rate-limiter",
+    "redis",
+    "distributed",
+    "backend"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@llm-rate-limiter/core": "^1.0.0",
+    "ioredis": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
