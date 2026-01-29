@@ -40,11 +40,6 @@ import type {
 } from './types.js';
 import { isRedisClient, toRedisOptions } from './types.js';
 
-/** Number of keys for Lua scripts */
-const KEYS_FOUR = 4;
-const KEYS_TWO = 2;
-const KEYS_ONE = 1;
-
 /** No-op function for ignored promise rejections */
 const ignoreError = (): void => {
   // Intentionally empty - used for fire-and-forget operations
@@ -84,6 +79,17 @@ const parseAllocation = (json: string | null): AllocationInfo => {
   return { slots: parsed.slots, tokensPerMinute: parsed.tokensPerMinute, requestsPerMinute: parsed.requestsPerMinute };
 };
 
+/** Execute a Lua script via EVAL and return string result */
+const evalScript = async (
+  redis: RedisType,
+  script: string,
+  keys: string[],
+  args: string[]
+): Promise<string> => {
+  const result: unknown = await redis.eval(script, keys.length, ...keys, ...args);
+  return typeof result === 'string' ? result : '';
+};
+
 /** Redis keys structure */
 interface RedisKeys {
   instances: string;
@@ -108,21 +114,6 @@ interface BackendOperationConfig {
   heartbeatIntervalMs: number;
   instanceTimeoutMs: number;
 }
-
-/** Command names for custom Lua scripts */
-const CMD_REGISTER = 'llmrlRegister';
-const CMD_UNREGISTER = 'llmrlUnregister';
-const CMD_ACQUIRE = 'llmrlAcquire';
-const CMD_RELEASE = 'llmrlRelease';
-const CMD_HEARTBEAT = 'llmrlHeartbeat';
-const CMD_CLEANUP = 'llmrlCleanup';
-const CMD_GET_STATS = 'llmrlGetStats';
-
-/** Safely call a custom Redis command that returns a string */
-const callCustomCommand = async (redis: RedisType, command: string, ...args: string[]): Promise<string> => {
-  const result: unknown = await redis.call(command, ...args);
-  return typeof result === 'string' ? result : '';
-};
 
 /** Internal backend implementation class */
 class RedisBackendImpl {
@@ -149,18 +140,7 @@ class RedisBackendImpl {
       heartbeatIntervalMs: redisConfig.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS,
       instanceTimeoutMs: redisConfig.instanceTimeoutMs ?? DEFAULT_INSTANCE_TIMEOUT_MS,
     };
-    this.defineCommands();
     this.startCleanupInterval();
-  }
-
-  private defineCommands(): void {
-    this.redis.defineCommand('llmrlRegister', { numberOfKeys: KEYS_FOUR, lua: REGISTER_SCRIPT });
-    this.redis.defineCommand('llmrlUnregister', { numberOfKeys: KEYS_FOUR, lua: UNREGISTER_SCRIPT });
-    this.redis.defineCommand('llmrlAcquire', { numberOfKeys: KEYS_TWO, lua: ACQUIRE_SCRIPT });
-    this.redis.defineCommand('llmrlRelease', { numberOfKeys: KEYS_FOUR, lua: RELEASE_SCRIPT });
-    this.redis.defineCommand('llmrlHeartbeat', { numberOfKeys: KEYS_ONE, lua: HEARTBEAT_SCRIPT });
-    this.redis.defineCommand('llmrlCleanup', { numberOfKeys: KEYS_FOUR, lua: CLEANUP_SCRIPT });
-    this.redis.defineCommand('llmrlGetStats', { numberOfKeys: KEYS_TWO, lua: GET_STATS_SCRIPT });
   }
 
   private startCleanupInterval(): void {
@@ -169,7 +149,7 @@ class RedisBackendImpl {
     const { instances, allocations, config: configKey, channel } = keys;
     this.cleanupInterval = setInterval(() => {
       const cutoff = Date.now() - instanceTimeoutMs;
-      callCustomCommand(redis, CMD_CLEANUP, instances, allocations, configKey, channel, String(cutoff)).catch(ignoreError);
+      evalScript(redis, CLEANUP_SCRIPT, [instances, allocations, configKey, channel], [String(cutoff)]).catch(ignoreError);
     }, DEFAULT_CLEANUP_INTERVAL_MS);
   }
 
@@ -181,7 +161,7 @@ class RedisBackendImpl {
     this.heartbeatInterval = setInterval(() => {
       const now = String(Date.now());
       for (const instId of registeredInstances) {
-        callCustomCommand(redis, CMD_HEARTBEAT, instances, instId, now).catch(ignoreError);
+        evalScript(redis, HEARTBEAT_SCRIPT, [instances], [instId, now]).catch(ignoreError);
       }
     }, heartbeatIntervalMs);
   }
@@ -210,10 +190,11 @@ class RedisBackendImpl {
     const { keys, config, redis } = this;
     const { instances, allocations, config: configKey, channel } = keys;
     const { totalCapacity, tokensPerMinute, requestsPerMinute } = config;
-    const result = await callCustomCommand(
-      redis, CMD_REGISTER,
-      instances, allocations, configKey, channel, instanceId, String(Date.now()),
-      String(totalCapacity), String(tokensPerMinute), String(requestsPerMinute)
+    const result = await evalScript(
+      redis,
+      REGISTER_SCRIPT,
+      [instances, allocations, configKey, channel],
+      [instanceId, String(Date.now()), String(totalCapacity), String(tokensPerMinute), String(requestsPerMinute)]
     );
     this.registeredInstances.add(instanceId);
     this.startHeartbeat();
@@ -225,15 +206,18 @@ class RedisBackendImpl {
     this.subscriptions.delete(instanceId);
     const { keys, redis } = this;
     const { instances, allocations, config: configKey, channel } = keys;
-    await callCustomCommand(redis, CMD_UNREGISTER, instances, allocations, configKey, channel, instanceId);
+    await evalScript(redis, UNREGISTER_SCRIPT, [instances, allocations, configKey, channel], [instanceId]);
   };
 
   readonly acquire = async (context: BackendAcquireContextV2): Promise<boolean> => {
     const { keys, redis } = this;
     const { instances, allocations } = keys;
     try {
-      const result = await callCustomCommand(
-        redis, CMD_ACQUIRE, instances, allocations, context.instanceId, String(Date.now())
+      const result = await evalScript(
+        redis,
+        ACQUIRE_SCRIPT,
+        [instances, allocations],
+        [context.instanceId, String(Date.now())]
       );
       return result === SUCCESS_RESULT;
     } catch {
@@ -244,7 +228,7 @@ class RedisBackendImpl {
   readonly release = async (context: BackendReleaseContextV2): Promise<void> => {
     const { keys, redis } = this;
     const { instances, allocations, config: configKey, channel } = keys;
-    await callCustomCommand(redis, CMD_RELEASE, instances, allocations, configKey, channel, context.instanceId, String(Date.now()));
+    await evalScript(redis, RELEASE_SCRIPT, [instances, allocations, configKey, channel], [context.instanceId, String(Date.now())]);
   };
 
   readonly subscribe = (instanceId: string, callback: AllocationCallback): Unsubscribe => {
@@ -285,7 +269,7 @@ class RedisBackendImpl {
   readonly getStats = async (): Promise<RedisBackendStats> => {
     const { keys, redis } = this;
     const { instances, allocations } = keys;
-    const result = await callCustomCommand(redis, CMD_GET_STATS, instances, allocations);
+    const result = await evalScript(redis, GET_STATS_SCRIPT, [instances, allocations], []);
     const parsed: unknown = JSON.parse(result);
     if (!isRedisBackendStats(parsed)) {
       return { totalInstances: ZERO, totalInFlight: ZERO, totalAllocated: ZERO, instances: [] };
