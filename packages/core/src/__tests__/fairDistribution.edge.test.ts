@@ -14,59 +14,54 @@ const FIFTY = 50;
 const HUNDRED = 100;
 const DEFAULT_TIMEOUT = 30_000;
 
-describe('fair distribution - edge cases', () => {
+describe('fair distribution - edge cases zero', () => {
   it(
     'handles zero capacity',
     async () => {
       const backend = new FairDistributionBackend({ totalCapacity: ZERO, estimatedTokensPerRequest: TEN });
       const limiter = await createAndStartLimiter(backend);
-
       expect(backend.getInstanceStats(limiter.getInstanceId())?.allocation).toBe(ZERO);
       assertCapacityInvariant(backend);
-
       limiter.stop();
     },
     DEFAULT_TIMEOUT
   );
+});
 
+describe('fair distribution - edge cases one', () => {
   it(
     'handles capacity of 1 with multiple instances',
     async () => {
       const backend = new FairDistributionBackend({ totalCapacity: ONE, estimatedTokensPerRequest: TEN });
-
       const limiterA = await createAndStartLimiter(backend);
       const limiterB = await createAndStartLimiter(backend);
       const limiterC = await createAndStartLimiter(backend);
-
       const total = backend.getTotalAllocated() + backend.getTotalInFlight();
       expect(total).toBeLessThanOrEqual(ONE);
       assertCapacityInvariant(backend);
-
       limiterA.stop();
       limiterB.stop();
       limiterC.stop();
     },
     DEFAULT_TIMEOUT
   );
+});
 
+describe('fair distribution - edge cases divisible', () => {
   it(
     'handles non-divisible capacity',
     async () => {
       const backend = new FairDistributionBackend({ totalCapacity: TEN, estimatedTokensPerRequest: TEN });
-
       const limiterA = await createAndStartLimiter(backend);
       const limiterB = await createAndStartLimiter(backend);
       const limiterC = await createAndStartLimiter(backend);
-
       const statsA = backend.getInstanceStats(limiterA.getInstanceId());
       const statsB = backend.getInstanceStats(limiterB.getInstanceId());
       const statsC = backend.getInstanceStats(limiterC.getInstanceId());
-
       const totalAllocated =
         (statsA?.allocation ?? ZERO) + (statsB?.allocation ?? ZERO) + (statsC?.allocation ?? ZERO);
       expect(totalAllocated).toBeLessThanOrEqual(TEN);
       assertCapacityInvariant(backend);
-
       limiterA.stop();
       limiterB.stop();
       limiterC.stop();

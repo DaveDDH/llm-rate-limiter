@@ -125,60 +125,49 @@ const runRapidChurnIterations = async (
   }, Promise.resolve());
 };
 
-describe('Redis fair distribution - instance lifecycle', () => {
+describe('Redis fair distribution - instance lifecycle churn', () => {
   it(
     'handles rapid instance join/leave without violating capacity',
     async () => {
       const available = await checkRedisAvailable();
       if (!available) return;
-
       const CAPACITY = SIXTY;
-      const ITERATIONS = THIRTY;
-
       const backend = createBackend(CAPACITY);
       const activeLimiters: LLMRateLimiterInstance[] = [];
-
-      await runRapidChurnIterations(backend, activeLimiters, ITERATIONS, CAPACITY);
-
+      await runRapidChurnIterations(backend, activeLimiters, THIRTY, CAPACITY);
       activeLimiters.forEach((limiter) => {
         limiter.stop();
       });
     },
     DEFAULT_TIMEOUT
   );
+});
 
+describe('Redis fair distribution - instance lifecycle rejoin', () => {
   it(
     'handles all instances leaving and rejoining',
     async () => {
       const available = await checkRedisAvailable();
       if (!available) return;
-
       const CAPACITY = HUNDRED;
       const backend = createBackend(CAPACITY);
-
       const limiterA1 = await createAndStartLimiter(backend);
       const limiterB1 = await createAndStartLimiter(backend);
-
       const statsInitial = await backend.getStats();
       expect(statsInitial.totalInstances).toBe(TWO);
       assertCapacityInvariant(statsInitial, CAPACITY);
-
       limiterA1.stop();
       limiterB1.stop();
       await sleep(HUNDRED);
-
       const statsEmpty = await backend.getStats();
       expect(statsEmpty.totalInstances).toBe(ZERO);
-
       const limiterA2 = await createAndStartLimiter(backend);
       const limiterB2 = await createAndStartLimiter(backend);
       const limiterC2 = await createAndStartLimiter(backend);
-
       const statsRejoin = await backend.getStats();
       expect(statsRejoin.totalInstances).toBe(THREE);
       expect(getInstanceStats(statsRejoin, limiterA2.getInstanceId())?.allocation).toBe(THIRTY_THREE);
       assertCapacityInvariant(statsRejoin, CAPACITY);
-
       limiterA2.stop();
       limiterB2.stop();
       limiterC2.stop();

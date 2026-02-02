@@ -60,64 +60,51 @@ describe('fair distribution - single instance', () => {
   );
 });
 
-describe('fair distribution - two instances', () => {
+describe('fair distribution - two instances split', () => {
   it(
     'two instances split capacity 50/50',
     async () => {
       const backend = new FairDistributionBackend({ totalCapacity: HUNDRED, estimatedTokensPerRequest: TEN });
-
       const limiterA = await createAndStartLimiter(backend);
       const limiterB = await createAndStartLimiter(backend);
-
       expect(backend.getInstanceCount()).toBe(TWO);
       expect(backend.getTotalAllocated()).toBe(HUNDRED);
-
       const statsA = backend.getInstanceStats(limiterA.getInstanceId());
       const statsB = backend.getInstanceStats(limiterB.getInstanceId());
-
       expect(statsA?.allocation).toBe(FIFTY);
       expect(statsB?.allocation).toBe(FIFTY);
       assertCapacityInvariant(backend);
-
       limiterA.stop();
       limiterB.stop();
     },
     DEFAULT_TIMEOUT
   );
+});
 
+describe('fair distribution - two instances late joiner', () => {
   it(
     'late joiner gets remaining capacity while busy instance drains',
     async () => {
       const backend = new FairDistributionBackend({ totalCapacity: HUNDRED, estimatedTokensPerRequest: TEN });
-
       const limiterA = await createAndStartLimiter(backend);
       const jobsA = await startControllableJobs(limiterA, EIGHTY);
-
       expect(backend.getInstanceStats(limiterA.getInstanceId())?.inFlight).toBe(EIGHTY);
       expect(backend.getInstanceStats(limiterA.getInstanceId())?.allocation).toBe(TWENTY);
       assertCapacityInvariant(backend);
-
       const limiterB = await createAndStartLimiter(backend);
-
       const statsA = backend.getInstanceStats(limiterA.getInstanceId());
       const statsB = backend.getInstanceStats(limiterB.getInstanceId());
-
       expect(statsA?.allocation).toBe(ZERO);
       expect(statsB?.allocation).toBe(TWENTY);
       assertCapacityInvariant(backend);
-
       await completeJobs(jobsA.slice(ZERO, FORTY));
-
       const statsAAfter = backend.getInstanceStats(limiterA.getInstanceId());
       const statsBAfter = backend.getInstanceStats(limiterB.getInstanceId());
-
       expect(statsAAfter?.inFlight).toBe(FORTY);
       expect(statsAAfter?.allocation).toBe(TEN);
       expect(statsBAfter?.allocation).toBe(FIFTY);
       assertCapacityInvariant(backend);
-
       await completeJobs(jobsA.slice(FORTY));
-
       limiterA.stop();
       limiterB.stop();
     },

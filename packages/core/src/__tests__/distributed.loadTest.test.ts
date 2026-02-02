@@ -80,7 +80,7 @@ const runJobBatch = async (
   await Promise.all(promises);
 };
 
-describe('distributed - load test coordination', () => {
+describe('distributed - load test coordination basic', () => {
   it('should coordinate 100 jobs across 3 instances without exceeding limits', async () => {
     const TOKENS_PER_JOB = FIVE;
     const distributedBackend = createDistributedBackend({
@@ -100,7 +100,9 @@ describe('distributed - load test coordination', () => {
     expect(tracker.failed).toBe(ZERO);
     cleanupInstances(instances);
   });
+});
 
+describe('distributed - load test rejection', () => {
   it('should reject jobs that would exceed combined limit', async () => {
     const TOKENS_PER_JOB = TEN;
     const distributedBackend = createDistributedBackend({
@@ -123,7 +125,7 @@ describe('distributed - load test coordination', () => {
   });
 });
 
-describe('distributed - load distribution', () => {
+describe('distributed - load distribution even', () => {
   it('should distribute load evenly across instances', async () => {
     const TOKENS_PER_JOB = TEN;
     const distributedBackend = createDistributedBackend({
@@ -143,7 +145,9 @@ describe('distributed - load distribution', () => {
     }
     cleanupInstances(instances);
   });
+});
 
+describe('distributed - load distribution concurrent', () => {
   it('should never exceed token limit even under concurrent load', async () => {
     const TOKENS_PER_JOB = TWENTY;
     const distributedBackend = createDistributedBackend({

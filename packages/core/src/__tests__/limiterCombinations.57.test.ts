@@ -1,3 +1,4 @@
+import { testSemaphoreBlocker, testTimeWindowBlocker } from './limiterCombinations.blocking.helpers.js';
 import {
   FIFTY_SEVEN,
   FIVE,
@@ -9,8 +10,6 @@ import {
   buildHighLimitConfig,
   combinations,
   createLLMRateLimiter,
-  testSemaphoreBlocker,
-  testTimeWindowBlocker,
 } from './limiterCombinations.helpers.js';
 import type { LLMRateLimiterInstance, LimiterType } from './limiterCombinations.helpers.js';
 

@@ -23,6 +23,11 @@ import {
 } from './limiterCombinations.helpers.js';
 import type { LLMRateLimiterInstance, MockJobResult } from './limiterCombinations.helpers.js';
 
+interface TrackedJob {
+  jobId: string;
+  job: (args: { modelId: string }, resolve: (u: UsageEntry) => void) => Promise<MockJobResult>;
+}
+
 describe('Blocking - concurrency actually blocks jobs', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
@@ -37,10 +42,6 @@ describe('Blocking - concurrency actually blocks jobs', () => {
     const startTimes: Record<string, number> = {};
     const endTimes: Record<string, number> = {};
     const start = Date.now();
-    interface TrackedJob {
-      jobId: string;
-      job: (args: { modelId: string }, resolve: (u: UsageEntry) => void) => Promise<MockJobResult>;
-    }
     const createTrackedJob = (id: string, delayMs: number): TrackedJob => ({
       jobId: generateJobId(),
       job: async ({ modelId }, resolve) => {
@@ -66,12 +67,15 @@ describe('Blocking - concurrency actually blocks jobs', () => {
   });
 });
 
+const SLOW_JOB_DELAY_MS = 200;
+
 describe('Blocking - memory actually blocks jobs', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
     limiter?.stop();
     limiter = undefined;
   });
+
   it('should queue jobs when memory slots are exhausted', async () => {
     limiter = createLLMRateLimiter({
       memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
@@ -80,7 +84,6 @@ describe('Blocking - memory actually blocks jobs', () => {
         default: { resourcesPerEvent: { estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB }, pricing: ZERO_PRICING },
       },
     });
-    const SLOW_JOB_DELAY_MS = 200;
     const jobOrder: string[] = [];
     const slowJobPromise = limiter.queueJob({
       jobId: generateJobId(),

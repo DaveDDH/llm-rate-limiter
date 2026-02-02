@@ -41,57 +41,47 @@ const calculateTotalFromStats = (stats: Array<InstanceStats | undefined>): numbe
   return total;
 };
 
-describe('fair distribution - three instances', () => {
+describe('fair distribution - three instances split', () => {
   it(
     'three instances split capacity evenly',
     async () => {
       const backend = new FairDistributionBackend({ totalCapacity: NINETY, estimatedTokensPerRequest: TEN });
-
       const limiterA = await createAndStartLimiter(backend);
       const limiterB = await createAndStartLimiter(backend);
       const limiterC = await createAndStartLimiter(backend);
-
       expect(backend.getInstanceCount()).toBe(THREE);
-
       const statsA = backend.getInstanceStats(limiterA.getInstanceId());
       const statsB = backend.getInstanceStats(limiterB.getInstanceId());
       const statsC = backend.getInstanceStats(limiterC.getInstanceId());
-
       expect(statsA?.allocation).toBe(THIRTY);
       expect(statsB?.allocation).toBe(THIRTY);
       expect(statsC?.allocation).toBe(THIRTY);
       assertCapacityInvariant(backend);
-
       limiterA.stop();
       limiterB.stop();
       limiterC.stop();
     },
     DEFAULT_TIMEOUT
   );
+});
 
+describe('fair distribution - three instances leave', () => {
   it(
     'when instance leaves, others absorb its allocation',
     async () => {
       const backend = new FairDistributionBackend({ totalCapacity: NINETY, estimatedTokensPerRequest: TEN });
-
       const limiterA = await createAndStartLimiter(backend);
       const limiterB = await createAndStartLimiter(backend);
       const limiterC = await createAndStartLimiter(backend);
-
       expect(backend.getInstanceStats(limiterA.getInstanceId())?.allocation).toBe(THIRTY);
-
       limiterB.stop();
       await sleep(TEN);
-
       expect(backend.getInstanceCount()).toBe(TWO);
-
       const statsA = backend.getInstanceStats(limiterA.getInstanceId());
       const statsC = backend.getInstanceStats(limiterC.getInstanceId());
-
       expect(statsA?.allocation).toBe(FORTY_FIVE);
       expect(statsC?.allocation).toBe(FORTY_FIVE);
       assertCapacityInvariant(backend);
-
       limiterA.stop();
       limiterC.stop();
     },

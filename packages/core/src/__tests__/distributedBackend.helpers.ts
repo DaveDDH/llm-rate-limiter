@@ -120,65 +120,124 @@ const createAvailabilityCalc =
     };
   };
 
-/** Creates a dummy distributed backend that simulates centralized rate limiting. */
-export const createDistributedBackend = (config: DistributedBackendConfig): DistributedBackendInstance => {
-  const subscribers = new Set<AvailabilitySubscriber>();
-  const modelUsage = new Map<string, ModelUsage>();
-  let currentTime = Date.now();
-  let stats = createInitialStats();
-  const getCurrentTime = (): number => currentTime;
-  const usage = createUsageHelpers(modelUsage, getCurrentTime);
-  const calcAvail = createAvailabilityCalc(config, () => {
-    for (const [id] of modelUsage) {
-      usage.resetIfNeeded(id);
-    }
-    return usage.getTotal();
-  });
-  const notify = (): void => {
+const checkCapacity = (
+  ctx: BackendAcquireContext,
+  config: DistributedBackendConfig,
+  totalT: number,
+  totalR: number
+): boolean =>
+  totalT + ctx.estimated.tokens <= config.tokensPerMinute &&
+  totalR + ctx.estimated.requests <= config.requestsPerMinute;
+
+const createNotify =
+  (subscribers: Set<AvailabilitySubscriber>, calcAvail: () => DistributedAvailability): (() => void) =>
+  (): void => {
     const avail = calcAvail();
-    for (const sub of subscribers) {
-      sub(avail);
-    }
+    for (const sub of subscribers) sub(avail);
   };
 
-  const doAcquire = (ctx: BackendAcquireContext): boolean => {
+class BackendStateManager {
+  stats: DistributedBackendStats;
+  currentTime: number;
+  constructor() {
+    this.stats = createInitialStats();
+    this.currentTime = Date.now();
+  }
+  reject(): void {
+    this.stats.rejections += ONE;
+  }
+  recordAcquire(tokens: number, requests: number, peakT: number, peakR: number): void {
+    this.stats.totalAcquires += ONE;
+    this.stats.totalTokensUsed += tokens;
+    this.stats.totalRequestsUsed += requests;
+    this.stats.peakTokensPerMinute = Math.max(this.stats.peakTokensPerMinute, peakT);
+    this.stats.peakRequestsPerMinute = Math.max(this.stats.peakRequestsPerMinute, peakR);
+  }
+  recordRelease(): void {
+    this.stats.totalReleases += ONE;
+  }
+  reset(): void {
+    this.stats = createInitialStats();
+  }
+  advanceTime(ms: number): void {
+    this.currentTime += ms;
+  }
+  getTime(): number {
+    return this.currentTime;
+  }
+  getStats(): DistributedBackendStats {
+    return { ...this.stats };
+  }
+}
+
+type UsageHelpers = ReturnType<typeof createUsageHelpers>;
+
+const createAcquireFn =
+  (
+    config: DistributedBackendConfig,
+    usage: UsageHelpers,
+    state: BackendStateManager,
+    notify: () => void
+  ): ((ctx: BackendAcquireContext) => boolean) =>
+  (ctx: BackendAcquireContext): boolean => {
     const u = usage.getOrCreate(ctx.modelId);
     usage.resetIfNeeded(ctx.modelId);
     const { tokens: totalT, requests: totalR } = usage.getTotal();
-    if (
-      totalT + ctx.estimated.tokens > config.tokensPerMinute ||
-      totalR + ctx.estimated.requests > config.requestsPerMinute
-    ) {
-      stats.rejections += ONE;
+    if (!checkCapacity(ctx, config, totalT, totalR)) {
+      state.reject();
       return false;
     }
     u.tokensPerMinute += ctx.estimated.tokens;
     u.requestsPerMinute += ctx.estimated.requests;
-    stats.totalAcquires += ONE;
-    stats.totalTokensUsed += ctx.estimated.tokens;
-    stats.totalRequestsUsed += ctx.estimated.requests;
     const { tokens: newT, requests: newR } = usage.getTotal();
-    stats.peakTokensPerMinute = Math.max(stats.peakTokensPerMinute, newT);
-    stats.peakRequestsPerMinute = Math.max(stats.peakRequestsPerMinute, newR);
+    state.recordAcquire(ctx.estimated.tokens, ctx.estimated.requests, newT, newR);
     notify();
     return true;
   };
 
-  const doRelease = (ctx: BackendReleaseContext): void => {
+const createReleaseFn =
+  (
+    usage: UsageHelpers,
+    state: BackendStateManager,
+    notify: () => void
+  ): ((ctx: BackendReleaseContext) => void) =>
+  (ctx: BackendReleaseContext): void => {
     const u = usage.getOrCreate(ctx.modelId);
     usage.resetIfNeeded(ctx.modelId);
     const tokenDiff = ctx.estimated.tokens - ctx.actual.tokens;
     const requestDiff = ctx.estimated.requests - ctx.actual.requests;
-    if (tokenDiff > ZERO) {
-      u.tokensPerMinute = Math.max(ZERO, u.tokensPerMinute - tokenDiff);
-    }
-    if (requestDiff > ZERO) {
-      u.requestsPerMinute = Math.max(ZERO, u.requestsPerMinute - requestDiff);
-    }
-    stats.totalReleases += ONE;
+    if (tokenDiff > ZERO) u.tokensPerMinute = Math.max(ZERO, u.tokensPerMinute - tokenDiff);
+    if (requestDiff > ZERO) u.requestsPerMinute = Math.max(ZERO, u.requestsPerMinute - requestDiff);
+    state.recordRelease();
     notify();
   };
 
+const createSubscribeFn =
+  (
+    subscribers: Set<AvailabilitySubscriber>,
+    calcAvail: () => DistributedAvailability
+  ): ((cb: AvailabilitySubscriber) => () => void) =>
+  (cb: AvailabilitySubscriber): (() => void) => {
+    subscribers.add(cb);
+    cb(calcAvail());
+    return () => {
+      subscribers.delete(cb);
+    };
+  };
+
+/** Creates a dummy distributed backend that simulates centralized rate limiting. */
+export const createDistributedBackend = (config: DistributedBackendConfig): DistributedBackendInstance => {
+  const subscribers = new Set<AvailabilitySubscriber>();
+  const modelUsage = new Map<string, ModelUsage>();
+  const state = new BackendStateManager();
+  const usage = createUsageHelpers(modelUsage, () => state.getTime());
+  const calcAvail = createAvailabilityCalc(config, () => {
+    for (const [id] of modelUsage) usage.resetIfNeeded(id);
+    return usage.getTotal();
+  });
+  const notify = createNotify(subscribers, calcAvail);
+  const doAcquire = createAcquireFn(config, usage, state, notify);
+  const doRelease = createReleaseFn(usage, state, notify);
   return {
     backend: {
       acquire: async (ctx): Promise<boolean> => await Promise.resolve(doAcquire(ctx)),
@@ -187,25 +246,19 @@ export const createDistributedBackend = (config: DistributedBackendConfig): Dist
         await Promise.resolve();
       },
     },
-    subscribe: (cb: AvailabilitySubscriber): (() => void) => {
-      subscribers.add(cb);
-      cb(calcAvail());
-      return (): void => {
-        subscribers.delete(cb);
-      };
-    },
+    subscribe: createSubscribeFn(subscribers, calcAvail),
     getAvailability: calcAvail,
-    getStats: () => ({ ...stats }),
+    getStats: () => state.getStats(),
     reset: () => {
       modelUsage.clear();
-      stats = createInitialStats();
+      state.reset();
       notify();
     },
-    advanceTime: (ms: number) => {
-      currentTime += ms;
+    advanceTime: (ms) => {
+      state.advanceTime(ms);
       notify();
     },
-    getCurrentTime,
+    getCurrentTime: () => state.getTime(),
   };
 };
 
@@ -226,42 +279,4 @@ export const createConnectedLimiters = (
   return instances;
 };
 
-/** Job result tracking for load tests */
-export interface JobTracker {
-  completed: number;
-  failed: number;
-  totalTokens: number;
-  totalRequests: number;
-  jobsPerInstance: Map<number, number>;
-  tokensPerInstance: Map<number, number>;
-  errors: Error[];
-  trackComplete: (instanceIndex: number, tokens: number) => void;
-  trackFailed: (error: unknown) => void;
-}
-
-/** Creates a job tracker for monitoring load test results */
-export const createJobTracker = (): JobTracker => {
-  const tracker: JobTracker = {
-    completed: ZERO,
-    failed: ZERO,
-    totalTokens: ZERO,
-    totalRequests: ZERO,
-    jobsPerInstance: new Map<number, number>(),
-    tokensPerInstance: new Map<number, number>(),
-    errors: [],
-    trackComplete: (idx: number, tokens: number): void => {
-      tracker.completed += ONE;
-      tracker.totalTokens += tokens;
-      tracker.totalRequests += ONE;
-      tracker.jobsPerInstance.set(idx, (tracker.jobsPerInstance.get(idx) ?? ZERO) + ONE);
-      tracker.tokensPerInstance.set(idx, (tracker.tokensPerInstance.get(idx) ?? ZERO) + tokens);
-    },
-    trackFailed: (error: unknown): void => {
-      tracker.failed += ONE;
-      if (error instanceof Error) {
-        tracker.errors.push(error);
-      }
-    },
-  };
-  return tracker;
-};
+export { type JobTracker, createJobTracker } from './jobTracker.helpers.js';

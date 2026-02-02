@@ -141,7 +141,7 @@ describe('MultiModelRateLimiter - pricing combined tokens', () => {
   });
 });
 
-describe('MultiModelRateLimiter - pricing fractional', () => {
+describe('MultiModelRateLimiter - pricing fractional 100K', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
     limiter?.stop();
@@ -168,6 +168,14 @@ describe('MultiModelRateLimiter - pricing fractional', () => {
     });
     const ctx = ensureDefined<JobCallbackContext>(capturedCtx);
     expect(ctx.totalCost).toBeCloseTo((DEFAULT_PRICING.input + DEFAULT_PRICING.output) / TEN);
+  });
+});
+
+describe('MultiModelRateLimiter - pricing zero tokens', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
   });
 
   it('should calculate zero cost for zero tokens', async () => {

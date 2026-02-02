@@ -176,17 +176,12 @@ export const buildConfigWithBlockingLimiter = (
   return { ...memoryConfig, models: { default: { ...modelConfig, ...blocking } } };
 };
 
-// Helper to get model stats from the limiter
-const getDefaultModelStats = (
-  limiter: LLMRateLimiterInstance
-): ReturnType<LLMRateLimiterInstance['getModelStats']> => limiter.getModelStats('default');
-
 // Helper to check which limiter is blocking
 export const getBlockingReason = (
   limiter: LLMRateLimiterInstance,
   activeLimiters: LimiterType[]
 ): LimiterType | null => {
-  const stats = getDefaultModelStats(limiter);
+  const stats = limiter.getModelStats('default');
   for (const lt of activeLimiters) {
     if (isLimiterBlocking(stats, lt)) {
       return lt;
@@ -226,65 +221,6 @@ export const combinations = <T>(arr: T[], k: number): T[][] => {
   return [...withFirst, ...withoutFirst];
 };
 
-// Helper function to run blocking test for semaphore-based limiters
-export const testSemaphoreBlocker = async (
-  limiters: LimiterType[],
-  blocker: LimiterType,
-  setLimiter: (l: LLMRateLimiterInstance) => void
-): Promise<void> => {
-  const config = buildConfigWithBlockingLimiter(limiters, blocker);
-  const newLimiter = createLLMRateLimiter(config);
-  setLimiter(newLimiter);
-
-  expect(newLimiter.hasCapacity()).toBe(true);
-
-  const slowJobPromise = newLimiter.queueJob({
-    jobId: generateJobId(),
-    job: async ({ modelId }, resolve) => {
-      await setTimeoutAsync(LONG_JOB_DELAY_MS);
-      resolve(createMockUsage(modelId));
-      return createMockJobResult('slow-job');
-    },
-  });
-
-  await setTimeoutAsync(SEMAPHORE_ACQUIRE_WAIT_MS);
-
-  const stats = getDefaultModelStats(newLimiter);
-  if (blocker === 'memory') {
-    expect(stats.memory?.activeKB).toBe(ESTIMATED_MEMORY_KB);
-    expect(stats.memory?.availableKB).toBe(ZERO);
-  } else if (blocker === 'concurrency') {
-    expect(stats.concurrency?.active).toBe(ONE);
-    expect(stats.concurrency?.available).toBe(ZERO);
-  }
-  expect(newLimiter.hasCapacity()).toBe(false);
-  expect(getBlockingReason(newLimiter, limiters)).toBe(blocker);
-
-  await slowJobPromise;
-};
-
-// Helper function to run blocking test for time-window limiters
-export const testTimeWindowBlocker = async (
-  limiters: LimiterType[],
-  blocker: LimiterType,
-  setLimiter: (l: LLMRateLimiterInstance) => void
-): Promise<void> => {
-  const config = buildConfigWithBlockingLimiter(limiters, blocker);
-  const newLimiter = createLLMRateLimiter(config);
-  setLimiter(newLimiter);
-
-  expect(newLimiter.hasCapacity()).toBe(true);
-  await newLimiter.queueJob({
-    jobId: generateJobId(),
-    job: ({ modelId }, resolve) => {
-      resolve(createMockUsage(modelId));
-      return createMockJobResult('exhaust-job');
-    },
-  });
-  expect(newLimiter.hasCapacity()).toBe(false);
-  expect(getBlockingReason(newLimiter, limiters)).toBe(blocker);
-};
-
 // Helper to queue a simple job that resolves immediately
 export const queueSimpleJob = async <T extends MockJobResult>(
   limiter: LLMRateLimiterInstance,
@@ -316,6 +252,12 @@ export const queueDelayedJob = async (
   });
   return jobResult;
 };
+
+/** Concurrency tracking object */
+export interface ConcurrencyTracker {
+  current: number;
+  max: number;
+}
 
 export { createLLMRateLimiter, setTimeoutAsync };
 export type { LLMRateLimiterConfig, LLMRateLimiterInstance, MockJobResult as LLMJobResult };

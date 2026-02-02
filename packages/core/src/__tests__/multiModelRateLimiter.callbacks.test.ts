@@ -22,11 +22,26 @@ const MODEL_CONFIG = {
   resourcesPerEvent: { estimatedNumberOfRequests: ONE },
   pricing: DEFAULT_PRICING,
 };
-
 const getUsageAt = (ctx: JobCallbackContext | undefined, index: number): UsageEntryWithCost | undefined =>
   ctx?.usage[index];
 
-describe('MultiModelRateLimiter - onComplete callback basic', () => {
+const createResolvingJob = (
+  modelId: string,
+  resolve: (u: ReturnType<typeof createMockUsage>) => void
+): ReturnType<typeof createMockJobResult> => {
+  resolve(createMockUsage(modelId));
+  return createMockJobResult('test');
+};
+
+const createRejectingJob = (
+  modelId: string,
+  reject: (u: ReturnType<typeof createMockUsage>, opts: { delegate: boolean }) => void
+): ReturnType<typeof createMockJobResult> => {
+  reject(createMockUsage(modelId), { delegate: false });
+  return createMockJobResult('test');
+};
+
+describe('MultiModelRateLimiter - onComplete jobId and usage', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
     limiter?.stop();
@@ -39,32 +54,34 @@ describe('MultiModelRateLimiter - onComplete callback basic', () => {
     const testJobId = generateJobId();
     await limiter.queueJob({
       jobId: testJobId,
-      job: ({ modelId }, resolve) => {
-        resolve(createMockUsage(modelId));
-        return createMockJobResult('test');
-      },
-      onComplete: (_result, ctx) => {
+      job: ({ modelId }, resolve) => createResolvingJob(modelId, resolve),
+      onComplete: (_r, ctx) => {
         capturedCtx = ctx;
       },
     });
     const ctx = ensureDefined<JobCallbackContext>(capturedCtx);
     expect(ctx.jobId).toBe(testJobId);
     expect(ctx.usage).toHaveLength(ONE);
-    const firstUsage = getUsageAt(capturedCtx, ZERO);
-    expect(firstUsage?.modelId).toBe('model-a');
-    expect(firstUsage?.inputTokens).toBe(MOCK_INPUT_TOKENS);
-    expect(firstUsage?.outputTokens).toBe(MOCK_OUTPUT_TOKENS);
+    expect(getUsageAt(capturedCtx, ZERO)?.modelId).toBe('model-a');
+    expect(getUsageAt(capturedCtx, ZERO)?.inputTokens).toBe(MOCK_INPUT_TOKENS);
+    expect(getUsageAt(capturedCtx, ZERO)?.outputTokens).toBe(MOCK_OUTPUT_TOKENS);
   });
+});
+
+describe('MultiModelRateLimiter - onComplete totalCost', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
+
   it('should include totalCost in onComplete callback', async () => {
     limiter = createLLMRateLimiter({ models: { 'model-a': MODEL_CONFIG } });
     let capturedCtx: JobCallbackContext | undefined = undefined;
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => {
-        resolve(createMockUsage(modelId));
-        return createMockJobResult('test');
-      },
-      onComplete: (_result, ctx) => {
+      job: ({ modelId }, resolve) => createResolvingJob(modelId, resolve),
+      onComplete: (_r, ctx) => {
         capturedCtx = ctx;
       },
     });
@@ -100,17 +117,13 @@ describe('MultiModelRateLimiter - onComplete callback skipping', () => {
     await setTimeoutAsync(DELAY_MS_SHORT);
     let capturedCtx: JobCallbackContext | undefined = undefined;
     const testJobId = generateJobId();
-    const secondJobPromise = limiter.queueJob({
+    await limiter.queueJob({
       jobId: testJobId,
-      job: ({ modelId }, resolve) => {
-        resolve(createMockUsage(modelId));
-        return createMockJobResult('second');
-      },
-      onComplete: (_result, ctx) => {
+      job: ({ modelId }, resolve) => createResolvingJob(modelId, resolve),
+      onComplete: (_r, ctx) => {
         capturedCtx = ctx;
       },
     });
-    await secondJobPromise;
     const ctx = ensureDefined<JobCallbackContext>(capturedCtx);
     expect(ctx.jobId).toBe(testJobId);
     expect(ctx.usage).toHaveLength(ONE);
@@ -119,7 +132,7 @@ describe('MultiModelRateLimiter - onComplete callback skipping', () => {
   });
 });
 
-describe('MultiModelRateLimiter - onError callback basic', () => {
+describe('MultiModelRateLimiter - onError jobId and usage', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
     limiter?.stop();
@@ -133,11 +146,8 @@ describe('MultiModelRateLimiter - onError callback basic', () => {
     await expect(
       limiter.queueJob({
         jobId: testJobId,
-        job: ({ modelId }, _resolve, reject) => {
-          reject(createMockUsage(modelId), { delegate: false });
-          return createMockJobResult('test');
-        },
-        onError: (_error, ctx) => {
+        job: ({ modelId }, _resolve, reject) => createRejectingJob(modelId, reject),
+        onError: (_e, ctx) => {
           capturedCtx = ctx;
         },
       })
@@ -147,17 +157,23 @@ describe('MultiModelRateLimiter - onError callback basic', () => {
     expect(ctx.usage).toHaveLength(ONE);
     expect(getUsageAt(ctx, ZERO)?.modelId).toBe('model-a');
   });
+});
+
+describe('MultiModelRateLimiter - onError totalCost', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
+
   it('should include totalCost in onError callback', async () => {
     limiter = createLLMRateLimiter({ models: { 'model-a': MODEL_CONFIG } });
     let capturedCtx: JobCallbackContext | undefined = undefined;
     await expect(
       limiter.queueJob({
         jobId: generateJobId(),
-        job: ({ modelId }, _resolve, reject) => {
-          reject(createMockUsage(modelId), { delegate: false });
-          return createMockJobResult('test');
-        },
-        onError: (_error, ctx) => {
+        job: ({ modelId }, _resolve, reject) => createRejectingJob(modelId, reject),
+        onError: (_e, ctx) => {
           capturedCtx = ctx;
         },
       })

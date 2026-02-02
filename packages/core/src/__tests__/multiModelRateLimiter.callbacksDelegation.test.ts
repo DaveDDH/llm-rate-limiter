@@ -21,6 +21,31 @@ const MODEL_CONFIG = {
 const getUsageAt = (ctx: JobCallbackContext | undefined, index: number): UsageEntryWithCost | undefined =>
   ctx?.usage[index];
 
+interface MockJobResult {
+  requestCount: number;
+  usage: { input: number; output: number; cached: number };
+  [key: string]: unknown;
+}
+type ResolveUsage = (u: {
+  modelId: string;
+  inputTokens: number;
+  cachedTokens: number;
+  outputTokens: number;
+}) => void;
+type RejectUsage = (
+  u: { modelId: string; inputTokens: number; cachedTokens: number; outputTokens: number },
+  opts?: { delegate?: boolean }
+) => void;
+const createDelegatingJob = (resolve: ResolveUsage, reject: RejectUsage, modelId: string): MockJobResult => {
+  const usage = createMockUsage(modelId);
+  if (modelId === 'model-a') {
+    reject(usage, { delegate: true });
+  } else {
+    resolve(usage);
+  }
+  return createMockJobResult('test');
+};
+
 describe('MultiModelRateLimiter - onError callback delegation', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
@@ -114,23 +139,15 @@ describe('MultiModelRateLimiter - callback with delegation cost', () => {
         resolve(createMockUsage(modelId));
         return createMockJobResult('test');
       },
-      onComplete: (_result, { totalCost }) => {
+      onComplete: (_r, { totalCost }) => {
         singleCost = totalCost;
       },
     });
     let delegatedCost = ZERO;
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve, reject) => {
-        const usage = createMockUsage(modelId);
-        if (modelId === 'model-a') {
-          reject(usage, { delegate: true });
-        } else {
-          resolve(usage);
-        }
-        return createMockJobResult('test');
-      },
-      onComplete: (_result, { totalCost }) => {
+      job: ({ modelId }, resolve, reject) => createDelegatingJob(resolve, reject, modelId),
+      onComplete: (_r, { totalCost }) => {
         delegatedCost = totalCost;
       },
     });

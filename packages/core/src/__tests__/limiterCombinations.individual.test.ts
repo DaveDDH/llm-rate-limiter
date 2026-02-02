@@ -84,7 +84,7 @@ describe('Individual Limiter - memory restore', () => {
   });
 });
 
-describe('Individual Limiter - concurrency', () => {
+describe('Individual Limiter - concurrency blocking', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
     limiter?.stop();
@@ -109,6 +109,14 @@ describe('Individual Limiter - concurrency', () => {
     expect(stats.concurrency?.available).toBe(ZERO);
     expect(limiter.hasCapacity()).toBe(false);
     await jobPromise;
+  });
+});
+
+describe('Individual Limiter - concurrency restore', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
   });
   it('should restore capacity after job completes', async () => {
     limiter = createLLMRateLimiter({

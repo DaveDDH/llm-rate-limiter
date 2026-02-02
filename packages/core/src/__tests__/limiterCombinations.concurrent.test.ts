@@ -1,3 +1,4 @@
+import type { ConcurrencyTracker, LLMJobResult } from './limiterCombinations.helpers.js';
 import {
   DEFAULT_REQUEST_COUNT,
   ESTIMATED_MEMORY_KB,
@@ -18,10 +19,29 @@ import {
   generateJobId,
   setTimeoutAsync,
 } from './limiterCombinations.helpers.js';
-import type { LLMJobResult } from './limiterCombinations.helpers.js';
 
 const FIVE = 5;
 const SIX = 6;
+const MAX_CONCURRENT = 2;
+const SHORT_DELAY = 30;
+const MEMORY_CAPACITY = ESTIMATED_MEMORY_KB * TWO;
+
+const createSlowJob = (
+  name: string
+): {
+  jobId: string;
+  job: (
+    args: { modelId: string },
+    resolve: (u: ReturnType<typeof createMockUsage>) => void
+  ) => Promise<LLMJobResult>;
+} => ({
+  jobId: generateJobId(),
+  job: async ({ modelId }, resolve) => {
+    await setTimeoutAsync(LONG_JOB_DELAY_MS);
+    resolve(createMockUsage(modelId));
+    return createMockJobResult(name);
+  },
+});
 
 describe('EdgeCase - concurrent jobs with all limiters', () => {
   it('should handle multiple concurrent jobs with all limiters', async () => {
@@ -63,10 +83,8 @@ describe('EdgeCase - concurrent jobs with all limiters', () => {
   });
 });
 
-describe('EdgeCase - concurrent jobs with concurrency limit', () => {
+describe('EdgeCase - concurrency limit tracking', () => {
   it('should correctly limit concurrency with time limiters', async () => {
-    const MAX_CONCURRENT = 2;
-    const SHORT_DELAY = 30;
     const limiter = createLLMRateLimiter({
       models: {
         default: {
@@ -81,40 +99,31 @@ describe('EdgeCase - concurrent jobs with concurrency limit', () => {
         },
       },
     });
-    const concurrencyTracker = { current: ZERO, max: ZERO };
-    interface UsageType {
-      modelId: string;
-      inputTokens: number;
-      outputTokens: number;
-      cachedTokens: number;
-    }
-    const createConcurrencyJob = (): {
-      jobId: string;
-      job: (args: { modelId: string }, resolve: (u: UsageType) => void) => Promise<LLMJobResult>;
-    } => ({
-      jobId: generateJobId(),
-      job: async ({ modelId }, resolve) => {
-        concurrencyTracker.current += ONE;
-        concurrencyTracker.max = Math.max(concurrencyTracker.max, concurrencyTracker.current);
-        await setTimeoutAsync(SHORT_DELAY);
-        concurrencyTracker.current -= ONE;
-        resolve(createMockUsage(modelId));
-        return createMockJobResult('concurrent-job');
-      },
-    });
+    const tracker: ConcurrencyTracker = { current: ZERO, max: ZERO };
     const jobs: Array<Promise<LLMJobResult>> = [];
     for (let i = ZERO; i < SIX; i += ONE) {
-      jobs.push(limiter.queueJob(createConcurrencyJob()));
+      jobs.push(
+        limiter.queueJob({
+          jobId: generateJobId(),
+          job: async ({ modelId }, resolve) => {
+            tracker.current += ONE;
+            tracker.max = Math.max(tracker.max, tracker.current);
+            await setTimeoutAsync(SHORT_DELAY);
+            tracker.current -= ONE;
+            resolve(createMockUsage(modelId));
+            return createMockJobResult('concurrent-job');
+          },
+        })
+      );
     }
     await Promise.all(jobs);
-    expect(concurrencyTracker.max).toBe(MAX_CONCURRENT);
+    expect(tracker.max).toBe(MAX_CONCURRENT);
     limiter.stop();
   });
 });
 
 describe('EdgeCase - memory + rpm combination', () => {
   it('should handle memory + rpm combination correctly', async () => {
-    const MEMORY_CAPACITY = ESTIMATED_MEMORY_KB * TWO;
     const limiter = createLLMRateLimiter({
       memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
       maxCapacity: MEMORY_CAPACITY,
@@ -127,25 +136,6 @@ describe('EdgeCase - memory + rpm combination', () => {
           },
           pricing: ZERO_PRICING,
         },
-      },
-    });
-    interface SlowJobUsage {
-      modelId: string;
-      inputTokens: number;
-      outputTokens: number;
-      cachedTokens: number;
-    }
-    const createSlowJob = (
-      name: string
-    ): {
-      jobId: string;
-      job: (args: { modelId: string }, resolve: (u: SlowJobUsage) => void) => Promise<LLMJobResult>;
-    } => ({
-      jobId: generateJobId(),
-      job: async ({ modelId }, resolve) => {
-        await setTimeoutAsync(LONG_JOB_DELAY_MS);
-        resolve(createMockUsage(modelId));
-        return createMockJobResult(name);
       },
     });
     const job1 = limiter.queueJob(createSlowJob('slow-1'));

@@ -99,34 +99,43 @@ describe('MultiModelRateLimiter - hasCapacityForModel', () => {
   });
 });
 
-describe('MultiModelRateLimiter - getAvailableModel', () => {
+const highRpmModel = {
+  requestsPerMinute: RPM_LIMIT_HIGH,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: DEFAULT_PRICING,
+};
+const lowRpmModel = {
+  requestsPerMinute: RPM_LIMIT_LOW,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: DEFAULT_PRICING,
+};
+
+describe('MultiModelRateLimiter - getAvailableModel basic', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
     limiter?.stop();
     limiter = undefined;
   });
-  const highRpm = {
-    requestsPerMinute: RPM_LIMIT_HIGH,
-    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
-    pricing: DEFAULT_PRICING,
-  };
-  const lowRpm = {
-    requestsPerMinute: RPM_LIMIT_LOW,
-    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
-    pricing: DEFAULT_PRICING,
-  };
 
   it('should return first model in order when all have capacity', () => {
     limiter = createLLMRateLimiter({
-      models: { 'gpt-4': highRpm, 'gpt-3.5': highRpm },
+      models: { 'gpt-4': highRpmModel, 'gpt-3.5': highRpmModel },
       order: ['gpt-4', 'gpt-3.5'],
     });
     expect(limiter.getAvailableModel()).toBe('gpt-4');
   });
+});
+
+describe('MultiModelRateLimiter - getAvailableModel exhausted', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should return next available model when first is exhausted', async () => {
     limiter = createLLMRateLimiter({
-      models: { 'gpt-4': lowRpm, 'gpt-3.5': highRpm },
+      models: { 'gpt-4': lowRpmModel, 'gpt-3.5': highRpmModel },
       order: ['gpt-4', 'gpt-3.5'],
     });
     await limiter.queueJob(simpleJob(createMockJobResult('job-1')));
@@ -135,7 +144,7 @@ describe('MultiModelRateLimiter - getAvailableModel', () => {
 
   it('should return null when all models are exhausted', async () => {
     limiter = createLLMRateLimiter({
-      models: { 'gpt-4': lowRpm, 'gpt-3.5': lowRpm },
+      models: { 'gpt-4': lowRpmModel, 'gpt-3.5': lowRpmModel },
       order: ['gpt-4', 'gpt-3.5'],
     });
     await limiter.queueJob(simpleJob(createMockJobResult('job-1')));

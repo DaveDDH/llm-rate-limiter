@@ -88,7 +88,7 @@ const TPM_LIMIT = 10000;
 const TPM_LIMIT_LOW = MOCK_TOTAL_TOKENS;
 const TPM_LIMIT_HIGH = 100000;
 
-describe('MultiModelRateLimiter - token limits fallback', () => {
+describe('MultiModelRateLimiter - token tracking', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
   afterEach(() => {
     limiter?.stop();
@@ -107,6 +107,14 @@ describe('MultiModelRateLimiter - token limits fallback', () => {
     });
     await limiter.queueJob(simpleJob(createMockJobResult('job-1')));
     expect(limiter.getModelStats('gpt-4').tokensPerMinute?.current).toBe(MOCK_TOTAL_TOKENS);
+  });
+});
+
+describe('MultiModelRateLimiter - token fallback', () => {
+  let limiter: LLMRateLimiterInstance | undefined = undefined;
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
   });
 
   it('should fallback when token limit is reached', async () => {

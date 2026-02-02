@@ -24,6 +24,17 @@ const acquireMultiple = async (semaphore: Semaphore, count: number): Promise<voi
   await Promise.all(promises);
 };
 
+const trackAcquire = (
+  semaphore: Semaphore,
+  permits: number = ONE
+): { promise: Promise<void>; getAcquired: () => boolean } => {
+  let acquired = false;
+  const promise = semaphore.acquire(permits).then(() => {
+    acquired = true;
+  });
+  return { promise, getAcquired: (): boolean => acquired };
+};
+
 describe('Semaphore - acquire and release', () => {
   it('should acquire and release permit', async () => {
     const semaphore = createSemaphore();
@@ -44,15 +55,12 @@ describe('Semaphore - queueing', () => {
   it('should queue when no permits available', async () => {
     const semaphore = createSemaphore();
     await acquireMultiple(semaphore, INITIAL_PERMITS);
-    let acquired = false;
-    const acquirePromise = semaphore.acquire().then(() => {
-      acquired = true;
-    });
+    const { promise, getAcquired } = trackAcquire(semaphore);
     expect(semaphore.getQueueLength()).toBe(ONE);
-    expect(acquired).toBe(false);
+    expect(getAcquired()).toBe(false);
     semaphore.release();
-    await acquirePromise;
-    expect(acquired).toBe(true);
+    await promise;
+    expect(getAcquired()).toBe(true);
   });
 
   it('should maintain FIFO order', async () => {
@@ -89,14 +97,11 @@ describe('Semaphore - variable permits basic', () => {
 
   it('should queue when not enough permits', async () => {
     const semaphore = createSemaphore();
-    let acquired = false;
-    const acquirePromise = semaphore.acquire(FIVE).then(() => {
-      acquired = true;
-    });
+    const { promise, getAcquired } = trackAcquire(semaphore, FIVE);
     expect(semaphore.getQueueLength()).toBe(ONE);
     semaphore.release(TWO);
-    await acquirePromise;
-    expect(acquired).toBe(true);
+    await promise;
+    expect(getAcquired()).toBe(true);
   });
 
   it('should handle mixed operations', async () => {
@@ -110,7 +115,7 @@ describe('Semaphore - variable permits basic', () => {
   });
 });
 
-describe('Semaphore - variable permits ordering', () => {
+describe('Semaphore - variable permits ordering (FIFO)', () => {
   it('should maintain FIFO order with variable permits', async () => {
     const semaphore = createSemaphore();
     const order: number[] = [];
@@ -127,43 +132,38 @@ describe('Semaphore - variable permits ordering', () => {
     await p2;
     expect(order).toEqual([ONE, TWO]);
   });
+});
 
+describe('Semaphore - variable permits ordering (no skip)', () => {
   it('should not skip queue for smaller requests', async () => {
     const semaphore = createSemaphore();
     await semaphore.acquire(INITIAL_PERMITS);
-    let first = false;
-    let second = false;
-    const p1 = semaphore.acquire(THREE).then(() => {
-      first = true;
-    });
-    const p2 = semaphore.acquire(ONE).then(() => {
-      second = true;
-    });
+    const { promise: p1, getAcquired: getFirst } = trackAcquire(semaphore, THREE);
+    const { promise: p2, getAcquired: getSecond } = trackAcquire(semaphore, ONE);
     semaphore.release(ONE);
     await setTimeoutAsync(DELAY_MS);
-    expect(first).toBe(false);
-    expect(second).toBe(false);
+    expect(getFirst()).toBe(false);
+    expect(getSecond()).toBe(false);
     semaphore.release(TWO);
     await p1;
     semaphore.release(ONE);
     await p2;
-    expect(first).toBe(true);
-    expect(second).toBe(true);
-  });
-
-  it('should handle resize to satisfy large request', async () => {
-    const semaphore = createSemaphore();
-    let acquired = false;
-    const acquirePromise = semaphore.acquire(TEN).then(() => {
-      acquired = true;
-    });
-    semaphore.resize(FIFTEEN);
-    await acquirePromise;
-    expect(acquired).toBe(true);
+    expect(getFirst()).toBe(true);
+    expect(getSecond()).toBe(true);
   });
 });
 
-describe('Semaphore - getStats', () => {
+describe('Semaphore - variable permits resize', () => {
+  it('should handle resize to satisfy large request', async () => {
+    const semaphore = createSemaphore();
+    const { promise, getAcquired } = trackAcquire(semaphore, TEN);
+    semaphore.resize(FIFTEEN);
+    await promise;
+    expect(getAcquired()).toBe(true);
+  });
+});
+
+describe('Semaphore - getStats initial', () => {
   it('should return correct initial stats', () => {
     const semaphore = createSemaphore();
     const stats = semaphore.getStats();
@@ -172,7 +172,9 @@ describe('Semaphore - getStats', () => {
     expect(stats.waiting).toBe(ZERO);
     expect(stats.inUse).toBe(ZERO);
   });
+});
 
+describe('Semaphore - getStats after acquire', () => {
   it('should return correct stats after acquiring', async () => {
     const semaphore = createSemaphore();
     await acquireMultiple(semaphore, TWO);
@@ -189,7 +191,7 @@ describe('Semaphore - getStats', () => {
   });
 });
 
-describe('Semaphore - resize', () => {
+describe('Semaphore - resize increase', () => {
   it('should increase capacity', () => {
     const semaphore = createSemaphore();
     semaphore.resize(FIVE);
@@ -200,20 +202,16 @@ describe('Semaphore - resize', () => {
   it('should wake queued waiters on increase', async () => {
     const semaphore = createSemaphore();
     await acquireMultiple(semaphore, INITIAL_PERMITS);
-    let a1 = false;
-    let a2 = false;
-    void semaphore.acquire().then(() => {
-      a1 = true;
-    });
-    void semaphore.acquire().then(() => {
-      a2 = true;
-    });
+    const { getAcquired: getA1 } = trackAcquire(semaphore);
+    const { getAcquired: getA2 } = trackAcquire(semaphore);
     semaphore.resize(FIVE);
     await setTimeoutAsync(ZERO);
-    expect(a1).toBe(true);
-    expect(a2).toBe(true);
+    expect(getA1()).toBe(true);
+    expect(getA2()).toBe(true);
   });
+});
 
+describe('Semaphore - resize decrease', () => {
   it('should decrease capacity', () => {
     const semaphore = createSemaphore();
     semaphore.resize(ONE);
@@ -239,10 +237,9 @@ describe('Semaphore - resize', () => {
 describe('Semaphore - logging', () => {
   it('should call onLog when initialized and resized', () => {
     const logMessages: string[] = [];
-    const onLog = (message: string): void => {
-      logMessages.push(message);
-    };
-    const testSemaphore = new Semaphore(INITIAL_PERMITS, SEMAPHORE_NAME, onLog);
+    const testSemaphore = new Semaphore(INITIAL_PERMITS, SEMAPHORE_NAME, (msg) => {
+      logMessages.push(msg);
+    });
     expect(testSemaphore.getAvailablePermits()).toBe(INITIAL_PERMITS);
     expect(logMessages.some((msg) => msg.includes('Initialized'))).toBe(true);
     testSemaphore.resize(FIVE);

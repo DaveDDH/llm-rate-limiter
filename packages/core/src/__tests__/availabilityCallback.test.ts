@@ -51,6 +51,46 @@ const createCallbackLimiter = (calls: CallbackRecord[]): LLMRateLimiterInstance 
     },
   });
 
+type LimiterConfig = Parameters<typeof createLLMRateLimiter>[typeof ZERO];
+
+const createMemoryLimiterConfig = (calls: CallbackRecord[]): LimiterConfig => ({
+  memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
+  maxCapacity: ESTIMATED_MEMORY_KB * TEN,
+  models: {
+    default: {
+      ...defaultModelConfig,
+      resourcesPerEvent: {
+        estimatedUsedTokens: ESTIMATED_TOKENS,
+        estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB,
+      },
+    },
+  },
+  onAvailableSlotsChange: (availability, reason, adjustment) => {
+    calls.push({ availability, reason, adjustment });
+  },
+});
+
+const createSimpleJobForModel =
+  (tokens: number) =>
+  (
+    { modelId }: { modelId: string },
+    resolve: (r: { modelId: string; inputTokens: number; cachedTokens: number; outputTokens: number }) => void
+  ): { usage: { input: number; output: number; cached: number }; requestCount: number } => {
+    resolve(createMockUsage(modelId, tokens));
+    return { usage: { input: tokens, output: ZERO, cached: ZERO }, requestCount: ONE };
+  };
+
+const createAsyncJobForModel =
+  (tokens: number, delayMs: number) =>
+  async (
+    { modelId }: { modelId: string },
+    resolve: (r: { modelId: string; inputTokens: number; cachedTokens: number; outputTokens: number }) => void
+  ): Promise<{ usage: { input: number; output: number; cached: number }; requestCount: number }> => {
+    await setTimeoutAsync(delayMs);
+    resolve(createMockUsage(modelId, tokens));
+    return { usage: { input: tokens, output: ZERO, cached: ZERO }, requestCount: ONE };
+  };
+
 describe('onAvailableSlotsChange callback - token adjustments', () => {
   it('should call callback with adjustment reason when actual tokens differ from estimated', async () => {
     const calls: CallbackRecord[] = [];
@@ -87,32 +127,13 @@ describe('onAvailableSlotsChange callback - token adjustments', () => {
   });
 });
 
-describe('onAvailableSlotsChange callback - memory and optional', () => {
+describe('onAvailableSlotsChange callback - memory', () => {
   it('should call callback on memory acquire with memory reason', async () => {
     const calls: CallbackRecord[] = [];
-    const limiter = createLLMRateLimiter({
-      memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
-      maxCapacity: ESTIMATED_MEMORY_KB * TEN,
-      models: {
-        default: {
-          ...defaultModelConfig,
-          resourcesPerEvent: {
-            estimatedUsedTokens: ESTIMATED_TOKENS,
-            estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB,
-          },
-        },
-      },
-      onAvailableSlotsChange: (availability, reason, adjustment) => {
-        calls.push({ availability, reason, adjustment });
-      },
-    });
+    const limiter = createLLMRateLimiter(createMemoryLimiterConfig(calls));
     const jobPromise = limiter.queueJob({
       jobId: 'test-1',
-      job: async ({ modelId }, resolve) => {
-        await setTimeoutAsync(TEN);
-        resolve(createMockUsage(modelId));
-        return { usage: { input: ESTIMATED_TOKENS, output: ZERO, cached: ZERO }, requestCount: ONE };
-      },
+      job: createAsyncJobForModel(ESTIMATED_TOKENS, TEN),
     });
     await setTimeoutAsync(ONE);
     const memoryCall = calls.find((c) => c.reason === 'memory');
@@ -121,7 +142,9 @@ describe('onAvailableSlotsChange callback - memory and optional', () => {
     await jobPromise;
     limiter.stop();
   });
+});
 
+describe('onAvailableSlotsChange callback - optional', () => {
   it('should work without callback (optional)', async () => {
     const limiter = createLLMRateLimiter({
       models: {
@@ -133,13 +156,7 @@ describe('onAvailableSlotsChange callback - memory and optional', () => {
       },
     });
     await expect(
-      limiter.queueJob({
-        jobId: 'test-1',
-        job: ({ modelId }, resolve) => {
-          resolve(createMockUsage(modelId));
-          return { usage: { input: ESTIMATED_TOKENS, output: ZERO, cached: ZERO }, requestCount: ONE };
-        },
-      })
+      limiter.queueJob({ jobId: 'test-1', job: createSimpleJobForModel(ESTIMATED_TOKENS) })
     ).resolves.toBeDefined();
     limiter.stop();
   });

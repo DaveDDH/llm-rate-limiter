@@ -137,3 +137,26 @@ export function ensureDefined<T extends object>(
   }
   return value;
 }
+
+/** Creates a model config with memory estimation */
+export const createMemoryModelConfig = (
+  rpm: number,
+  memoryKB: number
+): {
+  requestsPerMinute: number;
+  resourcesPerEvent: { estimatedNumberOfRequests: number; estimatedUsedMemoryKB: number };
+  pricing: ModelPricing;
+} => ({
+  requestsPerMinute: rpm,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE, estimatedUsedMemoryKB: memoryKB },
+  pricing: DEFAULT_PRICING,
+});
+
+/** Creates a two-model config for memory tests */
+export const createTwoMemoryModels = (
+  rpm: number,
+  memoryKB: number
+): Record<string, ReturnType<typeof createMemoryModelConfig>> => ({
+  'gpt-4': createMemoryModelConfig(rpm, memoryKB),
+  'gpt-3.5': createMemoryModelConfig(rpm, memoryKB),
+});

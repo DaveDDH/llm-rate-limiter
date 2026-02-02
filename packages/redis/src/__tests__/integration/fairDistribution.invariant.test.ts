@@ -165,56 +165,46 @@ const runJobCompletionsWithInvariantChecks = async (ctx: JobCompletionContext): 
   }, Promise.resolve());
 };
 
-describe('Redis fair distribution - capacity invariant', () => {
+describe('Redis fair distribution - capacity invariant concurrent', () => {
   it(
     'NEVER exceeds capacity under concurrent load',
     async () => {
       const available = await checkRedisAvailable();
       if (!available) return;
-
       const CAPACITY = FIFTY;
       const NUM_INSTANCES = FIVE;
       const JOBS_PER_INSTANCE = TWENTY;
-
       const backend = createBackend(CAPACITY);
-
       const limiters = await createMultipleLimiters(backend, NUM_INSTANCES);
       const allJobPromises = queueJobsForAllLimiters(limiters, JOBS_PER_INSTANCE);
-
       const statsDuring = await backend.getStats();
       assertCapacityInvariant(statsDuring, CAPACITY);
-
       await Promise.allSettled(allJobPromises);
-
       const statsAfter = await backend.getStats();
       assertCapacityInvariant(statsAfter, CAPACITY);
       stopAllLimiters(limiters);
     },
     DEFAULT_TIMEOUT
   );
+});
 
+describe('Redis fair distribution - capacity invariant rapid', () => {
   it(
     'maintains invariant through rapid job completion',
     async () => {
       const available = await checkRedisAvailable();
       if (!available) return;
-
       const CAPACITY = TWENTY;
       const backend = createBackend(CAPACITY);
-
       const limiterA = await createAndStartLimiter(backend);
       const limiterB = await createAndStartLimiter(backend);
-
       const jobsA = await startControllableJobs(limiterA, TEN);
       const statsAfterA = await backend.getStats();
       assertCapacityInvariant(statsAfterA, CAPACITY);
-
       const jobsB = await startControllableJobs(limiterB, TEN);
       const statsAfterB = await backend.getStats();
       assertCapacityInvariant(statsAfterB, CAPACITY);
-
       await runJobCompletionsWithInvariantChecks({ jobsA, jobsB, backend, capacity: CAPACITY });
-
       await Promise.allSettled(
         [...jobsA, ...jobsB].map(async (j) => {
           await j.promise;
@@ -222,7 +212,6 @@ describe('Redis fair distribution - capacity invariant', () => {
       );
       const statsFinal = await backend.getStats();
       assertCapacityInvariant(statsFinal, CAPACITY);
-
       limiterA.stop();
       limiterB.stop();
     },
