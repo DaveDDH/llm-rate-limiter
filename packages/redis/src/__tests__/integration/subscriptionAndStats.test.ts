@@ -5,35 +5,46 @@ import type { AllocationInfo } from '@llm-rate-limiter/core';
 
 import { createRedisBackend } from '../../redisBackend.js';
 import {
-  acquireCtx,
-  createTestBackend,
-  createTestState,
-  delay,
-  EXPECTED_IN_FLIGHT_TWO,
   EXPECTED_INSTANCES_ONE,
+  EXPECTED_IN_FLIGHT_TWO,
   FIRST_INDEX,
   LONG_DELAY_MS,
   MEDIUM_DELAY_MS,
   MIN_ALLOCATIONS_COUNT,
   REDIS_PORT,
   REQUESTS_PER_MINUTE,
+  TOKENS_PER_MINUTE,
+  TOTAL_CAPACITY,
+  acquireCtx,
+  createTestBackend,
+  createTestState,
+  delay,
   setupAfterAll,
   setupAfterEach,
   setupBeforeAll,
   setupBeforeEach,
-  TOKENS_PER_MINUTE,
-  TOTAL_CAPACITY,
 } from './testSetup.js';
 
 const state = createTestState();
 
-beforeAll(async () => { await setupBeforeAll(state); });
-afterAll(async () => { await setupAfterAll(state); });
-beforeEach(async () => { await setupBeforeEach(state); });
-afterEach(async () => { await setupAfterEach(state); });
+beforeAll(async () => {
+  await setupBeforeAll(state);
+});
+afterAll(async () => {
+  await setupAfterAll(state);
+});
+beforeEach(async () => {
+  await setupBeforeEach(state);
+});
+afterEach(async () => {
+  await setupAfterEach(state);
+});
 
 /** Allocation update handler that collects allocations */
-const createAllocationCollector = (): { allocations: AllocationInfo[]; handler: (alloc: AllocationInfo) => void } => {
+const createAllocationCollector = (): {
+  allocations: AllocationInfo[];
+  handler: (alloc: AllocationInfo) => void;
+} => {
   const allocations: AllocationInfo[] = [];
   const handler = (alloc: AllocationInfo): void => {
     allocations.push(alloc);

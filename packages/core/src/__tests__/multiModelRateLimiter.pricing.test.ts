@@ -143,15 +143,28 @@ describe('MultiModelRateLimiter - pricing combined tokens', () => {
 
 describe('MultiModelRateLimiter - pricing fractional', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should calculate cost correctly for 100K tokens (1/10 of 1M)', async () => {
     limiter = createLLMRateLimiter({ models: { 'model-a': MODEL_CONFIG } });
     let capturedCtx: JobCallbackContext | undefined = undefined;
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TOKENS_100K, outputTokens: TOKENS_100K, cachedTokens: ZERO_CACHED_TOKENS }); return createMockJobResult('test'); },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      job: ({ modelId }, resolve) => {
+        resolve({
+          modelId,
+          inputTokens: TOKENS_100K,
+          outputTokens: TOKENS_100K,
+          cachedTokens: ZERO_CACHED_TOKENS,
+        });
+        return createMockJobResult('test');
+      },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const ctx = ensureDefined<JobCallbackContext>(capturedCtx);
     expect(ctx.totalCost).toBeCloseTo((DEFAULT_PRICING.input + DEFAULT_PRICING.output) / TEN);
@@ -162,8 +175,13 @@ describe('MultiModelRateLimiter - pricing fractional', () => {
     let capturedCtx: JobCallbackContext | undefined = undefined;
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: ZERO, outputTokens: ZERO, cachedTokens: ZERO }); return createMockJobResult('test'); },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: ZERO, outputTokens: ZERO, cachedTokens: ZERO });
+        return createMockJobResult('test');
+      },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const ctx = ensureDefined<JobCallbackContext>(capturedCtx);
     expect(ctx.totalCost).toBe(ZERO);

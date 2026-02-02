@@ -3,6 +3,9 @@
  */
 import { createRedisBackend } from '../../redisBackend.js';
 import {
+  SHORT_DELAY_MS,
+  SMALL_CAPACITY_FIVE,
+  SMALL_CAPACITY_TEN,
   acquireCtx,
   createTestBackend,
   createTestState,
@@ -12,20 +15,27 @@ import {
   setupAfterEach,
   setupBeforeAll,
   setupBeforeEach,
-  SHORT_DELAY_MS,
-  SMALL_CAPACITY_FIVE,
-  SMALL_CAPACITY_TEN,
 } from './testSetup.js';
 
 const state = createTestState();
 
-beforeAll(async () => { await setupBeforeAll(state); });
-afterAll(async () => { await setupAfterAll(state); });
-beforeEach(async () => { await setupBeforeEach(state); });
-afterEach(async () => { await setupAfterEach(state); });
+beforeAll(async () => {
+  await setupBeforeAll(state);
+});
+afterAll(async () => {
+  await setupAfterAll(state);
+});
+beforeEach(async () => {
+  await setupBeforeEach(state);
+});
+afterEach(async () => {
+  await setupAfterEach(state);
+});
 
 /** Helper to acquire a slot and return result */
-const acquireSlot = async (backendConfig: { acquire: (ctx: ReturnType<typeof acquireCtx>) => Promise<boolean> }): Promise<boolean> => {
+const acquireSlot = async (backendConfig: {
+  acquire: (ctx: ReturnType<typeof acquireCtx>) => Promise<boolean>;
+}): Promise<boolean> => {
   const result = await backendConfig.acquire(acquireCtx('instance-1'));
   return result;
 };

@@ -3,8 +3,13 @@
  * Tests that multiple instances coordinate properly under high load.
  */
 import { createLLMRateLimiter } from '../multiModelRateLimiter.js';
-import type { LLMRateLimiterInstance, ModelRateLimitConfig, BackendConfig } from '../multiModelTypes.js';
-import { createConnectedLimiters, createDistributedBackend, createJobTracker, type JobTracker } from './distributedBackend.helpers.js';
+import type { BackendConfig, LLMRateLimiterInstance, ModelRateLimitConfig } from '../multiModelTypes.js';
+import {
+  type JobTracker,
+  createConnectedLimiters,
+  createDistributedBackend,
+  createJobTracker,
+} from './distributedBackend.helpers.js';
 
 const ZERO = 0;
 const ONE = 1;
@@ -32,27 +37,44 @@ const createModelConfig = (estimatedTokens: number, estimatedRequests: number): 
 });
 
 const cleanupInstances = (instances: InstanceArray): void => {
-  for (const { limiter, unsubscribe } of instances) { unsubscribe(); limiter.stop(); }
+  for (const { limiter, unsubscribe } of instances) {
+    unsubscribe();
+    limiter.stop();
+  }
 };
 
 const createLimiterForBackend = (backend: BackendConfig, tokensPerJob: number): LLMRateLimiterInstance =>
   createLLMRateLimiter({ backend, models: { default: createModelConfig(tokensPerJob, ONE) } });
 
 /** Run a batch of jobs across multiple instances */
-const runJobBatch = async (instances: InstanceArray, jobCount: number, tokensPerJob: number, tracker: JobTracker): Promise<void> => {
+const runJobBatch = async (
+  instances: InstanceArray,
+  jobCount: number,
+  tokensPerJob: number,
+  tracker: JobTracker
+): Promise<void> => {
   const promises: Array<Promise<void>> = [];
   for (let i = ZERO; i < jobCount; i += ONE) {
     const instanceIndex = i % instances.length;
     const { limiter } = instances[instanceIndex] ?? {};
-    if (limiter === undefined) { continue; }
+    if (limiter === undefined) {
+      continue;
+    }
     const jobId = `job-${i}`;
-    const promise = limiter.queueJob({
-      jobId,
-      job: ({ modelId }, resolve) => {
-        resolve({ modelId, inputTokens: tokensPerJob, cachedTokens: ZERO, outputTokens: ZERO });
-        return { requestCount: ONE, usage: { input: tokensPerJob, output: ZERO, cached: ZERO } };
-      },
-    }).then(() => { tracker.trackComplete(instanceIndex, tokensPerJob); }).catch((error: unknown) => { tracker.trackFailed(error); });
+    const promise = limiter
+      .queueJob({
+        jobId,
+        job: ({ modelId }, resolve) => {
+          resolve({ modelId, inputTokens: tokensPerJob, cachedTokens: ZERO, outputTokens: ZERO });
+          return { requestCount: ONE, usage: { input: tokensPerJob, output: ZERO, cached: ZERO } };
+        },
+      })
+      .then(() => {
+        tracker.trackComplete(instanceIndex, tokensPerJob);
+      })
+      .catch((error: unknown) => {
+        tracker.trackFailed(error);
+      });
     promises.push(promise);
   }
   await Promise.all(promises);
@@ -61,8 +83,14 @@ const runJobBatch = async (instances: InstanceArray, jobCount: number, tokensPer
 describe('distributed - load test coordination', () => {
   it('should coordinate 100 jobs across 3 instances without exceeding limits', async () => {
     const TOKENS_PER_JOB = FIVE;
-    const distributedBackend = createDistributedBackend({ tokensPerMinute: FIVE_HUNDRED, requestsPerMinute: HUNDRED, estimatedTokensPerRequest: TOKENS_PER_JOB });
-    const instances = createConnectedLimiters(THREE, distributedBackend, (b) => createLimiterForBackend(b, TOKENS_PER_JOB));
+    const distributedBackend = createDistributedBackend({
+      tokensPerMinute: FIVE_HUNDRED,
+      requestsPerMinute: HUNDRED,
+      estimatedTokensPerRequest: TOKENS_PER_JOB,
+    });
+    const instances = createConnectedLimiters(THREE, distributedBackend, (b) =>
+      createLimiterForBackend(b, TOKENS_PER_JOB)
+    );
     const tracker = createJobTracker();
     await runJobBatch(instances, HUNDRED, TOKENS_PER_JOB, tracker);
     const stats = distributedBackend.getStats();
@@ -75,8 +103,14 @@ describe('distributed - load test coordination', () => {
 
   it('should reject jobs that would exceed combined limit', async () => {
     const TOKENS_PER_JOB = TEN;
-    const distributedBackend = createDistributedBackend({ tokensPerMinute: FIFTY, requestsPerMinute: FIVE, estimatedTokensPerRequest: TOKENS_PER_JOB });
-    const instances = createConnectedLimiters(TWO, distributedBackend, (b) => createLimiterForBackend(b, TOKENS_PER_JOB));
+    const distributedBackend = createDistributedBackend({
+      tokensPerMinute: FIFTY,
+      requestsPerMinute: FIVE,
+      estimatedTokensPerRequest: TOKENS_PER_JOB,
+    });
+    const instances = createConnectedLimiters(TWO, distributedBackend, (b) =>
+      createLimiterForBackend(b, TOKENS_PER_JOB)
+    );
     const tracker = createJobTracker();
     await runJobBatch(instances, TEN, TOKENS_PER_JOB, tracker);
     const stats = distributedBackend.getStats();
@@ -92,8 +126,14 @@ describe('distributed - load test coordination', () => {
 describe('distributed - load distribution', () => {
   it('should distribute load evenly across instances', async () => {
     const TOKENS_PER_JOB = TEN;
-    const distributedBackend = createDistributedBackend({ tokensPerMinute: THOUSAND, requestsPerMinute: HUNDRED, estimatedTokensPerRequest: TOKENS_PER_JOB });
-    const instances = createConnectedLimiters(FIVE, distributedBackend, (b) => createLimiterForBackend(b, TOKENS_PER_JOB));
+    const distributedBackend = createDistributedBackend({
+      tokensPerMinute: THOUSAND,
+      requestsPerMinute: HUNDRED,
+      estimatedTokensPerRequest: TOKENS_PER_JOB,
+    });
+    const instances = createConnectedLimiters(FIVE, distributedBackend, (b) =>
+      createLimiterForBackend(b, TOKENS_PER_JOB)
+    );
     const tracker = createJobTracker();
     await runJobBatch(instances, HUNDRED, TOKENS_PER_JOB, tracker);
     const expectedJobsPerInstance = HUNDRED / FIVE;
@@ -106,11 +146,19 @@ describe('distributed - load distribution', () => {
 
   it('should never exceed token limit even under concurrent load', async () => {
     const TOKENS_PER_JOB = TWENTY;
-    const distributedBackend = createDistributedBackend({ tokensPerMinute: TWO_HUNDRED, requestsPerMinute: FIFTY, estimatedTokensPerRequest: TOKENS_PER_JOB });
-    const instances = createConnectedLimiters(FIVE, distributedBackend, (b) => createLimiterForBackend(b, TOKENS_PER_JOB));
+    const distributedBackend = createDistributedBackend({
+      tokensPerMinute: TWO_HUNDRED,
+      requestsPerMinute: FIFTY,
+      estimatedTokensPerRequest: TOKENS_PER_JOB,
+    });
+    const instances = createConnectedLimiters(FIVE, distributedBackend, (b) =>
+      createLimiterForBackend(b, TOKENS_PER_JOB)
+    );
     const tracker = createJobTracker();
     const batchPromises: Array<Promise<void>> = [];
-    for (const instance of instances) { batchPromises.push(runJobBatch([instance], TEN, TOKENS_PER_JOB, tracker)); }
+    for (const instance of instances) {
+      batchPromises.push(runJobBatch([instance], TEN, TOKENS_PER_JOB, tracker));
+    }
     await Promise.all(batchPromises);
     const stats = distributedBackend.getStats();
     expect(stats.peakTokensPerMinute).toBeLessThanOrEqual(TWO_HUNDRED);
@@ -122,8 +170,14 @@ describe('distributed - load distribution', () => {
 describe('distributed - time window reset', () => {
   it('should allow more jobs after time window reset', async () => {
     const TOKENS_PER_JOB = TEN;
-    const distributedBackend = createDistributedBackend({ tokensPerMinute: FIFTY, requestsPerMinute: FIVE, estimatedTokensPerRequest: TOKENS_PER_JOB });
-    const instances = createConnectedLimiters(TWO, distributedBackend, (b) => createLimiterForBackend(b, TOKENS_PER_JOB));
+    const distributedBackend = createDistributedBackend({
+      tokensPerMinute: FIFTY,
+      requestsPerMinute: FIVE,
+      estimatedTokensPerRequest: TOKENS_PER_JOB,
+    });
+    const instances = createConnectedLimiters(TWO, distributedBackend, (b) =>
+      createLimiterForBackend(b, TOKENS_PER_JOB)
+    );
     const tracker1 = createJobTracker();
     await runJobBatch(instances, TEN, TOKENS_PER_JOB, tracker1);
     expect(tracker1.completed).toBe(FIVE);
@@ -141,8 +195,14 @@ describe('distributed - time window reset', () => {
 describe('distributed - peak usage tracking', () => {
   it('should track peak usage correctly under burst load', async () => {
     const TOKENS_PER_JOB = FIFTY;
-    const distributedBackend = createDistributedBackend({ tokensPerMinute: THOUSAND, requestsPerMinute: HUNDRED, estimatedTokensPerRequest: TOKENS_PER_JOB });
-    const instances = createConnectedLimiters(TWO, distributedBackend, (b) => createLimiterForBackend(b, TOKENS_PER_JOB));
+    const distributedBackend = createDistributedBackend({
+      tokensPerMinute: THOUSAND,
+      requestsPerMinute: HUNDRED,
+      estimatedTokensPerRequest: TOKENS_PER_JOB,
+    });
+    const instances = createConnectedLimiters(TWO, distributedBackend, (b) =>
+      createLimiterForBackend(b, TOKENS_PER_JOB)
+    );
     const tracker = createJobTracker();
     await runJobBatch(instances, TWENTY, TOKENS_PER_JOB, tracker);
     const stats = distributedBackend.getStats();
@@ -155,19 +215,29 @@ describe('distributed - peak usage tracking', () => {
 });
 
 describe('distributed - stress test', () => {
-  it('should handle 500 jobs across 5 instances', async () => {
-    const TOKENS_PER_JOB = TEN;
-    const distributedBackend = createDistributedBackend({ tokensPerMinute: FIVE_THOUSAND, requestsPerMinute: FIVE_HUNDRED, estimatedTokensPerRequest: TOKENS_PER_JOB });
-    const instances = createConnectedLimiters(FIVE, distributedBackend, (b) => createLimiterForBackend(b, TOKENS_PER_JOB));
-    const tracker = createJobTracker();
-    await runJobBatch(instances, FIVE_HUNDRED, TOKENS_PER_JOB, tracker);
-    const stats = distributedBackend.getStats();
-    expect(stats.peakTokensPerMinute).toBeLessThanOrEqual(FIVE_THOUSAND);
-    expect(stats.peakRequestsPerMinute).toBeLessThanOrEqual(FIVE_HUNDRED);
-    expect(tracker.completed).toBe(FIVE_HUNDRED);
-    expect(tracker.failed).toBe(ZERO);
-    expect(stats.totalAcquires).toBe(FIVE_HUNDRED);
-    expect(stats.totalReleases).toBe(FIVE_HUNDRED);
-    cleanupInstances(instances);
-  }, STRESS_TEST_TIMEOUT);
+  it(
+    'should handle 500 jobs across 5 instances',
+    async () => {
+      const TOKENS_PER_JOB = TEN;
+      const distributedBackend = createDistributedBackend({
+        tokensPerMinute: FIVE_THOUSAND,
+        requestsPerMinute: FIVE_HUNDRED,
+        estimatedTokensPerRequest: TOKENS_PER_JOB,
+      });
+      const instances = createConnectedLimiters(FIVE, distributedBackend, (b) =>
+        createLimiterForBackend(b, TOKENS_PER_JOB)
+      );
+      const tracker = createJobTracker();
+      await runJobBatch(instances, FIVE_HUNDRED, TOKENS_PER_JOB, tracker);
+      const stats = distributedBackend.getStats();
+      expect(stats.peakTokensPerMinute).toBeLessThanOrEqual(FIVE_THOUSAND);
+      expect(stats.peakRequestsPerMinute).toBeLessThanOrEqual(FIVE_HUNDRED);
+      expect(tracker.completed).toBe(FIVE_HUNDRED);
+      expect(tracker.failed).toBe(ZERO);
+      expect(stats.totalAcquires).toBe(FIVE_HUNDRED);
+      expect(stats.totalReleases).toBe(FIVE_HUNDRED);
+      cleanupInstances(instances);
+    },
+    STRESS_TEST_TIMEOUT
+  );
 });

@@ -1,9 +1,8 @@
 /**
  * Type definitions for the Redis distributed backend.
  */
-import type { Redis, RedisOptions } from 'ioredis';
-
 import type { DistributedBackendConfig } from '@llm-rate-limiter/core';
+import type { Redis, RedisOptions } from 'ioredis';
 
 /**
  * Redis connection options when not providing an existing client.
@@ -107,8 +106,7 @@ export interface AllocationData {
  * Type guard for checking if redis is an ioredis client.
  * Checks for presence of 'get' method which exists on Redis but not on connection options.
  */
-export const isRedisClient = (redis: Redis | RedisConnectionOptions): redis is Redis =>
-  'get' in redis;
+export const isRedisClient = (redis: Redis | RedisConnectionOptions): redis is Redis => 'get' in redis;
 
 /** Default keepalive interval for Redis connections (30 seconds) */
 const DEFAULT_KEEPALIVE_MS = 30000;
@@ -125,6 +123,12 @@ export const toRedisOptions = (opts: RedisConnectionOptions): RedisOptions => ({
   keepAlive: DEFAULT_KEEPALIVE_MS,
 });
 
+/** Exponential backoff constants for retry strategy */
+const MAX_RETRY_DELAY_MS = 30000;
+const BASE_DELAY_MS = 100;
+const EXPONENT_BASE = 2;
+const EXPONENT_OFFSET = 1;
+
 /**
  * Options optimized for subscriber connections (pub/sub).
  * Includes aggressive reconnection and keepalive settings.
@@ -133,9 +137,7 @@ export const subscriberOptions: Partial<RedisOptions> = {
   keepAlive: DEFAULT_KEEPALIVE_MS,
   retryStrategy: (times: number): number => {
     // Exponential backoff: 100ms, 200ms, 400ms... up to 30s
-    const MAX_RETRY_DELAY_MS = 30000;
-    const BASE_DELAY_MS = 100;
-    const delay = Math.min(BASE_DELAY_MS * Math.pow(2, times - 1), MAX_RETRY_DELAY_MS);
+    const delay = Math.min(BASE_DELAY_MS * EXPONENT_BASE ** (times - EXPONENT_OFFSET), MAX_RETRY_DELAY_MS);
     return delay;
   },
 };

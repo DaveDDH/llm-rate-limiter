@@ -2,8 +2,8 @@
  * Test for memory resize in rateLimiter interval callback.
  * Uses module-level mocking to simulate memory changes.
  */
-import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 import { jest } from '@jest/globals';
+import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
 const ZERO = 0;
 const ONE = 1;

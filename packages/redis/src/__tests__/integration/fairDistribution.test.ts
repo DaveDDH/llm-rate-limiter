@@ -3,26 +3,34 @@
  */
 import { createRedisBackend } from '../../redisBackend.js';
 import {
-  createTestBackend,
-  createTestState,
-  delay,
   EXPECTED_INSTANCES_ONE,
   EXPECTED_INSTANCES_TWO,
   HALF_CAPACITY,
+  SHORT_DELAY_MS,
+  TOTAL_CAPACITY,
+  createTestBackend,
+  createTestState,
+  delay,
   setupAfterAll,
   setupAfterEach,
   setupBeforeAll,
   setupBeforeEach,
-  SHORT_DELAY_MS,
-  TOTAL_CAPACITY,
 } from './testSetup.js';
 
 const state = createTestState();
 
-beforeAll(async () => { await setupBeforeAll(state); });
-afterAll(async () => { await setupAfterAll(state); });
-beforeEach(async () => { await setupBeforeEach(state); });
-afterEach(async () => { await setupAfterEach(state); });
+beforeAll(async () => {
+  await setupBeforeAll(state);
+});
+afterAll(async () => {
+  await setupAfterAll(state);
+});
+beforeEach(async () => {
+  await setupBeforeEach(state);
+});
+afterEach(async () => {
+  await setupAfterEach(state);
+});
 
 describe('Redis Backend - Fair Distribution Between Instances', () => {
   it('should distribute slots fairly between two instances', async () => {

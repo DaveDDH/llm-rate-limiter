@@ -3,30 +3,38 @@
  */
 import { createRedisBackend } from '../../redisBackend.js';
 import {
-  acquireCtx,
-  createTestBackend,
-  createTestState,
-  delay,
   EXPECTED_IN_FLIGHT_ONE,
   EXPECTED_IN_FLIGHT_ZERO,
-  releaseCtx,
   REQUESTS_PER_MINUTE,
-  setupAfterAll,
-  setupAfterEach,
-  setupBeforeAll,
-  setupBeforeEach,
   SHORT_DELAY_MS,
   SMALL_CAPACITY,
   TOKENS_PER_MINUTE,
   TOTAL_CAPACITY,
+  acquireCtx,
+  createTestBackend,
+  createTestState,
+  delay,
+  releaseCtx,
+  setupAfterAll,
+  setupAfterEach,
+  setupBeforeAll,
+  setupBeforeEach,
 } from './testSetup.js';
 
 const state = createTestState();
 
-beforeAll(async () => { await setupBeforeAll(state); });
-afterAll(async () => { await setupAfterAll(state); });
-beforeEach(async () => { await setupBeforeEach(state); });
-afterEach(async () => { await setupAfterEach(state); });
+beforeAll(async () => {
+  await setupBeforeAll(state);
+});
+afterAll(async () => {
+  await setupAfterAll(state);
+});
+beforeEach(async () => {
+  await setupBeforeEach(state);
+});
+afterEach(async () => {
+  await setupAfterEach(state);
+});
 
 describe('Redis Backend - Register', () => {
   it('should register an instance and get allocation', async () => {

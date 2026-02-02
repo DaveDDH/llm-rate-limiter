@@ -25,7 +25,10 @@ import type { LLMRateLimiterInstance, MockJobResult } from './limiterCombination
 
 describe('Blocking - concurrency actually blocks jobs', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
   it('should queue jobs beyond concurrency limit and execute them in order', async () => {
     const MAX_CONCURRENT = 2;
     limiter = createLLMRateLimiter({
@@ -34,7 +37,10 @@ describe('Blocking - concurrency actually blocks jobs', () => {
     const startTimes: Record<string, number> = {};
     const endTimes: Record<string, number> = {};
     const start = Date.now();
-    interface TrackedJob { jobId: string; job: (args: { modelId: string }, resolve: (u: UsageEntry) => void) => Promise<MockJobResult>; }
+    interface TrackedJob {
+      jobId: string;
+      job: (args: { modelId: string }, resolve: (u: UsageEntry) => void) => Promise<MockJobResult>;
+    }
     const createTrackedJob = (id: string, delayMs: number): TrackedJob => ({
       jobId: generateJobId(),
       job: async ({ modelId }, resolve) => {
@@ -62,7 +68,10 @@ describe('Blocking - concurrency actually blocks jobs', () => {
 
 describe('Blocking - memory actually blocks jobs', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
   it('should queue jobs when memory slots are exhausted', async () => {
     limiter = createLLMRateLimiter({
       memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
@@ -88,7 +97,8 @@ describe('Blocking - memory actually blocks jobs', () => {
     const fastJobPromise = limiter.queueJob({
       jobId: generateJobId(),
       job: ({ modelId }, resolve) => {
-        jobOrder.push('fast-start'); jobOrder.push('fast-end');
+        jobOrder.push('fast-start');
+        jobOrder.push('fast-end');
         resolve(createMockUsage(modelId));
         return createMockJobResult('fast');
       },
@@ -100,7 +110,10 @@ describe('Blocking - memory actually blocks jobs', () => {
 
 describe('Blocking - rpm actually blocks jobs', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
   it('should block jobs when RPM limit is exhausted', async () => {
     const RPM_LIMIT = 2;
     limiter = createLLMRateLimiter({
@@ -112,28 +125,49 @@ describe('Blocking - rpm actually blocks jobs', () => {
         },
       },
     });
-    const simpleJob = { jobId: generateJobId(), job: ({ modelId }: { modelId: string }, resolve: (u: UsageEntry) => void) => { resolve(createMockUsage(modelId)); return createMockJobResult('job'); } };
+    const simpleJob = {
+      jobId: generateJobId(),
+      job: ({ modelId }: { modelId: string }, resolve: (u: UsageEntry) => void) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job');
+      },
+    };
     await limiter.queueJob({ ...simpleJob, jobId: generateJobId() });
     await limiter.queueJob({ ...simpleJob, jobId: generateJobId() });
     expect(limiter.hasCapacity()).toBe(false);
     const timeoutPromise = setTimeoutAsync(TIMEOUT_MS).then(() => 'timeout' as const);
-    const jobPromise = limiter.queueJob({ ...simpleJob, jobId: generateJobId() }).then(() => 'completed' as const);
+    const jobPromise = limiter
+      .queueJob({ ...simpleJob, jobId: generateJobId() })
+      .then(() => 'completed' as const);
     expect(await Promise.race([jobPromise, timeoutPromise])).toBe('timeout');
   });
 });
 
 describe('Blocking - tpm token reservation', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
   it('should reserve tokens before job execution and block when limit would be exceeded', async () => {
     const ESTIMATED_TOKENS = 50;
     const TPM_LIMIT = ESTIMATED_TOKENS * TWO;
     limiter = createLLMRateLimiter({
       models: {
-        default: { tokensPerMinute: TPM_LIMIT, resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS }, pricing: ZERO_PRICING },
+        default: {
+          tokensPerMinute: TPM_LIMIT,
+          resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS },
+          pricing: ZERO_PRICING,
+        },
       },
     });
-    const simpleJob = { jobId: generateJobId(), job: ({ modelId }: { modelId: string }, resolve: (u: UsageEntry) => void) => { resolve(createMockUsage(modelId)); return createMockJobResult('job'); } };
+    const simpleJob = {
+      jobId: generateJobId(),
+      job: ({ modelId }: { modelId: string }, resolve: (u: UsageEntry) => void) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job');
+      },
+    };
     await limiter.queueJob({ ...simpleJob, jobId: generateJobId() });
     let stats = limiter.getModelStats('default');
     expect(stats.tokensPerMinute?.current).toBe(ESTIMATED_TOKENS);
@@ -143,24 +177,36 @@ describe('Blocking - tpm token reservation', () => {
     expect(stats.tokensPerMinute?.current).toBe(TPM_LIMIT);
     expect(limiter.hasCapacity()).toBe(false);
     const timeoutPromise = setTimeoutAsync(TIMEOUT_MS).then(() => 'timeout' as const);
-    const jobPromise = limiter.queueJob({ ...simpleJob, jobId: generateJobId() }).then(() => 'completed' as const);
+    const jobPromise = limiter
+      .queueJob({ ...simpleJob, jobId: generateJobId() })
+      .then(() => 'completed' as const);
     expect(await Promise.race([jobPromise, timeoutPromise])).toBe('timeout');
   });
 });
 
 describe('Blocking - tpm never exceeds limit', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
   it('should never exceed token limit', async () => {
     const ESTIMATED_TOKENS = 100;
     limiter = createLLMRateLimiter({
       models: {
-        default: { tokensPerMinute: ESTIMATED_TOKENS, resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS }, pricing: ZERO_PRICING },
+        default: {
+          tokensPerMinute: ESTIMATED_TOKENS,
+          resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS },
+          pricing: ZERO_PRICING,
+        },
       },
     });
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('job-1'); },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('job-1');
+      },
     });
     const stats = limiter.getModelStats('default');
     expect(stats.tokensPerMinute?.current).toBeLessThanOrEqual(ESTIMATED_TOKENS);
@@ -170,17 +216,29 @@ describe('Blocking - tpm never exceeds limit', () => {
 
 describe('Blocking - combined limiters block correctly', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
   it('should block when any limiter is exhausted', async () => {
     const TEN = 10;
     limiter = createLLMRateLimiter({
       models: {
-        default: { maxConcurrentRequests: ONE, requestsPerMinute: TEN, resourcesPerEvent: { estimatedNumberOfRequests: DEFAULT_REQUEST_COUNT }, pricing: ZERO_PRICING },
+        default: {
+          maxConcurrentRequests: ONE,
+          requestsPerMinute: TEN,
+          resourcesPerEvent: { estimatedNumberOfRequests: DEFAULT_REQUEST_COUNT },
+          pricing: ZERO_PRICING,
+        },
       },
     });
     const slowJobPromise = limiter.queueJob({
       jobId: generateJobId(),
-      job: async ({ modelId }, resolve) => { await setTimeoutAsync(LONG_JOB_DELAY_MS); resolve(createMockUsage(modelId)); return createMockJobResult('slow'); },
+      job: async ({ modelId }, resolve) => {
+        await setTimeoutAsync(LONG_JOB_DELAY_MS);
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('slow');
+      },
     });
     await setTimeoutAsync(SEMAPHORE_ACQUIRE_WAIT_MS);
     expect(limiter.hasCapacity()).toBe(false);

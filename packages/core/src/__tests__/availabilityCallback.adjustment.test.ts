@@ -36,8 +36,16 @@ const createMockUsage = (
 
 const createTokenLimiter = (calls: CallbackRecord[]): LLMRateLimiterInstance =>
   createLLMRateLimiter({
-    models: { default: { tokensPerMinute: ESTIMATED_TOKENS * TEN, resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS, estimatedNumberOfRequests: ONE }, pricing: ZERO_PRICING } },
-    onAvailableSlotsChange: (availability, reason, adjustment) => { calls.push({ availability, reason, adjustment }); },
+    models: {
+      default: {
+        tokensPerMinute: ESTIMATED_TOKENS * TEN,
+        resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS, estimatedNumberOfRequests: ONE },
+        pricing: ZERO_PRICING,
+      },
+    },
+    onAvailableSlotsChange: (availability, reason, adjustment) => {
+      calls.push({ availability, reason, adjustment });
+    },
   });
 
 describe('onAvailableSlotsChange callback adjustment - tokens', () => {
@@ -45,7 +53,13 @@ describe('onAvailableSlotsChange callback adjustment - tokens', () => {
     const calls: CallbackRecord[] = [];
     const limiter = createTokenLimiter(calls);
     const actualTokens = ESTIMATED_TOKENS - HUNDRED;
-    await limiter.queueJob({ jobId: 'test-1', job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId, actualTokens)); return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE }; } });
+    await limiter.queueJob({
+      jobId: 'test-1',
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId, actualTokens));
+        return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE };
+      },
+    });
     const adjustmentCall = calls.find((c) => c.reason === 'adjustment');
     expect(adjustmentCall).toBeDefined();
     expect(adjustmentCall?.adjustment?.tokensPerMinute).toBe(-HUNDRED);
@@ -56,7 +70,13 @@ describe('onAvailableSlotsChange callback adjustment - tokens', () => {
     const calls: CallbackRecord[] = [];
     const limiter = createTokenLimiter(calls);
     const actualTokens = ESTIMATED_TOKENS + HUNDRED;
-    await limiter.queueJob({ jobId: 'test-1', job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId, actualTokens)); return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE }; } });
+    await limiter.queueJob({
+      jobId: 'test-1',
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId, actualTokens));
+        return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE };
+      },
+    });
     const adjustmentCall = calls.find((c) => c.reason === 'adjustment');
     expect(adjustmentCall?.adjustment?.memoryKB).toBe(ZERO);
     expect(adjustmentCall?.adjustment?.concurrentRequests).toBe(ZERO);
@@ -68,11 +88,28 @@ describe('onAvailableSlotsChange callback adjustment - requests', () => {
   it('should track request count adjustment', async () => {
     const calls: CallbackRecord[] = [];
     const limiter = createLLMRateLimiter({
-      models: { default: { requestsPerMinute: HUNDRED, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: ZERO_PRICING } },
-      onAvailableSlotsChange: (availability, reason, adjustment) => { calls.push({ availability, reason, adjustment }); },
+      models: {
+        default: {
+          requestsPerMinute: HUNDRED,
+          resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+          pricing: ZERO_PRICING,
+        },
+      },
+      onAvailableSlotsChange: (availability, reason, adjustment) => {
+        calls.push({ availability, reason, adjustment });
+      },
     });
     const actualRequests = 2;
-    await limiter.queueJob({ jobId: 'test-1', job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return { usage: { input: ESTIMATED_TOKENS, output: ZERO, cached: ZERO }, requestCount: actualRequests }; } });
+    await limiter.queueJob({
+      jobId: 'test-1',
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return {
+          usage: { input: ESTIMATED_TOKENS, output: ZERO, cached: ZERO },
+          requestCount: actualRequests,
+        };
+      },
+    });
     const adjustmentCall = calls.find((c) => c.reason === 'adjustment');
     expect(adjustmentCall).toBeDefined();
     expect(adjustmentCall?.adjustment?.requestsPerMinute).toBe(ONE);

@@ -90,11 +90,20 @@ const TPM_LIMIT_HIGH = 100000;
 
 describe('MultiModelRateLimiter - token limits fallback', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should track token usage per model', async () => {
     limiter = createLLMRateLimiter({
-      models: { 'gpt-4': { tokensPerMinute: TPM_LIMIT, resourcesPerEvent: { estimatedUsedTokens: MOCK_TOTAL_TOKENS }, pricing: DEFAULT_PRICING } },
+      models: {
+        'gpt-4': {
+          tokensPerMinute: TPM_LIMIT,
+          resourcesPerEvent: { estimatedUsedTokens: MOCK_TOTAL_TOKENS },
+          pricing: DEFAULT_PRICING,
+        },
+      },
     });
     await limiter.queueJob(simpleJob(createMockJobResult('job-1')));
     expect(limiter.getModelStats('gpt-4').tokensPerMinute?.current).toBe(MOCK_TOTAL_TOKENS);
@@ -103,8 +112,16 @@ describe('MultiModelRateLimiter - token limits fallback', () => {
   it('should fallback when token limit is reached', async () => {
     limiter = createLLMRateLimiter({
       models: {
-        'gpt-4': { tokensPerMinute: TPM_LIMIT_LOW, resourcesPerEvent: { estimatedUsedTokens: MOCK_TOTAL_TOKENS }, pricing: DEFAULT_PRICING },
-        'gpt-3.5': { tokensPerMinute: TPM_LIMIT_HIGH, resourcesPerEvent: { estimatedUsedTokens: MOCK_TOTAL_TOKENS }, pricing: DEFAULT_PRICING },
+        'gpt-4': {
+          tokensPerMinute: TPM_LIMIT_LOW,
+          resourcesPerEvent: { estimatedUsedTokens: MOCK_TOTAL_TOKENS },
+          pricing: DEFAULT_PRICING,
+        },
+        'gpt-3.5': {
+          tokensPerMinute: TPM_LIMIT_HIGH,
+          resourcesPerEvent: { estimatedUsedTokens: MOCK_TOTAL_TOKENS },
+          pricing: DEFAULT_PRICING,
+        },
       },
       order: ['gpt-4', 'gpt-3.5'],
     });

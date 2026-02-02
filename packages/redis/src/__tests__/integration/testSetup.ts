@@ -1,11 +1,9 @@
 /**
  * Shared test setup and helpers for Redis integration tests.
  */
-import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
-
-import { Redis } from 'ioredis';
-
 import type { BackendAcquireContextV2, BackendReleaseContextV2 } from '@llm-rate-limiter/core';
+import { Redis } from 'ioredis';
+import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
 import type { RedisBackendConfig, RedisBackendInstance } from '../../types.js';
 
@@ -18,9 +16,10 @@ export const REDIS_PORT = 6379;
 
 /** Get Redis connection options from REDIS_URL env var or default to localhost */
 const getRedisOptions = (): string | { host: string; port: number } => {
-  const redisUrl = process.env.REDIS_URL;
-  if (redisUrl !== undefined && redisUrl !== '') {
-    return redisUrl;
+  const { env } = process;
+  const { REDIS_URL } = env;
+  if (REDIS_URL !== undefined && REDIS_URL !== '') {
+    return REDIS_URL;
   }
   return { host: 'localhost', port: REDIS_PORT };
 };
@@ -71,9 +70,10 @@ const TEST_KEEPALIVE_MS = 30000;
 /** Check if Redis is available */
 export const checkRedisAvailable = async (): Promise<boolean> => {
   const options = getRedisOptions();
-  const testRedis = typeof options === 'string'
-    ? new Redis(options, { lazyConnect: true, keepAlive: TEST_KEEPALIVE_MS })
-    : new Redis({ ...options, lazyConnect: true, keepAlive: TEST_KEEPALIVE_MS });
+  const testRedis =
+    typeof options === 'string'
+      ? new Redis(options, { lazyConnect: true, keepAlive: TEST_KEEPALIVE_MS })
+      : new Redis({ ...options, lazyConnect: true, keepAlive: TEST_KEEPALIVE_MS });
   try {
     await testRedis.connect();
     await testRedis.ping();
@@ -112,9 +112,10 @@ export const setupBeforeAll = async (stateRef: TestState): Promise<void> => {
   Object.assign(stateRef, { redisAvailable: available });
   if (available) {
     const options = getRedisOptions();
-    const redis = typeof options === 'string'
-      ? new Redis(options, { keepAlive: TEST_KEEPALIVE_MS })
-      : new Redis({ ...options, keepAlive: TEST_KEEPALIVE_MS });
+    const redis =
+      typeof options === 'string'
+        ? new Redis(options, { keepAlive: TEST_KEEPALIVE_MS })
+        : new Redis({ ...options, keepAlive: TEST_KEEPALIVE_MS });
     Object.assign(stateRef, { redis });
   }
 };

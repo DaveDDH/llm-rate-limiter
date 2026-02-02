@@ -97,7 +97,10 @@ describe('MultiModelRateLimiter - callback with delegation models', () => {
 
 describe('MultiModelRateLimiter - callback with delegation cost', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should accumulate totalCost from all attempted models', async () => {
     limiter = createLLMRateLimiter({
@@ -107,18 +110,29 @@ describe('MultiModelRateLimiter - callback with delegation cost', () => {
     let singleCost = ZERO;
     await limiter.queueJob({
       jobId: generateJobId(),
-      job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId)); return createMockJobResult('test'); },
-      onComplete: (_result, { totalCost }) => { singleCost = totalCost; },
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId));
+        return createMockJobResult('test');
+      },
+      onComplete: (_result, { totalCost }) => {
+        singleCost = totalCost;
+      },
     });
     let delegatedCost = ZERO;
     await limiter.queueJob({
       jobId: generateJobId(),
       job: ({ modelId }, resolve, reject) => {
         const usage = createMockUsage(modelId);
-        if (modelId === 'model-a') { reject(usage, { delegate: true }); } else { resolve(usage); }
+        if (modelId === 'model-a') {
+          reject(usage, { delegate: true });
+        } else {
+          resolve(usage);
+        }
         return createMockJobResult('test');
       },
-      onComplete: (_result, { totalCost }) => { delegatedCost = totalCost; },
+      onComplete: (_result, { totalCost }) => {
+        delegatedCost = totalCost;
+      },
     });
     expect(delegatedCost).toBeCloseTo(singleCost * TWO);
   });

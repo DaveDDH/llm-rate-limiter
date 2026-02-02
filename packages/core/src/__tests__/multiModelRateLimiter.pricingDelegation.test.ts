@@ -106,7 +106,10 @@ describe('MultiModelRateLimiter - cost in usage entries', () => {
 
 describe('MultiModelRateLimiter - cost per model after delegation', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should have cost property on each usage entry after delegation', async () => {
     limiter = createLLMRateLimiter({
@@ -118,14 +121,24 @@ describe('MultiModelRateLimiter - cost per model after delegation', () => {
       jobId: generateJobId(),
       job: ({ modelId }, resolve, reject) => {
         const usage = { modelId, inputTokens: TOKENS_1M, outputTokens: ZERO, cachedTokens: ZERO };
-        if (modelId === 'model-c') { resolve(usage); } else { reject(usage, { delegate: true }); }
+        if (modelId === 'model-c') {
+          resolve(usage);
+        } else {
+          reject(usage, { delegate: true });
+        }
         return createMockJobResult('test');
       },
-      onComplete: (_result, ctx) => { capturedCtx = ctx; },
+      onComplete: (_result, ctx) => {
+        capturedCtx = ctx;
+      },
     });
     const ctx = ensureDefined<JobCallbackContext>(capturedCtx);
     expect(ctx.usage).toHaveLength(THREE);
-    const [usageFirst, usageSecond, usageThird] = [getUsageAt(ctx, ZERO), getUsageAt(ctx, ONE), getUsageAt(ctx, TWO)];
+    const [usageFirst, usageSecond, usageThird] = [
+      getUsageAt(ctx, ZERO),
+      getUsageAt(ctx, ONE),
+      getUsageAt(ctx, TWO),
+    ];
     expect(usageFirst?.cost).toBeCloseTo(DEFAULT_PRICING.input);
     expect(usageSecond?.cost).toBeCloseTo(ALT_PRICING.input);
     expect(usageThird?.cost).toBeCloseTo(CHEAP_PRICING.input);

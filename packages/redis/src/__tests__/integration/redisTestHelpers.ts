@@ -1,12 +1,13 @@
 /**
- * Helper utilities for fair distribution tests.
+ * Helper utilities for Redis integration tests with fair distribution.
+ * Mirrors the core fairDistribution.testHelpers.ts but uses the real Redis backend.
  */
+import { createLLMRateLimiter } from '@llm-rate-limiter/core';
+import type { LLMRateLimiterInstance, ModelRateLimitConfig } from '@llm-rate-limiter/core';
 import { EventEmitter, once } from 'node:events';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import { createLLMRateLimiter } from '../multiModelRateLimiter.js';
-import type { LLMRateLimiterInstance, ModelRateLimitConfig } from '../multiModelTypes.js';
-import type { FairDistributionBackend } from './fairDistribution.helpers.js';
+import type { RedisBackendInstance, RedisBackendStats, RedisInstanceStats } from '../../types.js';
 
 const ZERO = 0;
 const ONE = 1;
@@ -21,9 +22,9 @@ export const createModelConfig = (estimatedTokens: number = TEN): ModelRateLimit
   pricing: { input: ZERO, cached: ZERO, output: ZERO },
 });
 
-/** Create and start a limiter with the V2 backend */
+/** Create and start a limiter with the Redis backend */
 export const createAndStartLimiter = async (
-  backend: FairDistributionBackend,
+  backend: RedisBackendInstance,
   onAvailableSlotsChange?: (slots: number) => void
 ): Promise<LLMRateLimiterInstance> => {
   const limiter = createLLMRateLimiter({
@@ -49,7 +50,7 @@ export interface ControllableJob {
 /** Re-export sleep for tests */
 export { sleep };
 
-/** Create a deferred promise that can be resolved externally using EventEmitter */
+/** Deferred promise that can be resolved externally */
 interface Deferred {
   promise: Promise<unknown>;
   resolve: () => void;
@@ -89,14 +90,9 @@ export const startControllableJobs = async (
 
     jobs.push({ complete: deferred.resolve, promise: queuePromise });
   }
-  // Allow acquires to process
-  await sleep(TEN);
+  // Allow acquires to process (longer for Redis network latency)
+  await sleep(TEN * TEN);
   return jobs;
-};
-
-/** Wait for a promise and return void */
-const awaitPromise = async (p: Promise<unknown>): Promise<void> => {
-  await p;
 };
 
 /** Complete specific jobs and wait for releases to process */
@@ -104,12 +100,36 @@ export const completeJobs = async (jobs: ControllableJob[]): Promise<void> => {
   for (const job of jobs) {
     job.complete();
   }
-  // Wait for all promises to settle
   await Promise.allSettled(
     jobs.map(async (j) => {
-      await awaitPromise(j.promise);
+      await j.promise;
     })
   );
-  // Allow releases to process
-  await sleep(TEN);
+  // Allow releases to process (longer for Redis network latency)
+  await sleep(TEN * TEN);
+};
+
+/** Get instance stats by ID from RedisBackendStats */
+export const getInstanceStats = (
+  stats: RedisBackendStats,
+  instanceId: string
+): RedisInstanceStats | undefined => stats.instances.find((inst) => inst.id === instanceId);
+
+/** Assert that total in-flight + allocated never exceeds capacity */
+export const assertCapacityInvariant = (stats: RedisBackendStats, totalCapacity: number): void => {
+  const total = stats.totalInFlight + stats.totalAllocated;
+  if (total > totalCapacity) {
+    throw new Error(
+      `Capacity invariant violated: inFlight(${stats.totalInFlight}) + allocated(${stats.totalAllocated}) = ${total} > capacity(${totalCapacity})`
+    );
+  }
+};
+
+/** Calculate total usage from instance stats array */
+export const calculateTotalFromStats = (instances: RedisInstanceStats[]): number => {
+  let total = ZERO;
+  for (const inst of instances) {
+    total += inst.inFlight + inst.allocation;
+  }
+  return total;
 };

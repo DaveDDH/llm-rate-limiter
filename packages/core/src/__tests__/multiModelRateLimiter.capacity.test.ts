@@ -67,9 +67,20 @@ describe('MultiModelRateLimiter - hasCapacity false', () => {
 
 describe('MultiModelRateLimiter - hasCapacityForModel', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
-  const highRpmConfig = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
-  const lowRpmConfig = { requestsPerMinute: RPM_LIMIT_LOW, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
+  const highRpmConfig = {
+    requestsPerMinute: RPM_LIMIT_HIGH,
+    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+    pricing: DEFAULT_PRICING,
+  };
+  const lowRpmConfig = {
+    requestsPerMinute: RPM_LIMIT_LOW,
+    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+    pricing: DEFAULT_PRICING,
+  };
 
   it('should return true for model with capacity', () => {
     limiter = createLLMRateLimiter({ models: { 'gpt-4': highRpmConfig } });
@@ -90,23 +101,43 @@ describe('MultiModelRateLimiter - hasCapacityForModel', () => {
 
 describe('MultiModelRateLimiter - getAvailableModel', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
-  const highRpm = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
-  const lowRpm = { requestsPerMinute: RPM_LIMIT_LOW, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
+  const highRpm = {
+    requestsPerMinute: RPM_LIMIT_HIGH,
+    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+    pricing: DEFAULT_PRICING,
+  };
+  const lowRpm = {
+    requestsPerMinute: RPM_LIMIT_LOW,
+    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+    pricing: DEFAULT_PRICING,
+  };
 
   it('should return first model in order when all have capacity', () => {
-    limiter = createLLMRateLimiter({ models: { 'gpt-4': highRpm, 'gpt-3.5': highRpm }, order: ['gpt-4', 'gpt-3.5'] });
+    limiter = createLLMRateLimiter({
+      models: { 'gpt-4': highRpm, 'gpt-3.5': highRpm },
+      order: ['gpt-4', 'gpt-3.5'],
+    });
     expect(limiter.getAvailableModel()).toBe('gpt-4');
   });
 
   it('should return next available model when first is exhausted', async () => {
-    limiter = createLLMRateLimiter({ models: { 'gpt-4': lowRpm, 'gpt-3.5': highRpm }, order: ['gpt-4', 'gpt-3.5'] });
+    limiter = createLLMRateLimiter({
+      models: { 'gpt-4': lowRpm, 'gpt-3.5': highRpm },
+      order: ['gpt-4', 'gpt-3.5'],
+    });
     await limiter.queueJob(simpleJob(createMockJobResult('job-1')));
     expect(limiter.getAvailableModel()).toBe('gpt-3.5');
   });
 
   it('should return null when all models are exhausted', async () => {
-    limiter = createLLMRateLimiter({ models: { 'gpt-4': lowRpm, 'gpt-3.5': lowRpm }, order: ['gpt-4', 'gpt-3.5'] });
+    limiter = createLLMRateLimiter({
+      models: { 'gpt-4': lowRpm, 'gpt-3.5': lowRpm },
+      order: ['gpt-4', 'gpt-3.5'],
+    });
     await limiter.queueJob(simpleJob(createMockJobResult('job-1')));
     await limiter.queueJob(simpleJob(createMockJobResult('job-2')));
     expect(limiter.getAvailableModel()).toBeNull();

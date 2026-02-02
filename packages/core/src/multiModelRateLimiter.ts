@@ -1,4 +1,22 @@
 /** LLM Rate Limiter with per-model limits and automatic fallback. */
+import type {
+  AllocationInfo,
+  ArgsWithoutModelId,
+  AvailabilityChangeReason,
+  BackendConfig,
+  DistributedAvailability,
+  DistributedBackendConfig,
+  JobExecutionContext,
+  LLMJobResult,
+  LLMRateLimiterConfig,
+  LLMRateLimiterInstance,
+  LLMRateLimiterStats,
+  ModelsConfig,
+  QueueJobOptions,
+  Unsubscribe,
+  ValidatedLLMRateLimiterConfig,
+} from './multiModelTypes.js';
+import type { InternalJobResult, InternalLimiterInstance, InternalLimiterStats } from './types.js';
 import type { AvailabilityTracker } from './utils/availabilityTracker.js';
 import {
   type BackendOperationContext,
@@ -22,25 +40,6 @@ import {
 import { executeJobWithCallbacks } from './utils/jobExecutor.js';
 import { type MemoryManagerInstance, createMemoryManager } from './utils/memoryManager.js';
 import { getEffectiveOrder, validateMultiModelConfig } from './utils/multiModelHelpers.js';
-
-import type {
-  AllocationInfo,
-  ArgsWithoutModelId,
-  AvailabilityChangeReason,
-  BackendConfig,
-  DistributedAvailability,
-  DistributedBackendConfig,
-  JobExecutionContext,
-  LLMJobResult,
-  LLMRateLimiterConfig,
-  LLMRateLimiterInstance,
-  LLMRateLimiterStats,
-  ModelsConfig,
-  QueueJobOptions,
-  Unsubscribe,
-  ValidatedLLMRateLimiterConfig,
-} from './multiModelTypes.js';
-import type { InternalJobResult, InternalLimiterInstance, InternalLimiterStats } from './types.js';
 
 const ZERO = 0;
 const DEFAULT_POLL_INTERVAL_MS = 100;

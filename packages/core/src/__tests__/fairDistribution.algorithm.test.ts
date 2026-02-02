@@ -2,8 +2,17 @@
  * Fair distribution algorithm verification tests.
  */
 import type { LLMRateLimiterInstance } from '../multiModelTypes.js';
-import { assertCapacityInvariant, FairDistributionBackend, type InstanceStats } from './fairDistribution.helpers.js';
-import { completeJobs, createAndStartLimiter, sleep, startControllableJobs } from './fairDistribution.testHelpers.js';
+import {
+  FairDistributionBackend,
+  type InstanceStats,
+  assertCapacityInvariant,
+} from './fairDistribution.helpers.js';
+import {
+  completeJobs,
+  createAndStartLimiter,
+  sleep,
+  startControllableJobs,
+} from './fairDistribution.testHelpers.js';
 
 const ZERO = 0;
 const TWO = 2;
@@ -33,53 +42,61 @@ const calculateTotalFromStats = (stats: Array<InstanceStats | undefined>): numbe
 };
 
 describe('fair distribution - three instances', () => {
-  it('three instances split capacity evenly', async () => {
-    const backend = new FairDistributionBackend({ totalCapacity: NINETY, estimatedTokensPerRequest: TEN });
+  it(
+    'three instances split capacity evenly',
+    async () => {
+      const backend = new FairDistributionBackend({ totalCapacity: NINETY, estimatedTokensPerRequest: TEN });
 
-    const limiterA = await createAndStartLimiter(backend);
-    const limiterB = await createAndStartLimiter(backend);
-    const limiterC = await createAndStartLimiter(backend);
+      const limiterA = await createAndStartLimiter(backend);
+      const limiterB = await createAndStartLimiter(backend);
+      const limiterC = await createAndStartLimiter(backend);
 
-    expect(backend.getInstanceCount()).toBe(THREE);
+      expect(backend.getInstanceCount()).toBe(THREE);
 
-    const statsA = backend.getInstanceStats(limiterA.getInstanceId());
-    const statsB = backend.getInstanceStats(limiterB.getInstanceId());
-    const statsC = backend.getInstanceStats(limiterC.getInstanceId());
+      const statsA = backend.getInstanceStats(limiterA.getInstanceId());
+      const statsB = backend.getInstanceStats(limiterB.getInstanceId());
+      const statsC = backend.getInstanceStats(limiterC.getInstanceId());
 
-    expect(statsA?.allocation).toBe(THIRTY);
-    expect(statsB?.allocation).toBe(THIRTY);
-    expect(statsC?.allocation).toBe(THIRTY);
-    assertCapacityInvariant(backend);
+      expect(statsA?.allocation).toBe(THIRTY);
+      expect(statsB?.allocation).toBe(THIRTY);
+      expect(statsC?.allocation).toBe(THIRTY);
+      assertCapacityInvariant(backend);
 
-    limiterA.stop();
-    limiterB.stop();
-    limiterC.stop();
-  }, DEFAULT_TIMEOUT);
+      limiterA.stop();
+      limiterB.stop();
+      limiterC.stop();
+    },
+    DEFAULT_TIMEOUT
+  );
 
-  it('when instance leaves, others absorb its allocation', async () => {
-    const backend = new FairDistributionBackend({ totalCapacity: NINETY, estimatedTokensPerRequest: TEN });
+  it(
+    'when instance leaves, others absorb its allocation',
+    async () => {
+      const backend = new FairDistributionBackend({ totalCapacity: NINETY, estimatedTokensPerRequest: TEN });
 
-    const limiterA = await createAndStartLimiter(backend);
-    const limiterB = await createAndStartLimiter(backend);
-    const limiterC = await createAndStartLimiter(backend);
+      const limiterA = await createAndStartLimiter(backend);
+      const limiterB = await createAndStartLimiter(backend);
+      const limiterC = await createAndStartLimiter(backend);
 
-    expect(backend.getInstanceStats(limiterA.getInstanceId())?.allocation).toBe(THIRTY);
+      expect(backend.getInstanceStats(limiterA.getInstanceId())?.allocation).toBe(THIRTY);
 
-    limiterB.stop();
-    await sleep(TEN);
+      limiterB.stop();
+      await sleep(TEN);
 
-    expect(backend.getInstanceCount()).toBe(TWO);
+      expect(backend.getInstanceCount()).toBe(TWO);
 
-    const statsA = backend.getInstanceStats(limiterA.getInstanceId());
-    const statsC = backend.getInstanceStats(limiterC.getInstanceId());
+      const statsA = backend.getInstanceStats(limiterA.getInstanceId());
+      const statsC = backend.getInstanceStats(limiterC.getInstanceId());
 
-    expect(statsA?.allocation).toBe(FORTY_FIVE);
-    expect(statsC?.allocation).toBe(FORTY_FIVE);
-    assertCapacityInvariant(backend);
+      expect(statsA?.allocation).toBe(FORTY_FIVE);
+      expect(statsC?.allocation).toBe(FORTY_FIVE);
+      assertCapacityInvariant(backend);
 
-    limiterA.stop();
-    limiterC.stop();
-  }, DEFAULT_TIMEOUT);
+      limiterA.stop();
+      limiterC.stop();
+    },
+    DEFAULT_TIMEOUT
+  );
 });
 
 /** Helper to setup and verify allocation algorithm test */
@@ -125,36 +142,44 @@ const cleanupLimiters = (limiters: LLMRateLimiterInstance[]): void => {
 };
 
 describe('fair distribution - algorithm exact', () => {
-  it('allocations exactly match fair distribution algorithm', async () => {
-    const setup = await setupAllocationAlgorithmTest();
-    verifyAllocationAlgorithm(setup);
-    cleanupLimiters(setup.limiters);
-  }, DEFAULT_TIMEOUT);
+  it(
+    'allocations exactly match fair distribution algorithm',
+    async () => {
+      const setup = await setupAllocationAlgorithmTest();
+      verifyAllocationAlgorithm(setup);
+      cleanupLimiters(setup.limiters);
+    },
+    DEFAULT_TIMEOUT
+  );
 });
 
 describe('fair distribution - saturation', () => {
-  it('handles uneven distribution when some instances are saturated', async () => {
-    const backend = new FairDistributionBackend({ totalCapacity: HUNDRED, estimatedTokensPerRequest: TEN });
-    const limiterA = await createAndStartLimiter(backend);
-    const jobsA = await startControllableJobs(limiterA, EIGHTY);
-    await sleep(FIFTY);
+  it(
+    'handles uneven distribution when some instances are saturated',
+    async () => {
+      const backend = new FairDistributionBackend({ totalCapacity: HUNDRED, estimatedTokensPerRequest: TEN });
+      const limiterA = await createAndStartLimiter(backend);
+      const jobsA = await startControllableJobs(limiterA, EIGHTY);
+      await sleep(FIFTY);
 
-    const statsABefore = backend.getInstanceStats(limiterA.getInstanceId());
-    expect(statsABefore?.inFlight).toBe(EIGHTY);
-    expect(statsABefore?.allocation).toBe(TWENTY);
+      const statsABefore = backend.getInstanceStats(limiterA.getInstanceId());
+      expect(statsABefore?.inFlight).toBe(EIGHTY);
+      expect(statsABefore?.allocation).toBe(TWENTY);
 
-    const limiterB = await createAndStartLimiter(backend);
-    const statsA = backend.getInstanceStats(limiterA.getInstanceId());
-    const statsB = backend.getInstanceStats(limiterB.getInstanceId());
+      const limiterB = await createAndStartLimiter(backend);
+      const statsA = backend.getInstanceStats(limiterA.getInstanceId());
+      const statsB = backend.getInstanceStats(limiterB.getInstanceId());
 
-    expect(statsA?.inFlight).toBe(EIGHTY);
-    expect(statsA?.allocation).toBe(ZERO);
-    expect(statsB?.inFlight).toBe(ZERO);
-    expect(statsB?.allocation).toBe(TWENTY);
-    assertCapacityInvariant(backend);
+      expect(statsA?.inFlight).toBe(EIGHTY);
+      expect(statsA?.allocation).toBe(ZERO);
+      expect(statsB?.inFlight).toBe(ZERO);
+      expect(statsB?.allocation).toBe(TWENTY);
+      assertCapacityInvariant(backend);
 
-    await completeJobs(jobsA);
-    limiterA.stop();
-    limiterB.stop();
-  }, DEFAULT_TIMEOUT);
+      await completeJobs(jobsA);
+      limiterA.stop();
+      limiterB.stop();
+    },
+    DEFAULT_TIMEOUT
+  );
 });

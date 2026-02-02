@@ -46,7 +46,9 @@ const defaultModelConfig = {
 const createCallbackLimiter = (calls: CallbackRecord[]): LLMRateLimiterInstance =>
   createLLMRateLimiter({
     models: { default: defaultModelConfig },
-    onAvailableSlotsChange: (availability, reason, adjustment) => { calls.push({ availability, reason, adjustment }); },
+    onAvailableSlotsChange: (availability, reason, adjustment) => {
+      calls.push({ availability, reason, adjustment });
+    },
   });
 
 describe('onAvailableSlotsChange callback - token adjustments', () => {
@@ -91,8 +93,18 @@ describe('onAvailableSlotsChange callback - memory and optional', () => {
     const limiter = createLLMRateLimiter({
       memory: { freeMemoryRatio: FREE_MEMORY_RATIO },
       maxCapacity: ESTIMATED_MEMORY_KB * TEN,
-      models: { default: { ...defaultModelConfig, resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS, estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB } } },
-      onAvailableSlotsChange: (availability, reason, adjustment) => { calls.push({ availability, reason, adjustment }); },
+      models: {
+        default: {
+          ...defaultModelConfig,
+          resourcesPerEvent: {
+            estimatedUsedTokens: ESTIMATED_TOKENS,
+            estimatedUsedMemoryKB: ESTIMATED_MEMORY_KB,
+          },
+        },
+      },
+      onAvailableSlotsChange: (availability, reason, adjustment) => {
+        calls.push({ availability, reason, adjustment });
+      },
     });
     const jobPromise = limiter.queueJob({
       jobId: 'test-1',
@@ -111,14 +123,24 @@ describe('onAvailableSlotsChange callback - memory and optional', () => {
   });
 
   it('should work without callback (optional)', async () => {
-    const limiter = createLLMRateLimiter({ models: { default: { tokensPerMinute: ESTIMATED_TOKENS * TEN, resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS }, pricing: ZERO_PRICING } } });
-    await expect(limiter.queueJob({
-      jobId: 'test-1',
-      job: ({ modelId }, resolve) => {
-        resolve(createMockUsage(modelId));
-        return { usage: { input: ESTIMATED_TOKENS, output: ZERO, cached: ZERO }, requestCount: ONE };
+    const limiter = createLLMRateLimiter({
+      models: {
+        default: {
+          tokensPerMinute: ESTIMATED_TOKENS * TEN,
+          resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS },
+          pricing: ZERO_PRICING,
+        },
       },
-    })).resolves.toBeDefined();
+    });
+    await expect(
+      limiter.queueJob({
+        jobId: 'test-1',
+        job: ({ modelId }, resolve) => {
+          resolve(createMockUsage(modelId));
+          return { usage: { input: ESTIMATED_TOKENS, output: ZERO, cached: ZERO }, requestCount: ONE };
+        },
+      })
+    ).resolves.toBeDefined();
     limiter.stop();
   });
 });
@@ -126,10 +148,26 @@ describe('onAvailableSlotsChange callback - memory and optional', () => {
 describe('onAvailableSlotsChange callback - multi-model', () => {
   it('should handle multi-model configuration', async () => {
     const calls: CallbackRecord[] = [];
-    const modelConfig = { tokensPerMinute: ESTIMATED_TOKENS * TEN, resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS, estimatedNumberOfRequests: ONE }, pricing: ZERO_PRICING };
-    const limiter = createLLMRateLimiter({ models: { modelA: modelConfig, modelB: modelConfig }, order: ['modelA', 'modelB'], onAvailableSlotsChange: (availability, reason, adjustment) => { calls.push({ availability, reason, adjustment }); } });
+    const modelConfig = {
+      tokensPerMinute: ESTIMATED_TOKENS * TEN,
+      resourcesPerEvent: { estimatedUsedTokens: ESTIMATED_TOKENS, estimatedNumberOfRequests: ONE },
+      pricing: ZERO_PRICING,
+    };
+    const limiter = createLLMRateLimiter({
+      models: { modelA: modelConfig, modelB: modelConfig },
+      order: ['modelA', 'modelB'],
+      onAvailableSlotsChange: (availability, reason, adjustment) => {
+        calls.push({ availability, reason, adjustment });
+      },
+    });
     const actualTokens = ESTIMATED_TOKENS + HUNDRED;
-    await limiter.queueJob({ jobId: 'test-1', job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId, actualTokens)); return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE }; } });
+    await limiter.queueJob({
+      jobId: 'test-1',
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId, actualTokens));
+        return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE };
+      },
+    });
     const adjustmentCall = calls.find((c) => c.reason === 'adjustment');
     expect(adjustmentCall).toBeDefined();
     expect(adjustmentCall?.availability.slots).toBeGreaterThan(ZERO);
@@ -142,7 +180,13 @@ describe('onAvailableSlotsChange callback - availability', () => {
     const calls: CallbackRecord[] = [];
     const limiter = createCallbackLimiter(calls);
     const actualTokens = ESTIMATED_TOKENS + HUNDRED;
-    await limiter.queueJob({ jobId: 'test-1', job: ({ modelId }, resolve) => { resolve(createMockUsage(modelId, actualTokens)); return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE }; } });
+    await limiter.queueJob({
+      jobId: 'test-1',
+      job: ({ modelId }, resolve) => {
+        resolve(createMockUsage(modelId, actualTokens));
+        return { usage: { input: actualTokens, output: ZERO, cached: ZERO }, requestCount: ONE };
+      },
+    });
     expect(calls.length).toBeGreaterThan(ZERO);
     const lastCall = calls.at(-ONE);
     expect(lastCall).toBeDefined();

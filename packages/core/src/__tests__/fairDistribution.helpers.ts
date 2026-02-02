@@ -62,9 +62,13 @@ export class FairDistributionBackend {
   getBackendConfig(): DistributedBackendConfig {
     return {
       register: async (id: string): Promise<AllocationInfo> => await this.register(id),
-      unregister: async (id: string): Promise<void> => { await this.unregister(id); },
+      unregister: async (id: string): Promise<void> => {
+        await this.unregister(id);
+      },
       acquire: async (ctx: BackendAcquireContextV2): Promise<boolean> => await this.acquire(ctx),
-      release: async (ctx: BackendReleaseContextV2): Promise<void> => { await this.release(ctx); },
+      release: async (ctx: BackendReleaseContextV2): Promise<void> => {
+        await this.release(ctx);
+      },
       subscribe: (id: string, cb: AllocationCallback): Unsubscribe => this.subscribe(id, cb),
     };
   }
@@ -75,11 +79,15 @@ export class FairDistributionBackend {
       id: instanceId,
       inFlight: ZERO,
       allocation: ZERO,
-      callback: (): void => { /* placeholder */ },
+      callback: (): void => {
+        /* placeholder */
+      },
     });
     this.recalculateAllocations();
     const inst = this.instances.get(instanceId);
-    if (inst === undefined) { throw new Error(`Instance ${instanceId} not found after registration`); }
+    if (inst === undefined) {
+      throw new Error(`Instance ${instanceId} not found after registration`);
+    }
     return await Promise.resolve(this.buildAllocationInfo(inst.allocation));
   }
 
@@ -99,14 +107,20 @@ export class FairDistributionBackend {
     }
     return (): void => {
       const i = this.instances.get(instanceId);
-      if (i !== undefined) { i.callback = (): void => { /* unsubscribed */ }; }
+      if (i !== undefined) {
+        i.callback = (): void => {
+          /* unsubscribed */
+        };
+      }
     };
   }
 
   /** Acquire a slot from instance's allocation */
   private async acquire(ctx: BackendAcquireContextV2): Promise<boolean> {
     const inst = this.instances.get(ctx.instanceId);
-    if (inst === undefined || inst.allocation <= ZERO) { return await Promise.resolve(false); }
+    if (inst === undefined || inst.allocation <= ZERO) {
+      return await Promise.resolve(false);
+    }
     inst.allocation -= ONE;
     inst.inFlight += ONE;
     this.recalculateAllocations();
@@ -116,7 +130,9 @@ export class FairDistributionBackend {
   /** Release a slot (decrement in-flight, trigger reallocation) */
   private async release(ctx: BackendReleaseContextV2): Promise<void> {
     const inst = this.instances.get(ctx.instanceId);
-    if (inst === undefined || inst.inFlight <= ZERO) { return; }
+    if (inst === undefined || inst.inFlight <= ZERO) {
+      return;
+    }
     inst.inFlight -= ONE;
     this.recalculateAllocations();
     await Promise.resolve();
@@ -135,7 +151,9 @@ export class FairDistributionBackend {
   private recalculateAllocations(): void {
     const { instances, totalCapacity } = this;
     const { size: n } = instances;
-    if (n === ZERO) { return; }
+    if (n === ZERO) {
+      return;
+    }
 
     const fairShare = Math.floor(totalCapacity / n);
     let totalInFlight = ZERO;
@@ -174,14 +192,18 @@ export class FairDistributionBackend {
   /** Get total in-flight jobs across all instances */
   getTotalInFlight(): number {
     let total = ZERO;
-    for (const inst of this.instances.values()) { total += inst.inFlight; }
+    for (const inst of this.instances.values()) {
+      total += inst.inFlight;
+    }
     return total;
   }
 
   /** Get total allocated slots across all instances */
   getTotalAllocated(): number {
     let total = ZERO;
-    for (const inst of this.instances.values()) { total += inst.allocation; }
+    for (const inst of this.instances.values()) {
+      total += inst.allocation;
+    }
     return total;
   }
 
@@ -193,7 +215,9 @@ export class FairDistributionBackend {
   /** Get stats for a specific instance */
   getInstanceStats(instanceId: string): InstanceStats | undefined {
     const inst = this.instances.get(instanceId);
-    if (inst === undefined) { return undefined; }
+    if (inst === undefined) {
+      return undefined;
+    }
     return { inFlight: inst.inFlight, allocation: inst.allocation };
   }
 
@@ -218,6 +242,8 @@ export const assertCapacityInvariant = (backend: FairDistributionBackend): void 
   const total = stats.totalInFlight + stats.totalAllocated;
   const capacity = backend.getTotalCapacity();
   if (total > capacity) {
-    throw new Error(`Capacity invariant violated: inFlight(${stats.totalInFlight}) + allocated(${stats.totalAllocated}) = ${total} > capacity(${capacity})`);
+    throw new Error(
+      `Capacity invariant violated: inFlight(${stats.totalInFlight}) + allocated(${stats.totalAllocated}) = ${total} > capacity(${capacity})`
+    );
   }
 };

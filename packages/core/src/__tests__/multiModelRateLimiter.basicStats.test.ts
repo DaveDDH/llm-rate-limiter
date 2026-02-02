@@ -5,21 +5,32 @@ import type { LLMRateLimiterInstance, QueueJobOptions } from '../multiModelTypes
 import {
   DEFAULT_PRICING,
   DELAY_MS_SHORT,
+  type MockJobResult,
   ONE,
   RPM_LIMIT_HIGH,
   RPM_LIMIT_LOW,
   createJobOptions,
   createMockJobResult,
   simpleJob,
-  type MockJobResult,
 } from './multiModelRateLimiter.helpers.js';
 
-const MODEL_CFG_HIGH = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
-const MODEL_CFG_LOW = { requestsPerMinute: RPM_LIMIT_LOW, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
+const MODEL_CFG_HIGH = {
+  requestsPerMinute: RPM_LIMIT_HIGH,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: DEFAULT_PRICING,
+};
+const MODEL_CFG_LOW = {
+  requestsPerMinute: RPM_LIMIT_LOW,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+  pricing: DEFAULT_PRICING,
+};
 
 describe('MultiModelRateLimiter - order array', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should respect custom order priority', async () => {
     limiter = createLLMRateLimiter({
@@ -111,7 +122,10 @@ describe('MultiModelRateLimiter - stop', () => {
 
 describe('MultiModelRateLimiter - use correct model ID in job callback', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
 
   it('should use correct model ID in job callback', async () => {
     limiter = createLLMRateLimiter({
@@ -119,7 +133,11 @@ describe('MultiModelRateLimiter - use correct model ID in job callback', () => {
       order: ['gpt-4', 'gpt-3.5'],
     });
     const receivedModelIds: string[] = [];
-    const createTrackingJob = (name: string): QueueJobOptions<MockJobResult> => createJobOptions(({ modelId }) => { receivedModelIds.push(modelId); return createMockJobResult(name); });
+    const createTrackingJob = (name: string): QueueJobOptions<MockJobResult> =>
+      createJobOptions(({ modelId }) => {
+        receivedModelIds.push(modelId);
+        return createMockJobResult(name);
+      });
     const job1 = await limiter.queueJob(createTrackingJob('job-0'));
     const job2 = await limiter.queueJob(createTrackingJob('job-1'));
     const job3 = await limiter.queueJob(createTrackingJob('job-2'));

@@ -16,11 +16,21 @@ import {
 
 describe('MultiModelRateLimiter - getModelStats', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
-  const modelConfig = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
+  const modelConfig = {
+    requestsPerMinute: RPM_LIMIT_HIGH,
+    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+    pricing: DEFAULT_PRICING,
+  };
 
   it('should return stats for specific model', async () => {
-    limiter = createLLMRateLimiter({ models: { 'gpt-4': modelConfig, 'gpt-3.5': modelConfig }, order: ['gpt-4', 'gpt-3.5'] });
+    limiter = createLLMRateLimiter({
+      models: { 'gpt-4': modelConfig, 'gpt-3.5': modelConfig },
+      order: ['gpt-4', 'gpt-3.5'],
+    });
     await limiter.queueJob(simpleJob(createMockJobResult('job-1')));
     expect(limiter.getModelStats('gpt-4').requestsPerMinute?.current).toBe(ONE);
     expect(limiter.getModelStats('gpt-3.5').requestsPerMinute?.current).toBe(ZERO);
@@ -34,8 +44,15 @@ describe('MultiModelRateLimiter - getModelStats', () => {
 
 describe('MultiModelRateLimiter - queueJobForModel', () => {
   let limiter: LLMRateLimiterInstance | undefined = undefined;
-  afterEach(() => { limiter?.stop(); limiter = undefined; });
-  const cfg = { requestsPerMinute: RPM_LIMIT_HIGH, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: DEFAULT_PRICING };
+  afterEach(() => {
+    limiter?.stop();
+    limiter = undefined;
+  });
+  const cfg = {
+    requestsPerMinute: RPM_LIMIT_HIGH,
+    resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+    pricing: DEFAULT_PRICING,
+  };
 
   it('should execute job on specified model', async () => {
     limiter = createLLMRateLimiter({ models: { 'gpt-4': cfg, 'gpt-3.5': cfg }, order: ['gpt-4', 'gpt-3.5'] });
@@ -45,13 +62,19 @@ describe('MultiModelRateLimiter - queueJobForModel', () => {
     const { 'gpt-3.5': gpt35Stats, 'gpt-4': gpt4Stats } = models;
     expect(gpt35Stats).toBeDefined();
     expect(gpt4Stats).toBeDefined();
-    if (gpt35Stats !== undefined) { expect(gpt35Stats.requestsPerMinute?.current).toBe(ONE); }
-    if (gpt4Stats !== undefined) { expect(gpt4Stats.requestsPerMinute?.current).toBe(ZERO); }
+    if (gpt35Stats !== undefined) {
+      expect(gpt35Stats.requestsPerMinute?.current).toBe(ONE);
+    }
+    if (gpt4Stats !== undefined) {
+      expect(gpt4Stats.requestsPerMinute?.current).toBe(ZERO);
+    }
   });
 
   it('should throw error for unknown model', async () => {
     limiter = createLLMRateLimiter({ models: { 'gpt-4': cfg } });
-    await expect(limiter.queueJobForModel('unknown-model', () => createMockJobResult('test'))).rejects.toThrow('Unknown model');
+    await expect(
+      limiter.queueJobForModel('unknown-model', () => createMockJobResult('test'))
+    ).rejects.toThrow('Unknown model');
   });
 });
 

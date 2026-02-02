@@ -1,8 +1,6 @@
 /**
  * Redis distributed backend implementation with fair slot distribution.
  */
-import { Redis as RedisClient, type Redis as RedisType } from 'ioredis';
-
 import type {
   AllocationCallback,
   AllocationInfo,
@@ -11,6 +9,9 @@ import type {
   DistributedBackendConfig,
   Unsubscribe,
 } from '@llm-rate-limiter/core';
+import { Redis as RedisClient, type Redis as RedisType } from 'ioredis';
+import { once } from 'node:events';
+
 import {
   DEFAULT_CLEANUP_INTERVAL_MS,
   DEFAULT_HEARTBEAT_INTERVAL_MS,
@@ -32,54 +33,29 @@ import {
   RELEASE_SCRIPT,
   UNREGISTER_SCRIPT,
 } from './luaScripts.js';
-import type {
-  AllocationData,
-  RedisBackendConfig,
-  RedisBackendInstance,
-  RedisBackendStats,
-} from './types.js';
+import type { AllocationData, RedisBackendConfig, RedisBackendInstance, RedisBackendStats } from './types.js';
 import { isRedisClient, subscriberOptions, toRedisOptions } from './types.js';
 
-/** No-op function for ignored promise rejections */
 const ignoreError = (): void => {
-  // Intentionally empty - used for fire-and-forget operations
+  /* fire-and-forget */
 };
-
-/** Type guard helper - checks if value is a non-null object */
-const isObject = (data: unknown): data is Record<string, unknown> =>
-  typeof data === 'object' && data !== null;
-
-/** Type guard for AllocationData */
-const isAllocationData = (data: unknown): data is AllocationData => {
-  if (!isObject(data)) return false;
-  return 'slots' in data && typeof data.slots === 'number';
-};
-
-/** Type guard for parsed message */
-const isParsedMessage = (data: unknown): data is { instanceId: string; allocation: string } => {
-  if (!isObject(data)) return false;
-  return 'instanceId' in data && typeof data.instanceId === 'string';
-};
-
-/** Type guard for RedisBackendStats */
-const isRedisBackendStats = (data: unknown): data is RedisBackendStats => {
-  if (!isObject(data)) return false;
-  return 'totalInstances' in data;
-};
-
-/** Parse allocation data from JSON string with type safety */
+const isObject = (d: unknown): d is Record<string, unknown> => typeof d === 'object' && d !== null;
+const isAllocationData = (d: unknown): d is AllocationData =>
+  isObject(d) && 'slots' in d && typeof d.slots === 'number';
+const isParsedMessage = (d: unknown): d is { instanceId: string; allocation: string } =>
+  isObject(d) && 'instanceId' in d && typeof d.instanceId === 'string';
+const isRedisBackendStats = (d: unknown): d is RedisBackendStats => isObject(d) && 'totalInstances' in d;
+const defaultAlloc: AllocationInfo = { slots: ZERO, tokensPerMinute: ZERO, requestsPerMinute: ZERO };
 const parseAllocation = (json: string | null): AllocationInfo => {
-  if (json === null) {
-    return { slots: ZERO, tokensPerMinute: ZERO, requestsPerMinute: ZERO };
-  }
+  if (json === null) return defaultAlloc;
   const parsed: unknown = JSON.parse(json);
-  if (!isAllocationData(parsed)) {
-    return { slots: ZERO, tokensPerMinute: ZERO, requestsPerMinute: ZERO };
-  }
-  return { slots: parsed.slots, tokensPerMinute: parsed.tokensPerMinute, requestsPerMinute: parsed.requestsPerMinute };
+  if (!isAllocationData(parsed)) return defaultAlloc;
+  return {
+    slots: parsed.slots,
+    tokensPerMinute: parsed.tokensPerMinute,
+    requestsPerMinute: parsed.requestsPerMinute,
+  };
 };
-
-/** Execute a Lua script via EVAL and return string result */
 const evalScript = async (
   redis: RedisType,
   script: string,
@@ -89,24 +65,18 @@ const evalScript = async (
   const result: unknown = await redis.eval(script, keys.length, ...keys, ...args);
   return typeof result === 'string' ? result : '';
 };
-
-/** Redis keys structure */
 interface RedisKeys {
   instances: string;
   allocations: string;
   config: string;
   channel: string;
 }
-
-/** Build Redis keys with prefix */
 const buildKeys = (prefix: string): RedisKeys => ({
   instances: `${prefix}${KEY_SUFFIX_INSTANCES}`,
   allocations: `${prefix}${KEY_SUFFIX_ALLOCATIONS}`,
   config: `${prefix}${KEY_SUFFIX_CONFIG}`,
   channel: `${prefix}${KEY_SUFFIX_CHANNEL}`,
 });
-
-/** Configuration for backend operations */
 interface BackendOperationConfig {
   totalCapacity: number;
   tokensPerMinute: number;
@@ -130,7 +100,9 @@ class RedisBackendImpl {
 
   constructor(redisConfig: RedisBackendConfig) {
     this.ownClient = !isRedisClient(redisConfig.redis);
-    this.redis = isRedisClient(redisConfig.redis) ? redisConfig.redis : new RedisClient(toRedisOptions(redisConfig.redis));
+    this.redis = isRedisClient(redisConfig.redis)
+      ? redisConfig.redis
+      : new RedisClient(toRedisOptions(redisConfig.redis));
     this.subscriber = this.redis.duplicate(subscriberOptions);
     this.keys = buildKeys(redisConfig.keyPrefix ?? DEFAULT_KEY_PREFIX);
     this.config = {
@@ -161,7 +133,9 @@ class RedisBackendImpl {
     const { instances, allocations, config: configKey, channel } = keys;
     this.cleanupInterval = setInterval(() => {
       const cutoff = Date.now() - instanceTimeoutMs;
-      evalScript(redis, CLEANUP_SCRIPT, [instances, allocations, configKey, channel], [String(cutoff)]).catch(ignoreError);
+      evalScript(redis, CLEANUP_SCRIPT, [instances, allocations, configKey, channel], [String(cutoff)]).catch(
+        ignoreError
+      );
     }, DEFAULT_CLEANUP_INTERVAL_MS);
   }
 
@@ -181,27 +155,14 @@ class RedisBackendImpl {
   private async setupSubscriber(): Promise<void> {
     if (this.subscriberActive) return;
     try {
-      // Wait for subscriber to be ready if not connected yet
       if (this.subscriber.status !== 'ready' && this.subscriber.status !== 'connect') {
-        await new Promise<void>((resolve, reject) => {
-          const onReady = (): void => {
-            this.subscriber.off('error', onError);
-            resolve();
-          };
-          const onError = (err: Error): void => {
-            this.subscriber.off('ready', onReady);
-            reject(err);
-          };
-          this.subscriber.once('ready', onReady);
-          this.subscriber.once('error', onError);
-        });
+        await once(this.subscriber, 'ready');
       }
       await this.subscriber.subscribe(this.keys.channel);
       this.subscriberActive = true;
       this.subscriber.on('message', this.handleMessage.bind(this));
     } catch {
-      // Subscription failed - system continues without real-time updates
-      // Allocations will still be fetched on register/acquire operations
+      // Subscription failed - continues without real-time updates
     }
   }
 
@@ -226,7 +187,13 @@ class RedisBackendImpl {
       redis,
       REGISTER_SCRIPT,
       [instances, allocations, configKey, channel],
-      [instanceId, String(Date.now()), String(totalCapacity), String(tokensPerMinute), String(requestsPerMinute)]
+      [
+        instanceId,
+        String(Date.now()),
+        String(totalCapacity),
+        String(tokensPerMinute),
+        String(requestsPerMinute),
+      ]
     );
     this.registeredInstances.add(instanceId);
     this.startHeartbeat();
@@ -260,14 +227,21 @@ class RedisBackendImpl {
   readonly release = async (context: BackendReleaseContextV2): Promise<void> => {
     const { keys, redis } = this;
     const { instances, allocations, config: configKey, channel } = keys;
-    await evalScript(redis, RELEASE_SCRIPT, [instances, allocations, configKey, channel], [context.instanceId, String(Date.now())]);
+    await evalScript(
+      redis,
+      RELEASE_SCRIPT,
+      [instances, allocations, configKey, channel],
+      [context.instanceId, String(Date.now())]
+    );
   };
 
   readonly subscribe = (instanceId: string, callback: AllocationCallback): Unsubscribe => {
     this.subscriptions.set(instanceId, callback);
     void this.setupSubscriber();
     void this.fetchAndCallbackAllocation(instanceId, callback);
-    return () => { this.subscriptions.delete(instanceId); };
+    return () => {
+      this.subscriptions.delete(instanceId);
+    };
   };
 
   private async fetchAndCallbackAllocation(instanceId: string, callback: AllocationCallback): Promise<void> {

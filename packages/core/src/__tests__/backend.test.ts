@@ -2,7 +2,13 @@
  * Tests for backend (distributed rate limiting) functionality.
  */
 import { createLLMRateLimiter } from '../multiModelRateLimiter.js';
-import type { Availability, AvailabilityChangeReason, BackendAcquireContext, BackendReleaseContext, ModelRateLimitConfig } from '../multiModelTypes.js';
+import type {
+  Availability,
+  AvailabilityChangeReason,
+  BackendAcquireContext,
+  BackendReleaseContext,
+  ModelRateLimitConfig,
+} from '../multiModelTypes.js';
 
 const ZERO = 0;
 const ONE = 1;
@@ -10,26 +16,54 @@ const TEN = 10;
 const HUNDRED = 100;
 const HALF = 0.5;
 
-const createDefaultConfig = (): ModelRateLimitConfig => ({ requestsPerMinute: TEN, resourcesPerEvent: { estimatedNumberOfRequests: ONE, estimatedUsedTokens: HUNDRED }, pricing: { input: ZERO, cached: ZERO, output: ZERO } });
-const createConfigWithMemory = (): ModelRateLimitConfig => ({ requestsPerMinute: TEN, resourcesPerEvent: { estimatedNumberOfRequests: ONE, estimatedUsedTokens: HUNDRED, estimatedUsedMemoryKB: ONE }, pricing: { input: ZERO, cached: ZERO, output: ZERO } });
+const createDefaultConfig = (): ModelRateLimitConfig => ({
+  requestsPerMinute: TEN,
+  resourcesPerEvent: { estimatedNumberOfRequests: ONE, estimatedUsedTokens: HUNDRED },
+  pricing: { input: ZERO, cached: ZERO, output: ZERO },
+});
+const createConfigWithMemory = (): ModelRateLimitConfig => ({
+  requestsPerMinute: TEN,
+  resourcesPerEvent: {
+    estimatedNumberOfRequests: ONE,
+    estimatedUsedTokens: HUNDRED,
+    estimatedUsedMemoryKB: ONE,
+  },
+  pricing: { input: ZERO, cached: ZERO, output: ZERO },
+});
 
-const createAcquireTrue = (calls: BackendAcquireContext[]): (ctx: BackendAcquireContext) => Promise<boolean> =>
-  async (ctx): Promise<boolean> => { calls.push(ctx); return await Promise.resolve(true); };
+const createAcquireTrue =
+  (calls: BackendAcquireContext[]): ((ctx: BackendAcquireContext) => Promise<boolean>) =>
+  async (ctx): Promise<boolean> => {
+    calls.push(ctx);
+    return await Promise.resolve(true);
+  };
 
-const createReleasePush = (calls: BackendReleaseContext[]): (ctx: BackendReleaseContext) => Promise<void> =>
-  async (ctx): Promise<void> => { calls.push(ctx); await Promise.resolve(); };
+const createReleasePush =
+  (calls: BackendReleaseContext[]): ((ctx: BackendReleaseContext) => Promise<void>) =>
+  async (ctx): Promise<void> => {
+    calls.push(ctx);
+    await Promise.resolve();
+  };
 
-const createAcquireTrueSimple = (): (ctx: BackendAcquireContext) => Promise<boolean> =>
-  async (): Promise<boolean> => await Promise.resolve(true);
+const createAcquireTrueSimple =
+  (): ((ctx: BackendAcquireContext) => Promise<boolean>) => async (): Promise<boolean> =>
+    await Promise.resolve(true);
 
-const createReleaseSimple = (): (ctx: BackendReleaseContext) => Promise<void> =>
-  async (): Promise<void> => { await Promise.resolve(); };
+const createReleaseSimple =
+  (): ((ctx: BackendReleaseContext) => Promise<void>) => async (): Promise<void> => {
+    await Promise.resolve();
+  };
 
-const createAcquireFalse = (): (ctx: BackendAcquireContext) => Promise<boolean> =>
-  async (): Promise<boolean> => await Promise.resolve(false);
+const createAcquireFalse =
+  (): ((ctx: BackendAcquireContext) => Promise<boolean>) => async (): Promise<boolean> =>
+    await Promise.resolve(false);
 
-const createAcquireConditional = (calls: string[], rejectModel: string): (ctx: BackendAcquireContext) => Promise<boolean> =>
-  async (ctx): Promise<boolean> => { calls.push(ctx.modelId); return await Promise.resolve(ctx.modelId !== rejectModel); };
+const createAcquireConditional =
+  (calls: string[], rejectModel: string): ((ctx: BackendAcquireContext) => Promise<boolean>) =>
+  async (ctx): Promise<boolean> => {
+    calls.push(ctx.modelId);
+    return await Promise.resolve(ctx.modelId !== rejectModel);
+  };
 
 describe('backend - acquire/release context', () => {
   it('should call acquire and release with correct context on successful job', async () => {
@@ -39,7 +73,13 @@ describe('backend - acquire/release context', () => {
       backend: { acquire: createAcquireTrue(acquireCalls), release: createReleasePush(releaseCalls) },
       models: { default: createDefaultConfig() },
     });
-    await limiter.queueJob({ jobId: 'test-job', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    await limiter.queueJob({
+      jobId: 'test-job',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(acquireCalls).toHaveLength(ONE);
     expect(acquireCalls[ZERO]?.modelId).toBe('default');
     expect(acquireCalls[ZERO]?.jobId).toBe('test-job');
@@ -58,7 +98,13 @@ describe('backend - release on error', () => {
       backend: { acquire: createAcquireTrueSimple(), release: createReleasePush(releaseCalls) },
       models: { default: createDefaultConfig() },
     });
-    const jobPromise = limiter.queueJob({ jobId: 'error-job', job: (_, resolve) => { resolve({ modelId: 'default', inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO }); throw new Error('Job failed'); } });
+    const jobPromise = limiter.queueJob({
+      jobId: 'error-job',
+      job: (_, resolve) => {
+        resolve({ modelId: 'default', inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO });
+        throw new Error('Job failed');
+      },
+    });
     await expect(jobPromise).rejects.toThrow('Job failed');
     expect(releaseCalls).toHaveLength(ONE);
     expect(releaseCalls[ZERO]?.actual).toEqual({ requests: ZERO, tokens: ZERO });
@@ -67,13 +113,24 @@ describe('backend - release on error', () => {
 
   it('should silently catch release errors', async () => {
     let acquireCalled = false;
-    const acquireWithFlag = async (): Promise<boolean> => { acquireCalled = true; return await Promise.resolve(true); };
-    const releaseWithError = async (): Promise<void> => { await Promise.reject(new Error('Release failed')); };
+    const acquireWithFlag = async (): Promise<boolean> => {
+      acquireCalled = true;
+      return await Promise.resolve(true);
+    };
+    const releaseWithError = async (): Promise<void> => {
+      await Promise.reject(new Error('Release failed'));
+    };
     const limiter = createLLMRateLimiter({
       backend: { acquire: acquireWithFlag, release: releaseWithError },
       models: { default: createDefaultConfig() },
     });
-    const result = await limiter.queueJob({ jobId: 'release-error', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    const result = await limiter.queueJob({
+      jobId: 'release-error',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(acquireCalled).toBe(true);
     expect(result.requestCount).toBe(ONE);
     limiter.stop();
@@ -88,7 +145,13 @@ describe('backend - acquire returns false (fallback)', () => {
       models: { modelA: createDefaultConfig(), modelB: createDefaultConfig() },
       order: ['modelA', 'modelB'],
     });
-    const result = await limiter.queueJob({ jobId: 'fallback-job', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    const result = await limiter.queueJob({
+      jobId: 'fallback-job',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(acquireCalls).toEqual(['modelA', 'modelB']);
     expect(result.modelUsed).toBe('modelB');
     limiter.stop();
@@ -102,7 +165,13 @@ describe('backend - acquire returns false (fallback)', () => {
       order: ['modelA', 'modelB'],
       memory: { freeMemoryRatio: HALF },
     });
-    const result = await limiter.queueJob({ jobId: 'fallback-with-memory', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    const result = await limiter.queueJob({
+      jobId: 'fallback-with-memory',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(acquireCalls).toEqual(['modelA', 'modelB']);
     expect(result.modelUsed).toBe('modelB');
     limiter.stop();
@@ -115,7 +184,13 @@ describe('backend - acquire returns false (rejection)', () => {
       backend: { acquire: createAcquireFalse(), release: createReleaseSimple() },
       models: { default: createDefaultConfig() },
     });
-    const jobPromise = limiter.queueJob({ jobId: 'all-rejected', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO }); return { requestCount: ONE, usage: { input: ZERO, output: ZERO, cached: ZERO } }; } });
+    const jobPromise = limiter.queueJob({
+      jobId: 'all-rejected',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO });
+        return { requestCount: ONE, usage: { input: ZERO, output: ZERO, cached: ZERO } };
+      },
+    });
     await expect(jobPromise).rejects.toThrow('All models rejected by backend');
     limiter.stop();
   });
@@ -126,7 +201,13 @@ describe('backend - acquire returns false (rejection)', () => {
       models: { modelA: createDefaultConfig(), modelB: createDefaultConfig() },
       order: ['modelA', 'modelB'],
     });
-    const jobPromise = limiter.queueJob({ jobId: 'all-rejected-multi', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO }); return { requestCount: ONE, usage: { input: ZERO, output: ZERO, cached: ZERO } }; } });
+    const jobPromise = limiter.queueJob({
+      jobId: 'all-rejected-multi',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO });
+        return { requestCount: ONE, usage: { input: ZERO, output: ZERO, cached: ZERO } };
+      },
+    });
     await expect(jobPromise).rejects.toThrow('All models rejected by backend');
     limiter.stop();
   });
@@ -135,7 +216,13 @@ describe('backend - acquire returns false (rejection)', () => {
 describe('backend - no backend configured', () => {
   it('should work without backend', async () => {
     const limiter = createLLMRateLimiter({ models: { default: createDefaultConfig() } });
-    const result = await limiter.queueJob({ jobId: 'no-backend', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    const result = await limiter.queueJob({
+      jobId: 'no-backend',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(result.requestCount).toBe(ONE);
     limiter.stop();
   });
@@ -146,7 +233,9 @@ describe('backend - setDistributedAvailability', () => {
     const calls: Array<{ availability: Availability; reason: AvailabilityChangeReason }> = [];
     const limiter = createLLMRateLimiter({
       models: { default: createDefaultConfig() },
-      onAvailableSlotsChange: (availability, reason) => { calls.push({ availability, reason }); },
+      onAvailableSlotsChange: (availability, reason) => {
+        calls.push({ availability, reason });
+      },
     });
     limiter.setDistributedAvailability({ slots: TEN, tokensPerMinute: HUNDRED });
     const distCall = calls.find((c) => c.reason === 'distributed');
@@ -160,7 +249,9 @@ describe('backend - setDistributedAvailability', () => {
 
   it('should return early when no onAvailableSlotsChange callback', () => {
     const limiter = createLLMRateLimiter({ models: { default: createDefaultConfig() } });
-    expect(() => { limiter.setDistributedAvailability({ slots: TEN }); }).not.toThrow();
+    expect(() => {
+      limiter.setDistributedAvailability({ slots: TEN });
+    }).not.toThrow();
     limiter.stop();
   });
 
@@ -168,7 +259,11 @@ describe('backend - setDistributedAvailability', () => {
     const calls: Availability[] = [];
     const limiter = createLLMRateLimiter({
       models: { default: createDefaultConfig() },
-      onAvailableSlotsChange: (availability, reason) => { if (reason === 'distributed') { calls.push(availability); } },
+      onAvailableSlotsChange: (availability, reason) => {
+        if (reason === 'distributed') {
+          calls.push(availability);
+        }
+      },
     });
     limiter.setDistributedAvailability({ slots: TEN });
     expect(calls[ZERO]?.tokensPerMinute).toBeNull();
@@ -211,9 +306,21 @@ describe('backend - model with partial resource estimates', () => {
     const acquireCalls: BackendAcquireContext[] = [];
     const limiter = createLLMRateLimiter({
       backend: { acquire: createAcquireTrue(acquireCalls), release: createReleaseSimple() },
-      models: { default: { requestsPerMinute: TEN, resourcesPerEvent: { estimatedNumberOfRequests: ONE }, pricing: { input: ZERO, cached: ZERO, output: ZERO } } },
+      models: {
+        default: {
+          requestsPerMinute: TEN,
+          resourcesPerEvent: { estimatedNumberOfRequests: ONE },
+          pricing: { input: ZERO, cached: ZERO, output: ZERO },
+        },
+      },
     });
-    await limiter.queueJob({ jobId: 'no-token-estimates', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    await limiter.queueJob({
+      jobId: 'no-token-estimates',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(acquireCalls[ZERO]?.estimated).toEqual({ requests: ONE, tokens: ZERO });
     limiter.stop();
   });
@@ -222,9 +329,21 @@ describe('backend - model with partial resource estimates', () => {
     const acquireCalls: BackendAcquireContext[] = [];
     const limiter = createLLMRateLimiter({
       backend: { acquire: createAcquireTrue(acquireCalls), release: createReleaseSimple() },
-      models: { default: { tokensPerMinute: HUNDRED, resourcesPerEvent: { estimatedUsedTokens: TEN }, pricing: { input: ZERO, cached: ZERO, output: ZERO } } },
+      models: {
+        default: {
+          tokensPerMinute: HUNDRED,
+          resourcesPerEvent: { estimatedUsedTokens: TEN },
+          pricing: { input: ZERO, cached: ZERO, output: ZERO },
+        },
+      },
     });
-    await limiter.queueJob({ jobId: 'no-request-estimates', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    await limiter.queueJob({
+      jobId: 'no-request-estimates',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(acquireCalls[ZERO]?.estimated).toEqual({ requests: ZERO, tokens: TEN });
     limiter.stop();
   });
@@ -234,9 +353,21 @@ describe('backend - without memory manager', () => {
   it('should handle backend rejection without memory manager (all rejected)', async () => {
     const limiter = createLLMRateLimiter({
       backend: { acquire: createAcquireFalse(), release: createReleaseSimple() },
-      models: { default: { tokensPerMinute: HUNDRED, resourcesPerEvent: { estimatedUsedTokens: TEN }, pricing: { input: ZERO, cached: ZERO, output: ZERO } } },
+      models: {
+        default: {
+          tokensPerMinute: HUNDRED,
+          resourcesPerEvent: { estimatedUsedTokens: TEN },
+          pricing: { input: ZERO, cached: ZERO, output: ZERO },
+        },
+      },
     });
-    const jobPromise = limiter.queueJob({ jobId: 'no-memory', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO }); return { requestCount: ONE, usage: { input: ZERO, output: ZERO, cached: ZERO } }; } });
+    const jobPromise = limiter.queueJob({
+      jobId: 'no-memory',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: ZERO, cachedTokens: ZERO, outputTokens: ZERO });
+        return { requestCount: ONE, usage: { input: ZERO, output: ZERO, cached: ZERO } };
+      },
+    });
     await expect(jobPromise).rejects.toThrow('All models rejected by backend');
     limiter.stop();
   });
@@ -246,12 +377,26 @@ describe('backend - without memory manager', () => {
     const limiter = createLLMRateLimiter({
       backend: { acquire: createAcquireConditional(acquireCalls, 'modelA'), release: createReleaseSimple() },
       models: {
-        modelA: { tokensPerMinute: HUNDRED, resourcesPerEvent: { estimatedUsedTokens: TEN }, pricing: { input: ZERO, cached: ZERO, output: ZERO } },
-        modelB: { tokensPerMinute: HUNDRED, resourcesPerEvent: { estimatedUsedTokens: TEN }, pricing: { input: ZERO, cached: ZERO, output: ZERO } },
+        modelA: {
+          tokensPerMinute: HUNDRED,
+          resourcesPerEvent: { estimatedUsedTokens: TEN },
+          pricing: { input: ZERO, cached: ZERO, output: ZERO },
+        },
+        modelB: {
+          tokensPerMinute: HUNDRED,
+          resourcesPerEvent: { estimatedUsedTokens: TEN },
+          pricing: { input: ZERO, cached: ZERO, output: ZERO },
+        },
       },
       order: ['modelA', 'modelB'],
     });
-    const result = await limiter.queueJob({ jobId: 'fallback-no-memory', job: ({ modelId }, resolve) => { resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN }); return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } }; } });
+    const result = await limiter.queueJob({
+      jobId: 'fallback-no-memory',
+      job: ({ modelId }, resolve) => {
+        resolve({ modelId, inputTokens: TEN, cachedTokens: ZERO, outputTokens: TEN });
+        return { requestCount: ONE, usage: { input: TEN, output: TEN, cached: ZERO } };
+      },
+    });
     expect(acquireCalls).toEqual(['modelA', 'modelB']);
     expect(result.modelUsed).toBe('modelB');
     limiter.stop();
