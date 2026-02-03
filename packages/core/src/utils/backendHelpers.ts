@@ -11,7 +11,7 @@ export const getEstimatedResourcesForBackend = (
   resourcesPerJob: ResourceEstimationsPerJob,
   jobType: string
 ): BackendEstimatedResources => {
-  const resources = resourcesPerJob[jobType];
+  const { [jobType]: resources } = resourcesPerJob;
   return {
     requests: resources?.estimatedNumberOfRequests ?? ZERO,
     tokens: resources?.estimatedUsedTokens ?? ZERO,

@@ -14,6 +14,12 @@
     "resolveJsonModule": true,
     "types": ["node", "jest"]
   },
-  "references": [{ "path": "./packages/core" }, { "path": "./packages/redis" }, { "path": "./packages/server" }],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/redis" },
+    { "path": "./packages/e2e/proxy" },
+    { "path": "./packages/e2e/serverInstance" },
+    { "path": "./packages/e2e/testRunner" }
+  ],
   "files": []
 }

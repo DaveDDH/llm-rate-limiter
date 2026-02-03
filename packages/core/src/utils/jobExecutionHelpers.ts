@@ -61,6 +61,10 @@ export const buildErrorCallbackContext = (jobId: string, usage: JobUsage): JobCa
   usage,
 });
 
+/** Convert unknown error to Error object */
+export const toErrorObject = (error: unknown): Error =>
+  error instanceof Error ? error : new Error(String(error));
+
 /** Calculate the maximum estimated value across all items for a given resource property */
 export const calculateMaxEstimatedResource = <T>(
   items: Record<string, T>,
@@ -136,7 +140,7 @@ export const getMaxWaitMS = (
   if (resourceEstimationsPerJob === undefined) {
     return calculateDefaultMaxWaitMS();
   }
-  const jobTypeConfig = resourceEstimationsPerJob[jobType];
+  const { [jobType]: jobTypeConfig } = resourceEstimationsPerJob;
   if (jobTypeConfig === undefined) {
     return calculateDefaultMaxWaitMS();
   }
@@ -144,7 +148,7 @@ export const getMaxWaitMS = (
   if (maxWaitMSConfig === undefined) {
     return calculateDefaultMaxWaitMS();
   }
-  const modelMaxWaitMS = maxWaitMSConfig[modelId];
+  const { [modelId]: modelMaxWaitMS } = maxWaitMSConfig;
   if (modelMaxWaitMS === undefined) {
     return calculateDefaultMaxWaitMS();
   }
@@ -223,6 +227,8 @@ export interface SelectModelWithWaitParams {
   getMaxWaitMSForModel: (modelId: string) => number;
   /** Polling interval for capacity checks */
   pollIntervalMs: number;
+  /** Called when starting to wait for a model (for job tracking) */
+  onWaitingForModel?: (modelId: string, maxWaitMS: number) => void;
 }
 
 /** Result of model selection with waiting */
@@ -233,13 +239,56 @@ export interface SelectModelResult {
   allModelsExhausted: boolean;
 }
 
+/** Try model at given index and recurse to next if no capacity */
+const tryModelAtIndex = async (
+  params: SelectModelWithWaitParams,
+  index: number,
+  modelsAttempted: number
+): Promise<SelectModelResult> => {
+  const {
+    escalationOrder,
+    triedModels,
+    hasCapacityForModel,
+    getMaxWaitMSForModel,
+    pollIntervalMs,
+    onWaitingForModel,
+  } = params;
+
+  // Base case: exhausted all models
+  if (index >= escalationOrder.length) {
+    return {
+      modelId: null,
+      allModelsExhausted: modelsAttempted > ZERO || triedModels.size >= escalationOrder.length,
+    };
+  }
+
+  const { [index]: modelId } = escalationOrder;
+  if (modelId === undefined || triedModels.has(modelId)) {
+    return await tryModelAtIndex(params, index + ONE, modelsAttempted);
+  }
+
+  const maxWaitMS = getMaxWaitMSForModel(modelId);
+  onWaitingForModel?.(modelId, maxWaitMS);
+
+  const gotCapacity = await waitForSpecificModelCapacity(
+    () => hasCapacityForModel(modelId),
+    maxWaitMS,
+    pollIntervalMs
+  );
+  if (gotCapacity) {
+    return { modelId, allModelsExhausted: false };
+  }
+
+  return await tryModelAtIndex(params, index + ONE, modelsAttempted + ONE);
+};
+
 /**
  * Select a model with maxWaitMS support.
  * Tries each model in escalation order, waiting up to maxWaitMS for each.
  * @returns The selected model ID, or null if all models exhausted
  */
 export const selectModelWithWait = async (params: SelectModelWithWaitParams): Promise<SelectModelResult> => {
-  const { escalationOrder, triedModels, hasCapacityForModel, getMaxWaitMSForModel, pollIntervalMs } = params;
+  const { escalationOrder, triedModels, hasCapacityForModel } = params;
 
   // First pass: find any model with immediate capacity (not in triedModels)
   for (const modelId of escalationOrder) {
@@ -248,30 +297,6 @@ export const selectModelWithWait = async (params: SelectModelWithWaitParams): Pr
     }
   }
 
-  // Second pass: try each model in order, waiting up to maxWaitMS
-  let modelsAttempted = ZERO;
-  for (const modelId of escalationOrder) {
-    if (triedModels.has(modelId)) {
-      continue;
-    }
-    modelsAttempted += ONE;
-
-    const maxWaitMS = getMaxWaitMSForModel(modelId);
-    const gotCapacity = await waitForSpecificModelCapacity(
-      () => hasCapacityForModel(modelId),
-      maxWaitMS,
-      pollIntervalMs
-    );
-
-    if (gotCapacity) {
-      return { modelId, allModelsExhausted: false };
-    }
-    // Timeout: continue to next model
-  }
-
-  // All models exhausted
-  return {
-    modelId: null,
-    allModelsExhausted: modelsAttempted > ZERO || triedModels.size >= escalationOrder.length,
-  };
+  // Second pass: try each model recursively, waiting up to maxWaitMS
+  return await tryModelAtIndex(params, ZERO, ZERO);
 };

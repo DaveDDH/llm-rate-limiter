@@ -20,6 +20,10 @@ export { DEFAULT_RATIO_ADJUSTMENT_CONFIG } from './jobTypeTypes.js';
 
 // Public types from multiModelTypes.ts
 export type {
+  // Active job tracking types
+  ActiveJobInfo,
+  ActiveJobStatus,
+  // Job types
   ArgsWithoutModelId,
   Availability,
   AvailabilityChangeReason,

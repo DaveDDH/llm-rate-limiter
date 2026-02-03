@@ -49,8 +49,8 @@ let sharedState: SharedMemoryState | null = null;
 const extractCapacityBounds = (
   config: LLMRateLimiterConfig
 ): { minCapacity: number | undefined; maxCapacity: number | undefined } => {
-  let minCapacity: number | undefined;
-  let maxCapacity: number | undefined;
+  let minCapacity: number | undefined = undefined;
+  let maxCapacity: number | undefined = undefined;
 
   for (const modelConfig of Object.values(config.models)) {
     if (modelConfig.minCapacity !== undefined) {

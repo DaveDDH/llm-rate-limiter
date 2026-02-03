@@ -44,21 +44,27 @@ interface EstimatedResourcesInput {
   estimatedNumberOfRequests: number;
 }
 
-export const buildModelLimiterConfig = (
-  modelId: string,
-  modelConfig: InternalLimiterConfig,
-  parentLabel: string,
-  onLog?: (message: string, data?: Record<string, unknown>) => void,
-  estimatedResources?: EstimatedResourcesInput
-): InternalLimiterConfig => ({
-  requestsPerMinute: modelConfig.requestsPerMinute,
-  requestsPerDay: modelConfig.requestsPerDay,
-  tokensPerMinute: modelConfig.tokensPerMinute,
-  tokensPerDay: modelConfig.tokensPerDay,
-  maxConcurrentRequests: modelConfig.maxConcurrentRequests,
-  label: `${parentLabel}/${modelId}`,
-  onLog,
-  estimatedNumberOfRequests: estimatedResources?.estimatedNumberOfRequests,
-  estimatedUsedTokens: estimatedResources?.estimatedUsedTokens,
-  estimatedUsedMemoryKB: estimatedResources?.estimatedUsedMemoryKB,
-});
+/** Config for building model limiter */
+export interface BuildModelLimiterConfigInput {
+  modelId: string;
+  modelConfig: InternalLimiterConfig;
+  parentLabel: string;
+  onLog?: (message: string, data?: Record<string, unknown>) => void;
+  estimatedResources?: EstimatedResourcesInput;
+}
+
+export const buildModelLimiterConfig = (input: BuildModelLimiterConfigInput): InternalLimiterConfig => {
+  const { modelId, modelConfig, parentLabel, onLog, estimatedResources } = input;
+  return {
+    requestsPerMinute: modelConfig.requestsPerMinute,
+    requestsPerDay: modelConfig.requestsPerDay,
+    tokensPerMinute: modelConfig.tokensPerMinute,
+    tokensPerDay: modelConfig.tokensPerDay,
+    maxConcurrentRequests: modelConfig.maxConcurrentRequests,
+    label: `${parentLabel}/${modelId}`,
+    onLog,
+    estimatedNumberOfRequests: estimatedResources?.estimatedNumberOfRequests,
+    estimatedUsedTokens: estimatedResources?.estimatedUsedTokens,
+    estimatedUsedMemoryKB: estimatedResources?.estimatedUsedMemoryKB,
+  };
+};

@@ -9,6 +9,7 @@
  *    - escalationOrder array can only contain model IDs that have limits defined
  *    - escalationOrder is optional for single model, required for multiple models
  */
+import type { ActiveJobInfo } from './activeJobTypes.js';
 import type { DistributedBackendFactory } from './backendFactoryTypes.js';
 import type { JobTypeStats, RatioAdjustmentConfig, ResourceEstimationsPerJob } from './jobTypeTypes.js';
 import type { InternalJobResult, InternalLimiterStats, LogFn, MemoryLimitConfig } from './types.js';
@@ -389,33 +390,25 @@ export type OnAvailableSlotsChange = (
 
 /** Estimated resources for backend acquire (memory excluded - local only) */
 export interface BackendEstimatedResources {
-  /** Estimated number of requests */
   requests: number;
-  /** Estimated number of tokens */
   tokens: number;
 }
 
 /** Actual resources used after job completion */
 export interface BackendActualResources {
-  /** Actual number of requests made */
   requests: number;
-  /** Actual number of tokens used (input + output) */
   tokens: number;
 }
 
 /** Allocation info for a specific instance from the distributed backend */
 export interface AllocationInfo {
-  /** Slots allocated to THIS instance (how many more jobs to fetch) */
   slots: number;
-  /** Tokens per minute allocated to THIS instance */
   tokensPerMinute: number;
-  /** Requests per minute allocated to THIS instance */
   requestsPerMinute: number;
 }
 
 /** Callback for allocation updates from distributed backend */
 export type AllocationCallback = (allocation: AllocationInfo) => void;
-
 /** Unsubscribe function returned by subscribe */
 export type Unsubscribe = () => void;
 
@@ -507,6 +500,11 @@ export interface DistributedAvailability {
   /** Available requests per day (remaining), null if not tracked */
   requestsPerDay?: number | null;
 }
+
+// =============================================================================
+// Active Job Tracking Types (re-exported from dedicated module)
+// =============================================================================
+export type { ActiveJobInfo, ActiveJobStatus } from './activeJobTypes.js';
 
 // =============================================================================
 // Job Execution Context
@@ -644,4 +642,12 @@ export interface LLMRateLimiterInstance<JobType extends string> {
    * @returns Job type stats, or undefined if resourcesPerJob is not configured
    */
   getJobTypeStats: () => JobTypeStats | undefined;
+
+  /**
+   * Get all active jobs (waiting or processing).
+   * For debugging and testing to inspect queue state.
+   *
+   * @returns Array of active job info objects
+   */
+  getActiveJobs: () => ActiveJobInfo[];
 }

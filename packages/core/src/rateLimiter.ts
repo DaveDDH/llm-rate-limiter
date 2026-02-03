@@ -29,6 +29,7 @@ export type {
 } from './types.js';
 
 const ZERO = 0;
+const ONE = 1;
 const MS_PER_MINUTE = 60000;
 const MS_PER_DAY = 86400000;
 const DEFAULT_POLL_INTERVAL_MS = 100;
@@ -165,8 +166,8 @@ class LLMRateLimiter implements InternalLimiterInstance {
     const requestCounters = [this.rpmCounter, this.rpdCounter].filter((c) => c !== null);
     const tokenCounters = [this.tpmCounter, this.tpdCounter].filter((c) => c !== null);
     // When estimates are 0, check for at least 1 unit of capacity
-    const requestsToCheck = this.estimatedNumberOfRequests > ZERO ? this.estimatedNumberOfRequests : 1;
-    const tokensToCheck = this.estimatedUsedTokens > ZERO ? this.estimatedUsedTokens : 1;
+    const requestsToCheck = this.estimatedNumberOfRequests > ZERO ? this.estimatedNumberOfRequests : ONE;
+    const tokensToCheck = this.estimatedUsedTokens > ZERO ? this.estimatedUsedTokens : ONE;
     const hasRequestCapacity = requestCounters.every((c) => c.hasCapacityFor(requestsToCheck));
     const hasTokenCapacity = tokenCounters.every((c) => c.hasCapacityFor(tokensToCheck));
     return hasRequestCapacity && hasTokenCapacity;
@@ -187,38 +188,36 @@ class LLMRateLimiter implements InternalLimiterInstance {
     return Math.min(...times);
   }
 
-  private recordActualUsage(result: InternalJobResult): void {
-    // Record actual usage AFTER job execution
-    // Note: When estimates are 0 (default), we just record the actual usage
-    // When estimates are provided, we've already reserved that amount and need to adjust
-    const { requestCount: actualRequests, usage } = result;
-    const actualTokens = usage.input + usage.output;
-
+  private recordRequestUsage(actualRequests: number): void {
     if (this.estimatedNumberOfRequests === ZERO) {
-      // No reservation was made, add actual usage
       this.rpmCounter?.add(actualRequests);
       this.rpdCounter?.add(actualRequests);
-    } else {
-      // Reservation was made, refund the difference
-      const requestRefund = Math.max(ZERO, this.estimatedNumberOfRequests - actualRequests);
-      if (requestRefund > ZERO) {
-        this.rpmCounter?.subtract(requestRefund);
-        this.rpdCounter?.subtract(requestRefund);
-      }
+      return;
     }
+    const refund = Math.max(ZERO, this.estimatedNumberOfRequests - actualRequests);
+    if (refund > ZERO) {
+      this.rpmCounter?.subtract(refund);
+      this.rpdCounter?.subtract(refund);
+    }
+  }
 
+  private recordTokenUsage(actualTokens: number): void {
     if (this.estimatedUsedTokens === ZERO) {
-      // No reservation was made, add actual usage
       this.tpmCounter?.add(actualTokens);
       this.tpdCounter?.add(actualTokens);
-    } else {
-      // Reservation was made, refund the difference
-      const tokenRefund = Math.max(ZERO, this.estimatedUsedTokens - actualTokens);
-      if (tokenRefund > ZERO) {
-        this.tpmCounter?.subtract(tokenRefund);
-        this.tpdCounter?.subtract(tokenRefund);
-      }
+      return;
     }
+    const refund = Math.max(ZERO, this.estimatedUsedTokens - actualTokens);
+    if (refund > ZERO) {
+      this.tpmCounter?.subtract(refund);
+      this.tpdCounter?.subtract(refund);
+    }
+  }
+
+  private recordActualUsage(result: InternalJobResult): void {
+    const { requestCount: actualRequests, usage } = result;
+    this.recordRequestUsage(actualRequests);
+    this.recordTokenUsage(usage.input + usage.output);
   }
 
   private reserveResources(): void {
@@ -279,7 +278,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
 
   hasCapacity(): boolean {
     // Check memory capacity (in KB) - when estimate is 0, check for at least 1 KB
-    const memoryToCheck = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : 1;
+    const memoryToCheck = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
     if (this.memorySemaphore !== null && this.memorySemaphore.getAvailablePermits() < memoryToCheck) {
       return false;
     }

@@ -67,8 +67,8 @@ class RedisBackendImpl {
     this.keys = buildKeys(redisConfig.keyPrefix ?? DEFAULT_KEY_PREFIX);
     this.config = {
       totalCapacity: redisConfig.totalCapacity,
-      tokensPerMinute: redisConfig.tokensPerMinute ?? ZERO,
-      requestsPerMinute: redisConfig.requestsPerMinute ?? ZERO,
+      tokensPerMinute: redisConfig.tokensPerMinute,
+      requestsPerMinute: redisConfig.requestsPerMinute,
       heartbeatIntervalMs: redisConfig.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS,
       instanceTimeoutMs: redisConfig.instanceTimeoutMs ?? DEFAULT_INSTANCE_TIMEOUT_MS,
       resourceEstimationsPerJob: redisConfig.resourceEstimationsPerJob,

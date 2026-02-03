@@ -104,7 +104,7 @@ export class AvailabilityTracker {
    * @param allocation - The new allocation info
    * @param modelId - The model that triggered the allocation change (use '*' for global changes)
    */
-  setDistributedAllocation(allocation: AllocationInfo, modelId: string = '*'): void {
+  setDistributedAllocation(allocation: AllocationInfo, modelId = '*'): void {
     this.distributedAllocation = allocation;
     this.checkAndEmit('distributed', modelId);
   }

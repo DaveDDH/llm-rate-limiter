@@ -23,6 +23,7 @@
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"],
   "references": [
-    { "path": "../../server" }
+    { "path": "../../core" },
+    { "path": "../../redis" }
   ]
 }

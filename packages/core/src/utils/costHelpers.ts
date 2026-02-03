@@ -45,7 +45,7 @@ export const calculateJobAdjustment = (
   jobType: string,
   result: InternalJobResult
 ): RelativeAvailabilityAdjustment | null => {
-  const resources = resourcesPerJob[jobType];
+  const { [jobType]: resources } = resourcesPerJob;
   const tokenDiff = result.usage.input + result.usage.output - (resources?.estimatedUsedTokens ?? ZERO);
   const requestDiff = result.requestCount - (resources?.estimatedNumberOfRequests ?? ZERO);
   if (tokenDiff === ZERO && requestDiff === ZERO) {

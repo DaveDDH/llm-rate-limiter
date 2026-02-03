@@ -2,11 +2,13 @@
 import type { BackendFactoryInstance, DistributedBackendFactory } from './backendFactoryTypes.js';
 import type { JobTypeStats, ResourceEstimationsPerJob } from './jobTypeTypes.js';
 import type {
+  ActiveJobInfo,
   ArgsWithoutModelId,
   AvailabilityChangeReason,
   BackendConfig,
   DistributedAvailability,
   JobExecutionContext,
+  JobUsage,
   LLMJobResult,
   LLMRateLimiterConfig,
   LLMRateLimiterInstance,
@@ -17,8 +19,9 @@ import type {
   ValidatedLLMRateLimiterConfig,
 } from './multiModelTypes.js';
 import type { InternalJobResult, InternalLimiterInstance, InternalLimiterStats } from './types.js';
+import { createInitialActiveJobInfo, updateJobStatus } from './utils/activeJobTracker.js';
 import type { AvailabilityTracker } from './utils/availabilityTracker.js';
-import { type BackendOperationContext, acquireBackend, releaseBackend } from './utils/backendHelpers.js';
+import type { BackendOperationContext } from './utils/backendHelpers.js';
 import { addUsageWithCost, calculateJobAdjustment, toFullAvailability } from './utils/costHelpers.js';
 import {
   calculateEstimatedResources,
@@ -27,13 +30,8 @@ import {
   getModelLimiterById,
   initializeModelLimiters,
 } from './utils/initializationHelpers.js';
-import {
-  buildErrorCallbackContext,
-  getMaxWaitMS,
-  isDelegationError,
-  selectModelWithWait,
-} from './utils/jobExecutionHelpers.js';
-import { executeJobWithCallbacks } from './utils/jobExecutor.js';
+import type { DelegationContext } from './utils/jobDelegation.js';
+import { executeWithDelegation } from './utils/jobDelegation.js';
 import type { JobTypeManager } from './utils/jobTypeManager.js';
 import { validateJobTypeExists } from './utils/jobTypeValidation.js';
 import { type MemoryManagerInstance, createMemoryManager } from './utils/memoryManager.js';
@@ -44,8 +42,6 @@ import {
 } from './utils/multiModelHelpers.js';
 import {
   DEFAULT_LABEL,
-  DEFAULT_POLL_INTERVAL_MS,
-  ZERO,
   acquireJobTypeSlot,
   buildBackendContext,
   buildCombinedStats,
@@ -63,7 +59,7 @@ import {
   unregisterFromBackend,
 } from './utils/rateLimiterOperations.js';
 
-class LLMRateLimiter implements LLMRateLimiterInstance {
+class LLMRateLimiter implements LLMRateLimiterInstance<string> {
   private readonly config: LLMRateLimiterConfig;
   private readonly label: string;
   private readonly escalationOrder: readonly string[];
@@ -74,6 +70,7 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
   private readonly availabilityTracker: AvailabilityTracker | null;
   private readonly backendOrFactory: BackendConfig | DistributedBackendFactory | undefined;
   private readonly instanceId: string;
+  private readonly activeJobs = new Map<string, ActiveJobInfo>();
   private backendUnsubscribe: Unsubscribe | null = null;
   private backendFactoryInstance: BackendFactoryInstance | null = null;
   private resolvedBackend: BackendConfig | undefined;
@@ -127,7 +124,6 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
     );
     this.backendFactoryInstance = factoryInstance;
     this.resolvedBackend = resolvedBackend;
-
     const { unsubscribe, allocation } = await registerWithBackend(
       this.resolvedBackend,
       this.instanceId,
@@ -143,8 +139,10 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
     this.availabilityTracker?.checkAndEmit(reason, modelId);
   }
   private emitJobAdjustment(jobType: string, result: InternalJobResult, modelId: string): void {
-    const adjustment = calculateJobAdjustment(this.resourceEstimationsPerJob, jobType, result);
-    if (adjustment !== null) this.availabilityTracker?.emitAdjustment(adjustment, modelId);
+    const adj = calculateJobAdjustment(this.resourceEstimationsPerJob, jobType, result);
+    if (adj !== null) {
+      this.availabilityTracker?.emitAdjustment(adj, modelId);
+    }
   }
   private getModelLimiter(modelId: string): InternalLimiterInstance {
     return getModelLimiterById(this.modelLimiters, modelId);
@@ -171,112 +169,62 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
   getAvailableModel(): string | null {
     return this.escalationOrder.find((m) => this.hasCapacityForModel(m)) ?? null;
   }
-  private getAvailableModelExcluding(excludeModels: ReadonlySet<string>): string | null {
-    return this.escalationOrder.find((m) => !excludeModels.has(m) && this.hasCapacityForModel(m)) ?? null;
+  private getAvailableModelExcluding(exclude: ReadonlySet<string>): string | null {
+    return this.escalationOrder.find((m) => !exclude.has(m) && this.hasCapacityForModel(m)) ?? null;
   }
 
   async queueJob<T, Args extends ArgsWithoutModelId = ArgsWithoutModelId>(
     options: QueueJobOptions<T, Args>
   ): Promise<LLMJobResult<T>> {
-    const { jobType, job } = options;
+    const { jobId, jobType, job } = options;
     const { jobTypeManager: manager, resourceEstimationsPerJob: cfg } = this;
     validateJobTypeExists(jobType, cfg);
-    const acquired = await acquireJobTypeSlot({
-      manager,
-      resourcesConfig: cfg,
-      jobType,
-    });
+
+    this.activeJobs.set(jobId, createInitialActiveJobInfo(jobId, jobType, Date.now()));
+    const acquired = await acquireJobTypeSlot({ manager, resourcesConfig: cfg, jobType });
+    updateJobStatus(this.activeJobs, jobId, 'waiting-for-model');
+
+    const usage: JobUsage = [];
     const ctx: JobExecutionContext<T, Args> = {
-      jobId: options.jobId,
+      jobId,
       jobType,
       job,
       args: options.args,
       triedModels: new Set<string>(),
-      usage: [],
+      usage,
       onComplete: options.onComplete,
       onError: options.onError,
     };
     try {
-      return await this.executeJobWithDelegation(ctx);
+      return await executeWithDelegation(this.buildDelegationContext(), ctx);
     } finally {
-      if (acquired) manager?.release(jobType);
-    }
-  }
-
-  private async executeJobWithDelegation<T, Args extends ArgsWithoutModelId = ArgsWithoutModelId>(
-    ctx: JobExecutionContext<T, Args>
-  ): Promise<LLMJobResult<T>> {
-    const { modelId: selectedModel, allModelsExhausted } = await selectModelWithWait({
-      escalationOrder: this.escalationOrder,
-      triedModels: ctx.triedModels,
-      hasCapacityForModel: (m) => this.hasCapacityForModel(m),
-      getMaxWaitMSForModel: (m) => getMaxWaitMS(this.resourceEstimationsPerJob, ctx.jobType, m),
-      pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
-    });
-
-    if (selectedModel === null) {
-      if (allModelsExhausted) {
-        throw new Error('All models exhausted: no capacity available within maxWaitMS');
+      if (acquired) {
+        manager?.release(jobType);
       }
-      // No models available yet, but not all exhausted - retry
-      ctx.triedModels.clear();
-      return await this.executeJobWithDelegation(ctx);
-    }
-
-    ctx.triedModels.add(selectedModel);
-    await this.memoryManager?.acquire(selectedModel);
-    if (!(await acquireBackend(this.backendCtx(selectedModel, ctx.jobId, ctx.jobType)))) {
-      this.memoryManager?.release(selectedModel);
-      if (ctx.triedModels.size >= this.escalationOrder.length)
-        throw new Error('All models rejected by backend');
-      return await this.executeJobWithDelegation(ctx);
-    }
-    try {
-      return await this.executeJobOnModel(ctx, selectedModel);
-    } catch (error) {
-      return await this.handleExecutionError(ctx, selectedModel, error);
+      this.activeJobs.delete(jobId);
     }
   }
 
-  private async handleExecutionError<T, Args extends ArgsWithoutModelId = ArgsWithoutModelId>(
-    ctx: JobExecutionContext<T, Args>,
-    modelId: string,
-    error: unknown
-  ): Promise<LLMJobResult<T>> {
-    this.memoryManager?.release(modelId);
-    releaseBackend(this.backendCtx(modelId, ctx.jobId, ctx.jobType), { requests: ZERO, tokens: ZERO });
-    if (isDelegationError(error)) {
-      if (this.getAvailableModelExcluding(ctx.triedModels) === null) ctx.triedModels.clear();
-      return await this.executeJobWithDelegation(ctx);
-    }
-    const errorObj = error instanceof Error ? error : new Error(String(error));
-    ctx.onError?.(errorObj, buildErrorCallbackContext(ctx.jobId, ctx.usage));
-    throw errorObj;
-  }
-
-  private async executeJobOnModel<T, Args extends ArgsWithoutModelId = ArgsWithoutModelId>(
-    ctx: JobExecutionContext<T, Args>,
-    modelId: string
-  ): Promise<LLMJobResult<T>> {
-    return await executeJobWithCallbacks({
-      ctx,
-      modelId,
-      limiter: this.getModelLimiter(modelId),
+  private buildDelegationContext(): DelegationContext {
+    return {
+      escalationOrder: this.escalationOrder,
+      resourceEstimationsPerJob: this.resourceEstimationsPerJob,
+      activeJobs: this.activeJobs,
+      memoryManager: this.memoryManager,
+      hasCapacityForModel: (m) => this.hasCapacityForModel(m),
+      getAvailableModelExcluding: (e) => this.getAvailableModelExcluding(e),
+      backendCtx: (m, j, t) => this.backendCtx(m, j, t),
+      getModelLimiter: (m) => this.getModelLimiter(m),
       addUsageWithCost: (c, m, u) => {
         addUsageWithCost(this.config.models, c, m, u);
       },
-      emitAvailabilityChange: (m) => {
-        this.emitAvailabilityChange('tokensMinute', m);
+      emitAvailabilityChange: (r, m) => {
+        this.availabilityTracker?.checkAndEmit(r, m);
       },
       emitJobAdjustment: (jt, r, m) => {
         this.emitJobAdjustment(jt, r, m);
       },
-      releaseResources: (result) => {
-        this.memoryManager?.release(modelId);
-        const actual = { requests: result.requestCount, tokens: result.usage.input + result.usage.output };
-        releaseBackend(this.backendCtx(modelId, ctx.jobId, ctx.jobType), actual);
-      },
-    });
+    };
   }
 
   async queueJobForModel<T extends InternalJobResult>(
@@ -303,6 +251,9 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
   }
   getModelStats(modelId: string): InternalLimiterStats {
     return getModelStatsWithMemory(this.getModelLimiter(modelId), this.memoryManager);
+  }
+  getActiveJobs(): ActiveJobInfo[] {
+    return Array.from(this.activeJobs.values());
   }
   setDistributedAvailability(availability: DistributedAvailability): void {
     if (this.config.onAvailableSlotsChange !== undefined) {

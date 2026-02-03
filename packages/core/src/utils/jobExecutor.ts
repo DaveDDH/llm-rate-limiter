@@ -122,28 +122,35 @@ export const buildFinalResult = <T, Args extends ArgsWithoutModelId = ArgsWithou
 export const executeJobWithCallbacks = async <T, Args extends ArgsWithoutModelId = ArgsWithoutModelId>(
   jobContext: ModelJobContext<T, Args>
 ): Promise<LLMJobResult<T>> => {
-  const { ctx, modelId, limiter, addUsageWithCost, emitAvailabilityChange, emitJobAdjustment, releaseResources } =
-    jobContext;
+  const {
+    ctx,
+    modelId,
+    limiter,
+    addUsageWithCost,
+    emitAvailabilityChange,
+    emitJobAdjustment,
+    releaseResources,
+  } = jobContext;
 
   const state = createJobExecutionState();
   const handlerCtx = { stateRef: state, ctx, modelId, addUsageWithCost };
   const handleReject = createRejectHandler(handlerCtx);
 
   emitAvailabilityChange(modelId);
-  let resultData: T | undefined;
+  const resultContainer: { data: T | null } = { data: null };
   const internalResult = await limiter.queueJob(async () => {
     const jobArgs = buildJobArgs<Args>(modelId, ctx.args);
     const result = await ctx.job(jobArgs, handleReject);
     checkRejection(state);
-    resultData = result.data;
+    ({ data: resultContainer.data } = result);
     addSuccessUsage(result, modelId, ctx, addUsageWithCost);
     return buildInternalJobResult(result);
   });
 
   emitJobAdjustment(ctx.jobType, internalResult, modelId);
   releaseResources(internalResult);
-  if (resultData === undefined) {
+  if (resultContainer.data === null) {
     throw new Error('Job did not return a result');
   }
-  return buildFinalResult(resultData, modelId, ctx);
+  return buildFinalResult(resultContainer.data, modelId, ctx);
 };

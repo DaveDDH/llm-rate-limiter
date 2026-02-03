@@ -152,8 +152,12 @@ class JobTypeManagerImpl implements JobTypeManager {
     }
 
     // Otherwise, wait in queue
-    const { promise, resolve } = Promise.withResolvers<void>();
-    queue.push({ resolve });
+    const { promise, resolve } = Promise.withResolvers<undefined>();
+    queue.push({
+      resolve: () => {
+        resolve(undefined);
+      },
+    });
     this.log('Waiting for slot', { jobTypeId, queueLength: queue.length });
     await promise;
   }

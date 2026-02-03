@@ -1,139 +1,158 @@
-import { request } from 'node:http';
-import { promisify } from 'node:util';
+import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 
+import { cleanupRedis } from './redisCleanup.js';
+import { StateAggregator } from './stateAggregator.js';
+import { TestDataCollector } from './testDataCollector.js';
+import { createJobs, log, logError, sendJob, sleep, summarizeResults } from './testUtils.js';
+
+const REDIS_URL = 'redis://localhost:6379';
 const PROXY_URL = 'http://localhost:3000';
-const API_PATH = '/api/queue-job';
+const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 const NUM_JOBS = 10;
-const HTTP_ACCEPTED = 202;
-const INCREMENT = 1;
 const EXIT_FAILURE = 1;
+const ZERO = 0;
 
-interface QueueJobRequest {
-  jobId: string;
-  jobType: string;
-  payload: Record<string, unknown>;
-}
-
-interface QueueJobResponse {
-  jobId: string;
-}
-
-interface JobResult {
-  success: boolean;
-  jobId: string;
-  error?: string;
-}
-
-const log = (message: string): void => {
-  process.stdout.write(`${message}\n`);
-};
-
-const logError = (message: string): void => {
-  process.stderr.write(`${message}\n`);
-};
-
-const isQueueJobResponse = (value: unknown): value is QueueJobResponse =>
-  typeof value === 'object' &&
-  value !== null &&
-  'jobId' in value &&
-  typeof (value as { jobId: unknown }).jobId === 'string';
-
-const sendJobCallback = (
-  job: QueueJobRequest,
-  callback: (error: Error | null, response: QueueJobResponse | null) => void
-): void => {
-  const data = JSON.stringify(job);
-
-  const req = request(
-    `${PROXY_URL}${API_PATH}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
-      },
-    },
-    (res) => {
-      let body = '';
-      res.on('data', (chunk: Buffer) => {
-        body += chunk.toString();
-      });
-      res.on('end', () => {
-        if (res.statusCode === HTTP_ACCEPTED) {
-          const parsed: unknown = JSON.parse(body);
-          if (isQueueJobResponse(parsed)) {
-            callback(null, parsed);
-          } else {
-            callback(new Error('Invalid response format'), null);
-          }
-        } else {
-          callback(new Error(`Request failed with status ${res.statusCode}: ${body}`), null);
-        }
-      });
-    }
-  );
-
-  req.on('error', (error) => {
-    callback(error, null);
-  });
-  req.write(data);
-  req.end();
-};
-
-const sendJobPromisified = promisify(sendJobCallback);
-
-const sendJob = async (job: QueueJobRequest): Promise<QueueJobResponse> => {
-  const response = await sendJobPromisified(job);
-  if (response === null) {
-    throw new Error('No response received');
-  }
-  return response;
+// Output file for test data
+const OUTPUT_DIR = './test-results';
+const getOutputFilePath = (): string => {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return `${OUTPUT_DIR}/test-run-${timestamp}.json`;
 };
 
 const JOB_TYPES = ['summary', 'VacationPlanning', 'ImageCreation', 'BudgetCalculation', 'WeatherForecast'];
 
 const getRandomJobType = (): string => {
   const randomIndex = Math.floor(Math.random() * JOB_TYPES.length);
-  return JOB_TYPES[randomIndex] ?? 'default';
-};
-
-const createJob = (index: number): QueueJobRequest => ({
-  jobId: `test-job-${Date.now()}-${index}`,
-  jobType: getRandomJobType(),
-  payload: {
-    testData: `Test payload for job ${index}`,
-    timestamp: new Date().toISOString(),
-  },
-});
-
-const processJob = async (job: QueueJobRequest): Promise<JobResult> => {
-  try {
-    const response = await sendJob(job);
-    log(`[OK] Job ${response.jobId} queued successfully`);
-    return { success: true, jobId: job.jobId };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logError(`[FAIL] Job ${job.jobId} failed: ${errorMessage}`);
-    return { success: false, jobId: job.jobId, error: errorMessage };
-  }
+  return JOB_TYPES[randomIndex] ?? 'summary';
 };
 
 const runTests = async (): Promise<void> => {
-  log(`Sending ${NUM_JOBS} jobs to ${PROXY_URL}${API_PATH}...`);
+  log('=== E2E Test Runner ===');
+  log(`Proxy URL: ${PROXY_URL}`);
+  log(`Instance URLs: ${INSTANCE_URLS.join(', ')}`);
   log('');
 
-  const jobs: QueueJobRequest[] = [];
-  for (let i = 0; i < NUM_JOBS; i += INCREMENT) {
-    jobs.push(createJob(i));
+  // Clean Redis before starting
+  log('Cleaning Redis state...');
+  const cleanupResult = await cleanupRedis({ url: REDIS_URL });
+  log(`Cleaned ${cleanupResult.totalKeysDeleted} keys in ${cleanupResult.durationMs}ms`);
+  for (const [prefix, count] of Object.entries(cleanupResult.keysPerPrefix)) {
+    if (count > ZERO) {
+      log(`  - ${prefix}*: ${count} keys`);
+    }
+  }
+  log('');
+
+  // Initialize collectors
+  const aggregator = new StateAggregator(INSTANCE_URLS);
+  const collector = new TestDataCollector(INSTANCE_URLS);
+
+  // Start listening to SSE events
+  log('Starting event listeners...');
+  await collector.startEventListeners();
+
+  // Take initial snapshot
+  log('Taking initial state snapshot...');
+  const initialStates = await aggregator.fetchState();
+  collector.addSnapshot('initial', initialStates);
+
+  log(`Found ${initialStates.length} instances:`);
+  for (const state of initialStates) {
+    log(`  - ${state.instanceId}: ${state.activeJobs.length} active jobs`);
   }
 
-  const results = await Promise.all(jobs.map(processJob));
+  // Send jobs via proxy
+  log('');
+  log(`=== Sending ${NUM_JOBS} Jobs via Proxy ===`);
+
+  const jobs = [];
+  for (let i = ZERO; i < NUM_JOBS; i++) {
+    jobs.push({
+      jobId: `test-job-${Date.now()}-${i}`,
+      jobType: getRandomJobType(),
+      payload: { testData: `Test payload for job ${i}` },
+    });
+  }
+
+  const results = [];
+  for (const job of jobs) {
+    // Record job being sent
+    collector.recordJobSent(job.jobId, job.jobType, PROXY_URL);
+
+    const result = await sendJob(PROXY_URL, job);
+    results.push(result);
+
+    if (result.success) {
+      log(`[OK] Job ${result.jobId} queued`);
+    } else {
+      logError(`[FAIL] Job ${result.jobId}: ${result.error}`);
+    }
+  }
+
+  // Take snapshot after sending jobs
+  await sleep(200);
+  const afterSendStates = await aggregator.fetchState();
+  collector.addSnapshot('after-sending-jobs', afterSendStates);
 
   log('');
-  log('=== Test Summary ===');
-  const { length: successful } = results.filter((r) => r.success);
-  const { length: failed } = results.filter((r) => !r.success);
-  log(`Total: ${results.length} | Successful: ${successful} | Failed: ${failed}`);
+  const summary = summarizeResults(results);
+  log(`Sent: ${summary.total} | Successful: ${summary.successful} | Failed: ${summary.failed}`);
+
+  // Wait for jobs to complete
+  log('');
+  log('Waiting for jobs to complete...');
+  try {
+    await aggregator.waitForNoActiveJobs({ timeoutMs: 30000 });
+    log('All jobs completed!');
+  } catch (error) {
+    logError(`Timeout: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // Take final snapshot
+  const finalStates = await aggregator.fetchState();
+  collector.addSnapshot('final', finalStates);
+
+  // Stop event listeners
+  collector.stopEventListeners();
+
+  // Get collected data summary
+  const data = await collector.getData();
+  log('');
+  log('=== Data Collection Summary ===');
+  log(`Duration: ${data.durationMs}ms`);
+  log(`Events captured: ${data.summary.totalEventsReceived}`);
+  log(`Snapshots taken: ${data.summary.totalSnapshots}`);
+  log(`Jobs sent: ${data.summary.totalJobsSent}`);
+
+  // Log event breakdown
+  const eventTypes = new Map<string, number>();
+  for (const event of data.events) {
+    const type = (event.event as { type?: string })?.type ?? 'unknown';
+    eventTypes.set(type, (eventTypes.get(type) ?? 0) + 1);
+  }
+  log('Event breakdown:');
+  for (const [type, count] of eventTypes) {
+    log(`  - ${type}: ${count}`);
+  }
+
+  // Log job history summary
+  log('Job history per instance:');
+  for (const history of data.jobHistory) {
+    log(
+      `  - ${history.instanceId}: ${history.summary.completed} completed, ${history.summary.failed} failed`
+    );
+  }
+
+  // Save to file
+  const outputPath = getOutputFilePath();
+  await mkdir(dirname(outputPath), { recursive: true });
+  await collector.saveToFile(outputPath);
+  log('');
+  log(`Test data saved to: ${outputPath}`);
+
+  log('');
+  log('=== Test Complete ===');
 };
 
 runTests().catch((error: unknown) => {

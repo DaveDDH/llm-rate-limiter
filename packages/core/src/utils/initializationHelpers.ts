@@ -63,13 +63,13 @@ export const initializeModelLimiters = (
 ): Map<string, InternalLimiterInstance> => {
   const limiters = new Map<string, InternalLimiterInstance>();
   for (const [modelId, modelConfig] of Object.entries(models)) {
-    const limiterConfig = buildModelLimiterConfig(
+    const limiterConfig = buildModelLimiterConfig({
       modelId,
-      modelConfig as InternalLimiterConfig,
-      label,
+      modelConfig: modelConfig as InternalLimiterConfig,
+      parentLabel: label,
       onLog,
-      estimatedResources
-    );
+      estimatedResources,
+    });
     limiters.set(modelId, createInternalLimiter(limiterConfig));
   }
   return limiters;
