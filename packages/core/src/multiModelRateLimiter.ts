@@ -22,6 +22,7 @@ import { type BackendOperationContext, acquireBackend, releaseBackend } from './
 import { addUsageWithCost, calculateJobAdjustment, toFullAvailability } from './utils/costHelpers.js';
 import {
   calculateEstimatedResources,
+  calculateJobTypeCapacity,
   createAvailabilityTracker,
   getModelLimiterById,
   initializeModelLimiters,
@@ -50,6 +51,7 @@ import {
   getJobTypeKeysFromConfig,
   getJobTypeStatsFromManager,
   getModelStatsWithMemory,
+  initializeJobTypeCapacity,
   registerWithBackend,
   stopAllResources,
   unregisterFromBackend,
@@ -92,6 +94,7 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
       this.label,
       config.onLog
     );
+    initializeJobTypeCapacity(this.jobTypeManager, calculateJobTypeCapacity(config.models));
 
     this.log('Initialized', {
       models: this.order,
@@ -102,11 +105,9 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
   private log(message: string, data?: Record<string, unknown>): void {
     this.config.onLog?.(`${this.label}| ${message}`, data);
   }
-
   getInstanceId(): string {
     return this.instanceId;
   }
-
   async start(): Promise<void> {
     const { unsubscribe, allocation } = await registerWithBackend(
       this.backend,

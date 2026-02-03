@@ -169,17 +169,28 @@ export interface AcquireJobTypeSlotParams {
   waitForCapacity: (hasCapacity: () => boolean, pollMs: number) => Promise<unknown>;
 }
 
+/** Try to acquire slot with retry on race condition. */
+const tryAcquireWithRetry = async (
+  manager: JobTypeManager,
+  jobType: string,
+  pollIntervalMs: number,
+  waitForCapacity: (hasCapacity: () => boolean, pollMs: number) => Promise<unknown>
+): Promise<boolean> => {
+  await waitForCapacity(() => manager.hasCapacity(jobType), pollIntervalMs);
+  if (manager.acquire(jobType)) {
+    return true;
+  }
+  // Slot was acquired by another concurrent job, retry
+  return await tryAcquireWithRetry(manager, jobType, pollIntervalMs, waitForCapacity);
+};
+
 /** Acquire job type slot if applicable. Returns true if slot was acquired. */
 export const acquireJobTypeSlot = async (params: AcquireJobTypeSlotParams): Promise<boolean> => {
   const { manager, resourcesConfig, jobType, pollIntervalMs, waitForCapacity } = params;
   if (jobType === undefined || manager === null || resourcesConfig === undefined) {
     return false;
   }
-  await waitForCapacity(() => manager.hasCapacity(jobType), pollIntervalMs);
-  if (!manager.acquire(jobType)) {
-    throw new Error(`Failed to acquire slot for job type '${jobType}'`);
-  }
-  return true;
+  return await tryAcquireWithRetry(manager, jobType, pollIntervalMs, waitForCapacity);
 };
 
 const INSTANCE_ID_RADIX = 36;
@@ -196,3 +207,8 @@ export const DEFAULT_LABEL = 'LLMRateLimiter';
 export const DEFAULT_POLL_INTERVAL_MS = 100;
 /** Zero constant for avoiding magic numbers. */
 export const ZERO = 0;
+
+/** Initialize job type capacity on manager if present. */
+export const initializeJobTypeCapacity = (manager: JobTypeManager | null, capacity: number): void => {
+  manager?.setTotalCapacity(capacity);
+};

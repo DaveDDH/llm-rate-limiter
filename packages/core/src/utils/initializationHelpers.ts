@@ -94,3 +94,21 @@ export const buildModelStats = (
   }
   return modelStats;
 };
+
+const ZERO = 0;
+const DEFAULT_JOB_TYPE_CAPACITY = 100;
+
+/** Calculate total capacity for job types from models config.
+ * Uses the minimum maxConcurrentRequests across all models,
+ * or a default if not specified. */
+export const calculateJobTypeCapacity = (models: Record<string, ModelRateLimitConfig>): number => {
+  let minCapacity: number | null = null;
+  for (const modelConfig of Object.values(models)) {
+    const { maxConcurrentRequests } = modelConfig;
+    if (typeof maxConcurrentRequests === 'number' && maxConcurrentRequests > ZERO) {
+      minCapacity =
+        minCapacity === null ? maxConcurrentRequests : Math.min(minCapacity, maxConcurrentRequests);
+    }
+  }
+  return minCapacity ?? DEFAULT_JOB_TYPE_CAPACITY;
+};
