@@ -34,8 +34,8 @@ import { buildKeys, evalScript } from './redisHelpers.js';
 import { RedisJobTypeOps } from './redisJobTypeOps.js';
 import { ignoreError, isParsedMessage, isRedisBackendStats, parseAllocation } from './redisTypeGuards.js';
 import type {
-  RedisBackendConfig,
   RedisBackendInstance,
+  RedisBackendInternalConfig,
   RedisBackendStats,
   RedisJobTypeStats,
 } from './types.js';
@@ -57,7 +57,7 @@ class RedisBackendImpl {
   private readonly jobTypeOps: RedisJobTypeOps;
   private stopPromise: Promise<void> | null = null;
 
-  constructor(redisConfig: RedisBackendConfig) {
+  constructor(redisConfig: RedisBackendInternalConfig) {
     this.ownClient = !isRedisClient(redisConfig.redis);
     this.redis = isRedisClient(redisConfig.redis)
       ? redisConfig.redis
@@ -297,7 +297,7 @@ class RedisBackendImpl {
 }
 
 /** Create a Redis distributed backend instance (legacy API with explicit config). */
-export const createRedisBackend = (config: RedisBackendConfig): RedisBackendInstance => {
+export const createRedisBackend = (config: RedisBackendInternalConfig): RedisBackendInstance => {
   const impl = new RedisBackendImpl(config);
   return {
     getBackendConfig: () => impl.getBackendConfig(),

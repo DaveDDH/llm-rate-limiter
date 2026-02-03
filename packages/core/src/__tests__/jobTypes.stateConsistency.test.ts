@@ -91,7 +91,7 @@ describe('Job Types State Consistency - Slot Sum', () => {
 });
 
 describe('Job Types State Consistency - Non-Negative inFlight', () => {
-  it('should never have negative inFlight after any release sequence', () => {
+  it('should never have negative inFlight after any release sequence', async () => {
     const manager = createTestManager({ typeA: { ratio: ONE } }, TEN);
 
     try {
@@ -100,7 +100,7 @@ describe('Job Types State Consistency - Non-Negative inFlight', () => {
       expect(manager.getState('typeA')?.inFlight).toBeGreaterThanOrEqual(ZERO);
 
       // Acquire once, release multiple times
-      manager.acquire('typeA');
+      await manager.acquire('typeA');
       manager.release('typeA');
       manager.release('typeA');
       manager.release('typeA');
@@ -108,7 +108,7 @@ describe('Job Types State Consistency - Non-Negative inFlight', () => {
 
       // Complex acquire/release pattern
       for (let i = ZERO; i < FIVE; i += ONE) {
-        manager.acquire('typeA');
+        await manager.acquire('typeA');
       }
       for (let i = ZERO; i < TEN; i += ONE) {
         // More releases than acquires
@@ -122,12 +122,12 @@ describe('Job Types State Consistency - Non-Negative inFlight', () => {
 });
 
 describe('Job Types State Consistency - After Stop', () => {
-  it('should be safe to use after stop() is called', () => {
+  it('should be safe to use after stop() is called', async () => {
     const manager = createTestManager({ typeA: { ratio: ONE } }, TEN);
 
     // Acquire some slots
-    manager.acquire('typeA');
-    manager.acquire('typeA');
+    await manager.acquire('typeA');
+    await manager.acquire('typeA');
 
     // Stop the manager
     manager.stop();
@@ -151,15 +151,13 @@ describe('Job Types State Consistency - After Stop', () => {
     expect(state).toBeDefined();
   });
 
-  it('should handle operations gracefully after stop', () => {
+  it('should handle operations gracefully after stop', async () => {
     const manager = createTestManager({ typeA: { ratio: ONE } }, TEN);
 
     manager.stop();
 
     // These should not crash - behavior may vary but should be safe
-    expect(() => {
-      manager.acquire('typeA');
-    }).not.toThrow();
+    await expect(manager.acquire('typeA')).resolves.toBeUndefined();
     expect(() => {
       manager.release('typeA');
     }).not.toThrow();
@@ -200,10 +198,9 @@ const runConcurrentOperation = async (
   manager: ReturnType<typeof createTestManager>,
   jobType: string
 ): Promise<void> => {
-  if (manager.acquire(jobType)) {
-    await sleep(ONE);
-    manager.release(jobType);
-  }
+  await manager.acquire(jobType);
+  await sleep(ONE);
+  manager.release(jobType);
 };
 
 describe('Job Types State Consistency - Concurrent Operations', () => {
@@ -240,10 +237,10 @@ describe('Job Types State Consistency - Concurrent Operations', () => {
   });
 });
 
-const acquireMultipleBothTypes = (manager: ReturnType<typeof createTestManager>, count: number): void => {
+const acquireMultipleBothTypes = async (manager: ReturnType<typeof createTestManager>, count: number): Promise<void> => {
   for (let i = ZERO; i < count; i += ONE) {
-    manager.acquire('typeA');
-    manager.acquire('typeB');
+    await manager.acquire('typeA');
+    await manager.acquire('typeB');
   }
 };
 
@@ -255,7 +252,7 @@ const releaseMultipleBothTypes = (manager: ReturnType<typeof createTestManager>,
 };
 
 describe('Job Types State Consistency - Ratio Preservation', () => {
-  it('should preserve ratio relationships after operations', () => {
+  it('should preserve ratio relationships after operations', async () => {
     const manager = createTestManager(
       {
         typeA: { ratio: RATIO_06 },
@@ -272,7 +269,7 @@ describe('Job Types State Consistency - Ratio Preservation', () => {
       expect(initialRatioA).toBeGreaterThan(initialRatioB);
 
       // Acquire and release operations
-      acquireMultipleBothTypes(manager, TEN);
+      await acquireMultipleBothTypes(manager, TEN);
       releaseMultipleBothTypes(manager, TEN);
 
       // Without ratio adjustment, ratios should remain the same

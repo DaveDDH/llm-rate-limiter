@@ -34,17 +34,12 @@ describe('Job Types - Invariant: inFlight <= allocatedSlots', () => {
         const jobType = i % TWO === ZERO ? 'typeA' : 'typeB';
         operations.push(
           (async () => {
-            // Wait for capacity
-            while (!manager.hasCapacity(jobType)) {
-              checker.check(); // Check invariant while waiting
-              await new Promise((r) => setTimeout(r, ONE));
-            }
-            if (manager.acquire(jobType)) {
-              checker.check(); // Check invariant after acquire
-              await new Promise((r) => setTimeout(r, SHORT_DELAY_MS));
-              manager.release(jobType);
-              checker.check(); // Check invariant after release
-            }
+            // Acquire slot (will wait if no capacity)
+            await manager.acquire(jobType);
+            checker.check(); // Check invariant after acquire
+            await new Promise((r) => setTimeout(r, SHORT_DELAY_MS));
+            manager.release(jobType);
+            checker.check(); // Check invariant after release
           })()
         );
       }
@@ -67,8 +62,8 @@ describe('Job Types - Invariant: Internal State Matches External', () => {
     try {
       // Acquire 5 slots
       for (let i = ZERO; i < FIVE; i++) {
-        const acquired = manager.acquire('typeA');
-        if (acquired) externalCount += ONE;
+        await manager.acquire('typeA');
+        externalCount += ONE;
       }
 
       const internalCount = manager.getState('typeA')?.inFlight ?? ZERO;

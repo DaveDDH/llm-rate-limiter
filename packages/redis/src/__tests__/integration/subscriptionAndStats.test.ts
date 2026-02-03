@@ -121,6 +121,8 @@ describe('Redis Backend - Connection Options', () => {
     const backend = createRedisBackend({
       redis: { host: 'localhost', port: REDIS_PORT },
       totalCapacity: TOTAL_CAPACITY,
+      tokensPerMinute: TOKENS_PER_MINUTE,
+      requestsPerMinute: REQUESTS_PER_MINUTE,
       keyPrefix: state.testPrefix,
     });
 

@@ -37,6 +37,9 @@ const state = createTestState();
 const backends: RedisBackendInstance[] = [];
 
 /** Create a test backend with unique prefix */
+const DEFAULT_TOKENS_PER_MINUTE = 10000;
+const DEFAULT_REQUESTS_PER_MINUTE = 1000;
+
 const createBackend = (capacity: number): RedisBackendInstance => {
   if (state.redis === undefined) {
     throw new Error('Redis not available');
@@ -44,6 +47,8 @@ const createBackend = (capacity: number): RedisBackendInstance => {
   const backend = createRedisBackend({
     redis: state.redis,
     totalCapacity: capacity,
+    tokensPerMinute: DEFAULT_TOKENS_PER_MINUTE,
+    requestsPerMinute: DEFAULT_REQUESTS_PER_MINUTE,
     keyPrefix: state.testPrefix,
   });
   backends.push(backend);

@@ -1,9 +1,14 @@
 /**
  * Helper utilities for job execution in the multi-model rate limiter.
  */
+import type { MaxWaitMSConfig, ResourceEstimationsPerJob } from '../jobTypeTypes.js';
 import type { ArgsWithoutModelId, JobArgs, JobCallbackContext, JobUsage } from '../multiModelTypes.js';
 
 const ZERO = 0;
+const ONE = 1;
+const SECONDS_PER_MINUTE = 60;
+const MS_PER_SECOND = 1000;
+const DEFAULT_BUFFER_SECONDS = 5;
 
 /** Internal marker class for delegation */
 export class DelegationError extends Error {
@@ -103,4 +108,167 @@ export const waitForJobTypeCapacity = async (
   };
   checkCapacity();
   return await promise;
+};
+
+/**
+ * Calculate the default maxWaitMS based on time remaining until the next minute boundary.
+ * This is optimized for TPM/RPM limits which reset at minute boundaries.
+ * @returns milliseconds until next minute + 5 second buffer (range: 5000-65000ms)
+ */
+export const calculateDefaultMaxWaitMS = (): number => {
+  const now = new Date();
+  const secondsToNextMinute = SECONDS_PER_MINUTE - now.getSeconds();
+  return (secondsToNextMinute + DEFAULT_BUFFER_SECONDS) * MS_PER_SECOND;
+};
+
+/**
+ * Get the effective maxWaitMS for a specific job type and model.
+ * @param resourceEstimationsPerJob - The resource estimations config
+ * @param jobType - The job type ID
+ * @param modelId - The model ID
+ * @returns The maxWaitMS value (0 for fail-fast, positive for wait time, or default if not specified)
+ */
+export const getMaxWaitMS = (
+  resourceEstimationsPerJob: ResourceEstimationsPerJob | undefined,
+  jobType: string,
+  modelId: string
+): number => {
+  if (resourceEstimationsPerJob === undefined) {
+    return calculateDefaultMaxWaitMS();
+  }
+  const jobTypeConfig = resourceEstimationsPerJob[jobType];
+  if (jobTypeConfig === undefined) {
+    return calculateDefaultMaxWaitMS();
+  }
+  const maxWaitMSConfig: MaxWaitMSConfig | undefined = jobTypeConfig.maxWaitMS;
+  if (maxWaitMSConfig === undefined) {
+    return calculateDefaultMaxWaitMS();
+  }
+  const modelMaxWaitMS = maxWaitMSConfig[modelId];
+  if (modelMaxWaitMS === undefined) {
+    return calculateDefaultMaxWaitMS();
+  }
+  return modelMaxWaitMS;
+};
+
+/** Result of waiting for model capacity with timeout */
+export interface WaitForModelResult {
+  /** The model ID if capacity became available, null if timeout or all models exhausted */
+  modelId: string | null;
+  /** Whether the wait timed out */
+  timedOut: boolean;
+}
+
+/**
+ * Wait for a specific model to have capacity, with timeout support.
+ * @param hasCapacity - Function to check if the model has capacity
+ * @param maxWaitMS - Maximum time to wait (0 = fail fast, > 0 = wait up to this time)
+ * @param pollIntervalMs - Polling interval for checking capacity
+ * @returns Promise that resolves to true if capacity became available, false if timeout
+ */
+export const waitForSpecificModelCapacity = async (
+  hasCapacity: () => boolean,
+  maxWaitMS: number,
+  pollIntervalMs: number
+): Promise<boolean> => {
+  // Fail fast: don't wait at all
+  if (maxWaitMS === ZERO) {
+    return hasCapacity();
+  }
+
+  // Check immediately first
+  if (hasCapacity()) {
+    return true;
+  }
+
+  const { promise, resolve } = Promise.withResolvers<boolean>();
+  const startTime = Date.now();
+
+  const checkCapacity = (): void => {
+    if (hasCapacity()) {
+      resolve(true);
+      return;
+    }
+
+    const elapsed = Date.now() - startTime;
+    if (elapsed >= maxWaitMS) {
+      resolve(false);
+      return;
+    }
+
+    // Schedule next check, but don't exceed the remaining time
+    const remaining = maxWaitMS - elapsed;
+    const nextInterval = Math.min(pollIntervalMs, remaining);
+    if (nextInterval > ZERO) {
+      setTimeout(checkCapacity, nextInterval);
+    } else {
+      resolve(false);
+    }
+  };
+
+  // Start polling (first check already done above)
+  setTimeout(checkCapacity, Math.min(pollIntervalMs, maxWaitMS));
+  return await promise;
+};
+
+/** Parameters for selecting a model with maxWaitMS support */
+export interface SelectModelWithWaitParams {
+  /** Escalation order of models to try */
+  escalationOrder: readonly string[];
+  /** Models that have already been tried (will be skipped) */
+  triedModels: ReadonlySet<string>;
+  /** Function to check if a specific model has capacity */
+  hasCapacityForModel: (modelId: string) => boolean;
+  /** Function to get maxWaitMS for a job type and model */
+  getMaxWaitMSForModel: (modelId: string) => number;
+  /** Polling interval for capacity checks */
+  pollIntervalMs: number;
+}
+
+/** Result of model selection with waiting */
+export interface SelectModelResult {
+  /** Selected model ID, or null if all models exhausted */
+  modelId: string | null;
+  /** Whether all models were exhausted without finding capacity */
+  allModelsExhausted: boolean;
+}
+
+/**
+ * Select a model with maxWaitMS support.
+ * Tries each model in escalation order, waiting up to maxWaitMS for each.
+ * @returns The selected model ID, or null if all models exhausted
+ */
+export const selectModelWithWait = async (params: SelectModelWithWaitParams): Promise<SelectModelResult> => {
+  const { escalationOrder, triedModels, hasCapacityForModel, getMaxWaitMSForModel, pollIntervalMs } = params;
+
+  // First pass: find any model with immediate capacity (not in triedModels)
+  for (const modelId of escalationOrder) {
+    if (!triedModels.has(modelId) && hasCapacityForModel(modelId)) {
+      return { modelId, allModelsExhausted: false };
+    }
+  }
+
+  // Second pass: try each model in order, waiting up to maxWaitMS
+  let modelsAttempted = ZERO;
+  for (const modelId of escalationOrder) {
+    if (triedModels.has(modelId)) {
+      continue;
+    }
+    modelsAttempted += ONE;
+
+    const maxWaitMS = getMaxWaitMSForModel(modelId);
+    const gotCapacity = await waitForSpecificModelCapacity(
+      () => hasCapacityForModel(modelId),
+      maxWaitMS,
+      pollIntervalMs
+    );
+
+    if (gotCapacity) {
+      return { modelId, allModelsExhausted: false };
+    }
+    // Timeout: continue to next model
+  }
+
+  // All models exhausted
+  return { modelId: null, allModelsExhausted: modelsAttempted > ZERO || triedModels.size >= escalationOrder.length };
 };

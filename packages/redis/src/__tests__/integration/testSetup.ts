@@ -9,7 +9,7 @@ import type {
 import { Redis } from 'ioredis';
 import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
-import type { RedisBackendConfig, RedisBackendInstance } from '../../types.js';
+import type { RedisBackendInstance, RedisBackendInternalConfig } from '../../types.js';
 
 /** Test configuration constants */
 export const TEST_KEY_PREFIX = 'test-llm-rl:';
@@ -166,8 +166,8 @@ export interface BackendOptions {
   resourceEstimationsPerJob?: ResourceEstimationsPerJob;
 }
 
-/** Function type for creating Redis backends */
-type CreateRedisBackendFn = (config: RedisBackendConfig) => RedisBackendInstance;
+/** Function type for creating Redis backends (uses internal config with derived values) */
+type CreateRedisBackendFn = (config: RedisBackendInternalConfig) => RedisBackendInstance;
 
 /** Create a backend with standard test configuration */
 export const createTestBackend = (
@@ -181,8 +181,8 @@ export const createTestBackend = (
   return createFn({
     redis: stateRef.redis,
     totalCapacity: options.capacity ?? TOTAL_CAPACITY,
-    tokensPerMinute: options.tokensPerMinute,
-    requestsPerMinute: options.requestsPerMinute,
+    tokensPerMinute: options.tokensPerMinute ?? TOKENS_PER_MINUTE,
+    requestsPerMinute: options.requestsPerMinute ?? REQUESTS_PER_MINUTE,
     keyPrefix: stateRef.testPrefix,
     resourceEstimationsPerJob: options.resourceEstimationsPerJob,
   });

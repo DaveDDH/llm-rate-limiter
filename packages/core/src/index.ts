@@ -12,6 +12,7 @@ export type {
   JobTypeResourceConfig,
   JobTypeState,
   JobTypeStats,
+  MaxWaitMSConfig,
   RatioAdjustmentConfig,
   ResourceEstimationsPerJob,
 } from './jobTypeTypes.js';
@@ -57,3 +58,6 @@ export type {
   BackendFactoryInstance,
 } from './multiModelTypes.js';
 export { isDistributedBackendFactory } from './multiModelTypes.js';
+
+// Helper functions
+export { calculateDefaultMaxWaitMS } from './utils/jobExecutionHelpers.js';

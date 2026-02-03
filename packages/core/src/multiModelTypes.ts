@@ -89,10 +89,12 @@ export type HasMultipleModels<T extends ModelsConfig> = IsSingleModel<T> extends
 
 /**
  * Base configuration for rate limiter (without order).
+ * @typeParam T - Models config type
+ * @typeParam J - Resource estimations per job type (with model IDs for maxWaitMS type safety)
  */
 export interface LLMRateLimiterConfigBase<
   T extends ModelsConfig,
-  J extends ResourceEstimationsPerJob = ResourceEstimationsPerJob,
+  J extends ResourceEstimationsPerJob<string, ModelIds<T>> = ResourceEstimationsPerJob<string, ModelIds<T>>,
 > {
   /** Map of model ID to its rate limit configuration */
   models: T;
@@ -112,6 +114,7 @@ export interface LLMRateLimiterConfigBase<
    * Job type configurations with per-type resource estimates and capacity ratios.
    * Each job type defines resource estimates (tokens, requests, memory) and capacity allocation.
    * Ratios determine how total capacity is divided among job types.
+   * The maxWaitMS field is type-checked against the model IDs defined in models.
    */
   resourceEstimationsPerJob: J;
   /**
@@ -130,10 +133,11 @@ export interface LLMRateLimiterConfigBase<
  * - If only one model is defined, `escalationOrder` is optional
  * - If multiple models are defined, `escalationOrder` is REQUIRED
  * - The escalationOrder array can only contain model IDs that are defined in `models`
+ * - The maxWaitMS keys in resourceEstimationsPerJob can only contain model IDs that are defined in `models`
  */
 export type ValidatedLLMRateLimiterConfig<
   T extends ModelsConfig,
-  J extends ResourceEstimationsPerJob = ResourceEstimationsPerJob,
+  J extends ResourceEstimationsPerJob<string, ModelIds<T>> = ResourceEstimationsPerJob<string, ModelIds<T>>,
 > = LLMRateLimiterConfigBase<T, J> &
   (HasMultipleModels<T> extends true
     ? { escalationOrder: ReadonlyArray<ModelIds<T>> }

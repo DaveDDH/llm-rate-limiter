@@ -51,10 +51,18 @@ export interface JobTypeRatioConfig {
 }
 
 /**
+ * Max wait time configuration per model.
+ * Keys must be valid model IDs from the models config.
+ * @typeParam ModelIds - Union of valid model ID strings
+ */
+export type MaxWaitMSConfig<ModelIds extends string = string> = Partial<Record<ModelIds, number>>;
+
+/**
  * Resource configuration for a specific job type.
  * Extends base resources with ratio configuration and memory estimation.
+ * @typeParam ModelIds - Union of valid model ID strings for maxWaitMS type safety
  */
-export interface JobTypeResourceConfig extends BaseResourcesPerEvent {
+export interface JobTypeResourceConfig<ModelIds extends string = string> extends BaseResourcesPerEvent {
   /**
    * Estimated memory usage in KB for this job type.
    * Required when using memory-based limiting.
@@ -66,11 +74,31 @@ export interface JobTypeResourceConfig extends BaseResourcesPerEvent {
    * If not provided, capacity is distributed evenly among all job types.
    */
   ratio?: JobTypeRatioConfig;
+
+  /**
+   * Maximum time (in milliseconds) to wait for capacity per model.
+   *
+   * - If not specified: Uses dynamic default (time to next minute + 5 seconds, max 65s)
+   * - If 0: Fail fast - immediately delegate to next model or reject
+   * - If > 0: Wait up to that many milliseconds before delegating/rejecting
+   *
+   * @example
+   * ```typescript
+   * maxWaitMS: {
+   *   'gpt-5.2': 60000,    // Wait up to 60s (TPM resets predictably)
+   *   'gpt-oss-20b': 5000, // Wait only 5s (concurrent limit is unpredictable)
+   * }
+   * ```
+   */
+  maxWaitMS?: MaxWaitMSConfig<ModelIds>;
 }
 
 /**
  * Map of job type ID to its resource configuration.
  * The keys become the type-safe job type identifiers.
+ *
+ * @typeParam K - Union of job type ID strings
+ * @typeParam M - Union of model ID strings (for maxWaitMS type safety)
  *
  * @example
  * ```typescript
@@ -80,7 +108,10 @@ export interface JobTypeResourceConfig extends BaseResourcesPerEvent {
  * };
  * ```
  */
-export type ResourceEstimationsPerJob<K extends string = string> = Record<K, JobTypeResourceConfig>;
+export type ResourceEstimationsPerJob<K extends string = string, M extends string = string> = Record<
+  K,
+  JobTypeResourceConfig<M>
+>;
 
 /**
  * Extract job type IDs from ResourceEstimationsPerJob as a string literal union.

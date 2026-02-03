@@ -9,10 +9,10 @@ import { Redis as RedisClient } from 'ioredis';
 import { DEFAULT_FACTORY_KEY_PREFIX, ZERO } from './constants.js';
 import { createRedisBackend as createRedisBackendLegacy } from './redisBackend.js';
 import type {
-  RedisBackendConfig,
   RedisBackendFactory,
   RedisBackendInitConfig,
   RedisBackendInstance,
+  RedisBackendInternalConfig,
   RedisBackendUserConfig,
 } from './types.js';
 
@@ -73,7 +73,7 @@ const buildBackendConfigWithClient = (
   userConfig: RedisBackendUserConfig,
   config: RedisBackendInitConfig,
   redisClient: RedisClient
-): RedisBackendConfig => {
+): RedisBackendInternalConfig => {
   const { models, resourceEstimationsPerJob } = config;
   const totalCapacity = calculateTotalCapacity(models);
   const tokensPerMinute = calculateTotalTokensPerMinute(models);
@@ -82,8 +82,8 @@ const buildBackendConfigWithClient = (
   return {
     redis: redisClient,
     totalCapacity,
-    tokensPerMinute: tokensPerMinute > ZERO ? tokensPerMinute : undefined,
-    requestsPerMinute: requestsPerMinute > ZERO ? requestsPerMinute : undefined,
+    tokensPerMinute,
+    requestsPerMinute,
     keyPrefix: userConfig.keyPrefix ?? DEFAULT_FACTORY_KEY_PREFIX,
     heartbeatIntervalMs: userConfig.heartbeatIntervalMs,
     instanceTimeoutMs: userConfig.instanceTimeoutMs,

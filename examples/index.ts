@@ -3,7 +3,7 @@ import { createRedisBackend } from '@llm-rate-limiter/redis';
 
 const redisURL = 'rediss://default:example.com:6379';
 
-const estimates = {
+const resourceEstimationsPerJob = {
   summary: {
     estimatedUsedTokens: 10000,
     estimatedNumberOfRequests: 1,
@@ -65,11 +65,10 @@ const models = {
 };
 
 const limiter = createLLMRateLimiter({
-  label: 'server',
   backend: createRedisBackend(redisURL),
   models,
   escalationOrder,
-  estimates,
+  resourceEstimationsPerJob,
 });
 
 limiter.start();

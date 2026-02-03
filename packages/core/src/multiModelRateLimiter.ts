@@ -29,8 +29,9 @@ import {
 } from './utils/initializationHelpers.js';
 import {
   buildErrorCallbackContext,
+  getMaxWaitMS,
   isDelegationError,
-  waitForModelCapacity,
+  selectModelWithWait,
 } from './utils/jobExecutionHelpers.js';
 import { executeJobWithCallbacks } from './utils/jobExecutor.js';
 import type { JobTypeManager } from './utils/jobTypeManager.js';
@@ -205,13 +206,23 @@ class LLMRateLimiter implements LLMRateLimiterInstance {
   private async executeJobWithDelegation<T extends InternalJobResult, Args extends ArgsWithoutModelId>(
     ctx: JobExecutionContext<T, Args>
   ): Promise<LLMJobResult<T>> {
-    const selectedModel =
-      this.getAvailableModelExcluding(ctx.triedModels) ??
-      (await waitForModelCapacity(
-        (exclude) => this.getAvailableModelExcluding(exclude),
-        ctx.triedModels,
-        DEFAULT_POLL_INTERVAL_MS
-      ));
+    const { modelId: selectedModel, allModelsExhausted } = await selectModelWithWait({
+      escalationOrder: this.escalationOrder,
+      triedModels: ctx.triedModels,
+      hasCapacityForModel: (m) => this.hasCapacityForModel(m),
+      getMaxWaitMSForModel: (m) => getMaxWaitMS(this.resourceEstimationsPerJob, ctx.jobType, m),
+      pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
+    });
+
+    if (selectedModel === null) {
+      if (allModelsExhausted) {
+        throw new Error('All models exhausted: no capacity available within maxWaitMS');
+      }
+      // No models available yet, but not all exhausted - retry
+      ctx.triedModels.clear();
+      return await this.executeJobWithDelegation(ctx);
+    }
+
     ctx.triedModels.add(selectedModel);
     await this.memoryManager?.acquire(selectedModel);
     if (!(await acquireBackend(this.backendCtx(selectedModel, ctx.jobId, ctx.jobType)))) {

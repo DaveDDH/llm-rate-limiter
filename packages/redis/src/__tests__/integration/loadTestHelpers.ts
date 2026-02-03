@@ -117,6 +117,8 @@ export class BackendManager {
     const backend = createRedisBackend({
       redis: this.state.redis,
       totalCapacity: capacity,
+      tokensPerMinute: THOUSAND * TEN,
+      requestsPerMinute: THOUSAND,
       keyPrefix: this.state.testPrefix,
     });
     this.backends.push(backend);

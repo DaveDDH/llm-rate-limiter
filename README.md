@@ -159,17 +159,9 @@ For multi-instance deployments, use the Redis backend for coordinated rate limit
 import { createLLMRateLimiter } from '@llm-rate-limiter/core';
 import { createRedisBackend } from '@llm-rate-limiter/redis';
 
-// Create Redis backend
-const redisBackend = createRedisBackend({
-  redis: { host: 'localhost', port: 6379, password: 'optional' },
-  totalCapacity: 100,           // Total slots across all instances
-  tokensPerMinute: 100000,      // Total TPM across all instances
-  requestsPerMinute: 1000,      // Total RPM across all instances
-});
-
 // Create rate limiter with Redis backend
 const limiter = createLLMRateLimiter({
-  backend: redisBackend.getBackendConfig(),
+  backend: createRedisBackend('YOUR_REDIS_CONNECTION_STR'),
   models: {
     'gpt-4': {
       requestsPerMinute: 500,
@@ -185,8 +177,7 @@ await limiter.start();
 const result = await limiter.queueJob({ /* ... */ });
 
 // Stop (unregisters from Redis)
-limiter.stop();
-await redisBackend.stop();
+await limiter.stop();
 ```
 
 ### How It Works

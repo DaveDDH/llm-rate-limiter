@@ -169,6 +169,9 @@ describe('Redis Backend - multiple heartbeat intervals', () => {
   });
 });
 
+const DEFAULT_TOKENS_PER_MINUTE = 10000;
+const DEFAULT_REQUESTS_PER_MINUTE = 1000;
+
 describe('Redis Backend - connection options', () => {
   it('should create backend with connection options instead of client', async () => {
     if (!state.redisAvailable) return;
@@ -176,6 +179,8 @@ describe('Redis Backend - connection options', () => {
     const backend = createRedisBackend({
       redis: { host: LOCALHOST, port: REDIS_PORT },
       totalCapacity: SMALL_CAPACITY_TEN,
+      tokensPerMinute: DEFAULT_TOKENS_PER_MINUTE,
+      requestsPerMinute: DEFAULT_REQUESTS_PER_MINUTE,
       keyPrefix: `${state.testPrefix}conn-opts-`,
     });
 

@@ -82,24 +82,31 @@ export interface RedisConnectionOptions {
 }
 
 /**
- * Configuration for creating a Redis distributed backend.
+ * Configuration for creating a Redis distributed backend (user-facing).
  */
 export interface RedisBackendConfig {
   /** Redis connection (ioredis client or connection options) */
   redis: Redis | RedisConnectionOptions;
-  /** Total capacity (concurrent slots) across all instances */
-  totalCapacity: number;
-  /** Total tokens per minute across all instances (optional) */
-  tokensPerMinute?: number;
-  /** Total requests per minute across all instances (optional) */
-  requestsPerMinute?: number;
   /** Key prefix for Redis keys (default: 'llm-rl:') */
   keyPrefix?: string;
   /** Heartbeat interval in ms (default: 5000) */
   heartbeatIntervalMs?: number;
   /** Instance timeout in ms (default: 15000) - instances not seen for this long are cleaned up */
   instanceTimeoutMs?: number;
-  /** Job type configuration for distributed job type capacity (optional) */
+}
+
+/**
+ * Internal configuration for Redis backend implementation.
+ * Built by the factory from model configs - not user-facing.
+ */
+export interface RedisBackendInternalConfig extends RedisBackendConfig {
+  /** Total capacity derived from model configs */
+  totalCapacity: number;
+  /** Total tokens per minute derived from model configs */
+  tokensPerMinute: number;
+  /** Total requests per minute derived from model configs */
+  requestsPerMinute: number;
+  /** Job type configuration */
   resourceEstimationsPerJob?: ResourceEstimationsPerJob;
 }
 
