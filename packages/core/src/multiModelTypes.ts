@@ -537,7 +537,7 @@ export interface JobExecutionContext<T = unknown, Args extends ArgsWithoutModelI
  *
  * @typeParam JobType - Union type of valid job type IDs (from resourcesPerJob keys)
  */
-export interface LLMRateLimiterInstance<JobType extends string = string> {
+export interface LLMRateLimiterInstance<JobType extends string> {
   /**
    * Queue a job with automatic model selection, delegation support, and callbacks.
    *

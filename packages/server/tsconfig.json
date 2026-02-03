@@ -5,15 +5,25 @@
     "lib": ["ES2024"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "isolatedModules": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node", "jest"]
+    "isolatedModules": true,
+    "incremental": true,
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "types": ["node"]
   },
-  "references": [{ "path": "./packages/core" }, { "path": "./packages/redis" }, { "path": "./packages/server" }],
-  "files": []
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../core" },
+    { "path": "../redis" }
+  ]
 }
