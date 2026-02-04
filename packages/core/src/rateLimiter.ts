@@ -15,9 +15,11 @@ import type {
   JobWindowStarts,
   OverageEvent,
   OverageResourceType,
+  RateLimitUpdate,
   ReservationContext,
 } from './types.js';
 import { CapacityWaitQueue } from './utils/capacityWaitQueue.js';
+import { isDelegationError } from './utils/jobExecutionHelpers.js';
 import { validateConfig } from './utils/configValidation.js';
 import { getAvailableMemoryKB } from './utils/memoryUtils.js';
 import { Semaphore } from './utils/semaphore.js';
@@ -387,7 +389,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
    */
   private recordActualUsage(result: InternalJobResult, windowStarts: JobWindowStarts): void {
     const { requestCount: actualRequests, usage } = result;
-    const actualTokens = usage.input + usage.output;
+    const actualTokens = usage.input + usage.output + usage.cached;
 
     this.recordRequestUsage(actualRequests, windowStarts);
     this.recordTokenUsage(actualTokens, windowStarts);
@@ -435,7 +437,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
     }
   }
 
-  setRateLimits(update: { tokensPerMinute?: number; requestsPerMinute?: number }): void {
+  setRateLimits(update: RateLimitUpdate): void {
     if (update.tokensPerMinute !== undefined && this.tpmCounter !== null) {
       this.tpmCounter.setLimit(update.tokensPerMinute);
       this.log('Updated TPM limit', { newLimit: update.tokensPerMinute });
@@ -443,6 +445,14 @@ class LLMRateLimiter implements InternalLimiterInstance {
     if (update.requestsPerMinute !== undefined && this.rpmCounter !== null) {
       this.rpmCounter.setLimit(update.requestsPerMinute);
       this.log('Updated RPM limit', { newLimit: update.requestsPerMinute });
+    }
+    if (update.tokensPerDay !== undefined && this.tpdCounter !== null) {
+      this.tpdCounter.setLimit(update.tokensPerDay);
+      this.log('Updated TPD limit', { newLimit: update.tokensPerDay });
+    }
+    if (update.requestsPerDay !== undefined && this.rpdCounter !== null) {
+      this.rpdCounter.setLimit(update.requestsPerDay);
+      this.log('Updated RPD limit', { newLimit: update.requestsPerDay });
     }
   }
 
@@ -625,6 +635,21 @@ class LLMRateLimiter implements InternalLimiterInstance {
       this.recordActualUsage(result, context.windowStarts);
 
       return result;
+    } catch (error) {
+      // If this is a DelegationError with usage (from reject()), record the actual usage
+      // This ensures reject(usage) triggers the same adjustment flow as successful completion
+      if (isDelegationError(error)) {
+        const delegationResult: InternalJobResult = {
+          requestCount: error.usage.requests,
+          usage: {
+            input: error.usage.tokens,
+            output: 0,
+            cached: 0,
+          },
+        };
+        this.recordActualUsage(delegationResult, context.windowStarts);
+      }
+      throw error;
     } finally {
       // Release concurrency slot (was reserved in tryReserve - not time-windowed)
       this.concurrencySemaphore?.release();

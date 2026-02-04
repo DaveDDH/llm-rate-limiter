@@ -11,11 +11,20 @@ const SECONDS_PER_MINUTE = 60;
 const MS_PER_SECOND = 1000;
 const DEFAULT_BUFFER_SECONDS = 5;
 
-/** Internal marker class for delegation */
+/** Actual usage at time of rejection */
+export interface DelegationUsage {
+  requests: number;
+  tokens: number;
+}
+
+/** Internal marker class for delegation with usage tracking */
 export class DelegationError extends Error {
   public readonly isDelegation = true;
-  constructor() {
+  public readonly usage: DelegationUsage;
+
+  constructor(usage: DelegationUsage = { requests: 0, tokens: 0 }) {
     super('Delegation requested');
+    this.usage = usage;
   }
 }
 

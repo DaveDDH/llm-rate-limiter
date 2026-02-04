@@ -2,7 +2,7 @@
  * Backend helper functions for the LLM Rate Limiter.
  */
 import type { ResourceEstimationsPerJob } from '../jobTypeTypes.js';
-import type { BackendConfig, BackendEstimatedResources } from '../multiModelTypes.js';
+import type { BackendConfig, BackendEstimatedResources, BackendReleaseContext } from '../multiModelTypes.js';
 
 const ZERO = 0;
 
@@ -47,7 +47,8 @@ export const acquireBackend = async (ctx: BackendOperationContext): Promise<bool
 /** Release backend slot */
 export const releaseBackend = (
   ctx: BackendOperationContext,
-  actual: { requests: number; tokens: number }
+  actual: { requests: number; tokens: number },
+  windowStarts?: BackendReleaseContext['windowStarts']
 ): void => {
   const { backend, resourceEstimationsPerJob, instanceId, modelId, jobId, jobType } = ctx;
   if (backend === undefined) {
@@ -61,6 +62,7 @@ export const releaseBackend = (
       jobType,
       estimated: getEstimatedResourcesForBackend(resourceEstimationsPerJob, jobType),
       actual,
+      windowStarts,
     })
     .catch(() => {
       /* User handles errors */

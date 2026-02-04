@@ -149,7 +149,7 @@ class LLMRateLimiter implements LLMRateLimiterInstance<string> {
    * Only applies if instanceCount >= current to avoid race conditions.
    */
   private applyAllocationToLimiters(allocation: AllocationInfo): void {
-    const { instanceCount } = allocation;
+    const { instanceCount, dynamicLimits } = allocation;
     // Debug: log raw allocation
     console.log(`[DEBUG] applyAllocationToLimiters called:`, JSON.stringify(allocation));
 
@@ -167,24 +167,34 @@ class LLMRateLimiter implements LLMRateLimiterInstance<string> {
     }
 
     this.currentInstanceCount = instanceCount;
-    this.log('Applying distributed allocation', { instanceCount });
+    this.log('Applying distributed allocation', { instanceCount, hasDynamicLimits: dynamicLimits !== undefined });
 
     for (const [modelId, limiter] of this.modelLimiters) {
       const modelConfig = this.config.models[modelId];
       if (modelConfig === undefined) continue;
 
-      const originalTPM = modelConfig.tokensPerMinute;
-      const perInstanceTPM =
-        originalTPM !== undefined ? Math.floor(originalTPM / instanceCount) : undefined;
-      const originalRPM = modelConfig.requestsPerMinute;
-      const perInstanceRPM =
-        originalRPM !== undefined ? Math.floor(originalRPM / instanceCount) : undefined;
+      // Use dynamicLimits when present (based on actual global usage), otherwise divide config by instanceCount
+      const modelDynamic = dynamicLimits?.[modelId];
+
+      const perInstanceTPM = modelDynamic?.tokensPerMinute
+        ?? (modelConfig.tokensPerMinute !== undefined ? Math.floor(modelConfig.tokensPerMinute / instanceCount) : undefined);
+      const perInstanceRPM = modelDynamic?.requestsPerMinute
+        ?? (modelConfig.requestsPerMinute !== undefined ? Math.floor(modelConfig.requestsPerMinute / instanceCount) : undefined);
+      const perInstanceTPD = modelDynamic?.tokensPerDay
+        ?? (modelConfig.tokensPerDay !== undefined ? Math.floor(modelConfig.tokensPerDay / instanceCount) : undefined);
+      const perInstanceRPD = modelDynamic?.requestsPerDay
+        ?? (modelConfig.requestsPerDay !== undefined ? Math.floor(modelConfig.requestsPerDay / instanceCount) : undefined);
 
       console.log(
-        `[DEBUG] Model ${modelId}: originalTPM=${originalTPM}, instanceCount=${instanceCount}, perInstanceTPM=${perInstanceTPM}`
+        `[DEBUG] Model ${modelId}: perInstanceTPM=${perInstanceTPM}, perInstanceRPM=${perInstanceRPM}, perInstanceTPD=${perInstanceTPD}, perInstanceRPD=${perInstanceRPD}`
       );
-      this.log(`Model ${modelId} limits`, { perInstanceTPM, perInstanceRPM });
-      limiter.setRateLimits({ tokensPerMinute: perInstanceTPM, requestsPerMinute: perInstanceRPM });
+      this.log(`Model ${modelId} limits`, { perInstanceTPM, perInstanceRPM, perInstanceTPD, perInstanceRPD });
+      limiter.setRateLimits({
+        tokensPerMinute: perInstanceTPM,
+        requestsPerMinute: perInstanceRPM,
+        tokensPerDay: perInstanceTPD,
+        requestsPerDay: perInstanceRPD,
+      });
     }
   }
 

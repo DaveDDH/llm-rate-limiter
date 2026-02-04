@@ -14,6 +14,26 @@
  * - {prefix}:job-type-resources - Hash of jobTypeId -> JSON {estimatedUsedTokens, estimatedNumberOfRequests, ratio}
  */
 const REALLOCATION_LOGIC = `
+-- Helper: Get global actual usage for a model from Redis counters
+local function getGlobalUsage(prefix, modelId, timestamp)
+  local MS_PER_MINUTE = 60000
+  local MS_PER_DAY = 86400000
+  local minuteWindow = math.floor(timestamp / MS_PER_MINUTE) * MS_PER_MINUTE
+  local dayWindow = math.floor(timestamp / MS_PER_DAY) * MS_PER_DAY
+
+  local tpmKey = prefix .. 'usage:' .. modelId .. ':tpm:' .. minuteWindow
+  local rpmKey = prefix .. 'usage:' .. modelId .. ':rpm:' .. minuteWindow
+  local tpdKey = prefix .. 'usage:' .. modelId .. ':tpd:' .. dayWindow
+  local rpdKey = prefix .. 'usage:' .. modelId .. ':rpd:' .. dayWindow
+
+  return {
+    tpmUsed = tonumber(redis.call('HGET', tpmKey, 'tokens')) or 0,
+    rpmUsed = tonumber(redis.call('HGET', rpmKey, 'requests')) or 0,
+    tpdUsed = tonumber(redis.call('HGET', tpdKey, 'tokens')) or 0,
+    rpdUsed = tonumber(redis.call('HGET', rpdKey, 'requests')) or 0
+  }
+end
+
 -- Calculate multi-dimensional slot allocations
 local function recalculateAllocations(instancesKey, allocationsKey, channel, modelCapacitiesKey, jobTypeResourcesKey)
   -- Get instance count
@@ -49,6 +69,36 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
     jobTypeResources[jobTypeId] = cjson.decode(jobTypeResourcesData[i+1])
   end
 
+  -- Extract prefix from instancesKey (e.g., "myprefix:instances" -> "myprefix:")
+  local prefix = string.match(instancesKey, '^(.-)instances$') or ''
+  local timestamp = tonumber(redis.call('TIME')[1]) * 1000
+
+  -- Build dynamicLimits based on remaining global capacity after actual usage
+  local dynamicLimits = {}
+  for _, modelId in ipairs(modelIds) do
+    local model = modelCapacities[modelId]
+    local usage = getGlobalUsage(prefix, modelId, timestamp)
+    dynamicLimits[modelId] = {}
+
+    -- Calculate remaining capacity: (globalLimit - actualUsage) / instanceCount
+    if model.tokensPerMinute then
+      local remaining = math.max(0, model.tokensPerMinute - usage.tpmUsed)
+      dynamicLimits[modelId].tokensPerMinute = math.floor(remaining / instanceCount)
+    end
+    if model.requestsPerMinute then
+      local remaining = math.max(0, model.requestsPerMinute - usage.rpmUsed)
+      dynamicLimits[modelId].requestsPerMinute = math.floor(remaining / instanceCount)
+    end
+    if model.tokensPerDay then
+      local remaining = math.max(0, model.tokensPerDay - usage.tpdUsed)
+      dynamicLimits[modelId].tokensPerDay = math.floor(remaining / instanceCount)
+    end
+    if model.requestsPerDay then
+      local remaining = math.max(0, model.requestsPerDay - usage.rpdUsed)
+      dynamicLimits[modelId].requestsPerDay = math.floor(remaining / instanceCount)
+    end
+  end
+
   -- Calculate slots for each instance
   for _, instId in ipairs(instanceIds) do
     local slotsByJobTypeAndModel = {}
@@ -62,13 +112,14 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
         local model = modelCapacities[modelId]
         local estimatedTokens = jobType.estimatedUsedTokens or 1
         local estimatedRequests = jobType.estimatedNumberOfRequests or 1
+        local modelDynamic = dynamicLimits[modelId] or {}
 
-        -- Calculate slot candidates from each limit type
+        -- Calculate slot candidates from each limit type using REMAINING capacity
         local slotCandidates = {}
-        local tpm = 0
-        local rpm = 0
-        local tpd = 0
-        local rpd = 0
+        local tpm = modelDynamic.tokensPerMinute or 0
+        local rpm = modelDynamic.requestsPerMinute or 0
+        local tpd = modelDynamic.tokensPerDay or 0
+        local rpd = modelDynamic.requestsPerDay or 0
 
         -- Concurrent-based slots (direct capacity, no resource division)
         if model.maxConcurrentRequests and model.maxConcurrentRequests > 0 then
@@ -76,27 +127,27 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
           table.insert(slotCandidates, concurrentSlots)
         end
 
-        -- TPM-based slots
-        if model.tokensPerMinute and model.tokensPerMinute > 0 then
-          local tpmSlots = math.floor(model.tokensPerMinute / estimatedTokens / instanceCount * ratio)
+        -- TPM-based slots using remaining capacity
+        if tpm > 0 then
+          local tpmSlots = math.floor(tpm / estimatedTokens * ratio)
           table.insert(slotCandidates, tpmSlots)
         end
 
-        -- RPM-based slots
-        if model.requestsPerMinute and model.requestsPerMinute > 0 then
-          local rpmSlots = math.floor(model.requestsPerMinute / estimatedRequests / instanceCount * ratio)
+        -- RPM-based slots using remaining capacity
+        if rpm > 0 then
+          local rpmSlots = math.floor(rpm / estimatedRequests * ratio)
           table.insert(slotCandidates, rpmSlots)
         end
 
-        -- TPD-based slots
-        if model.tokensPerDay and model.tokensPerDay > 0 then
-          local tpdSlots = math.floor(model.tokensPerDay / estimatedTokens / instanceCount * ratio)
+        -- TPD-based slots using remaining capacity
+        if tpd > 0 then
+          local tpdSlots = math.floor(tpd / estimatedTokens * ratio)
           table.insert(slotCandidates, tpdSlots)
         end
 
-        -- RPD-based slots
-        if model.requestsPerDay and model.requestsPerDay > 0 then
-          local rpdSlots = math.floor(model.requestsPerDay / estimatedRequests / instanceCount * ratio)
+        -- RPD-based slots using remaining capacity
+        if rpd > 0 then
+          local rpdSlots = math.floor(rpd / estimatedRequests * ratio)
           table.insert(slotCandidates, rpdSlots)
         end
 
@@ -111,20 +162,6 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
           end
         end
 
-        -- Calculate per-instance rate limits
-        if model.tokensPerMinute then
-          tpm = math.floor(model.tokensPerMinute / instanceCount)
-        end
-        if model.requestsPerMinute then
-          rpm = math.floor(model.requestsPerMinute / instanceCount)
-        end
-        if model.tokensPerDay then
-          tpd = math.floor(model.tokensPerDay / instanceCount)
-        end
-        if model.requestsPerDay then
-          rpd = math.floor(model.requestsPerDay / instanceCount)
-        end
-
         slotsByJobTypeAndModel[jobTypeId][modelId] = {
           slots = slots,
           tokensPerMinute = tpm,
@@ -135,10 +172,11 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
       end
     end
 
-    -- Store allocation
+    -- Store allocation with dynamicLimits for instances to update local rate limiters
     local allocData = cjson.encode({
       instanceCount = instanceCount,
-      slotsByJobTypeAndModel = slotsByJobTypeAndModel
+      slotsByJobTypeAndModel = slotsByJobTypeAndModel,
+      dynamicLimits = dynamicLimits
     })
     redis.call('HSET', allocationsKey, instId, allocData)
     -- Publish update
@@ -290,7 +328,8 @@ return "1"
 /**
  * Release a slot and recalculate allocations.
  * KEYS: [instances, allocations, channel, modelCapacities, jobTypeResources]
- * ARGV: [instanceId, timestamp, jobType, modelId]
+ * ARGV: [instanceId, timestamp, jobType, modelId, actualTokens, actualRequests,
+ *        tpmWindowStart, rpmWindowStart, tpdWindowStart, rpdWindowStart]
  * Returns: "OK"
  */
 export const RELEASE_SCRIPT = `
@@ -305,6 +344,47 @@ local instanceId = ARGV[1]
 local timestamp = tonumber(ARGV[2])
 local jobType = ARGV[3]
 local modelId = ARGV[4]
+
+-- Parse actual usage and window starts for distributed usage tracking
+local actualTokens = tonumber(ARGV[5]) or 0
+local actualRequests = tonumber(ARGV[6]) or 0
+local tpmWindowStart = ARGV[7] or ''
+local rpmWindowStart = ARGV[8] or ''
+local tpdWindowStart = ARGV[9] or ''
+local rpdWindowStart = ARGV[10] or ''
+
+-- Update global usage counters (for distributed capacity tracking)
+local prefix = string.match(instancesKey, '^(.-)instances$') or ''
+local MINUTE_TTL = 120   -- 2 minutes
+local DAY_TTL = 172800   -- 2 days
+
+-- Track token usage (TPM and TPD)
+if actualTokens > 0 then
+  if tpmWindowStart ~= '' then
+    local tpmKey = prefix .. 'usage:' .. modelId .. ':tpm:' .. tpmWindowStart
+    redis.call('HINCRBY', tpmKey, 'tokens', actualTokens)
+    redis.call('EXPIRE', tpmKey, MINUTE_TTL)
+  end
+  if tpdWindowStart ~= '' then
+    local tpdKey = prefix .. 'usage:' .. modelId .. ':tpd:' .. tpdWindowStart
+    redis.call('HINCRBY', tpdKey, 'tokens', actualTokens)
+    redis.call('EXPIRE', tpdKey, DAY_TTL)
+  end
+end
+
+-- Track request usage (RPM and RPD)
+if actualRequests > 0 then
+  if rpmWindowStart ~= '' then
+    local rpmKey = prefix .. 'usage:' .. modelId .. ':rpm:' .. rpmWindowStart
+    redis.call('HINCRBY', rpmKey, 'requests', actualRequests)
+    redis.call('EXPIRE', rpmKey, MINUTE_TTL)
+  end
+  if rpdWindowStart ~= '' then
+    local rpdKey = prefix .. 'usage:' .. modelId .. ':rpd:' .. rpdWindowStart
+    redis.call('HINCRBY', rpdKey, 'requests', actualRequests)
+    redis.call('EXPIRE', rpdKey, DAY_TTL)
+  end
+end
 
 -- Decrement in-flight
 local instJson = redis.call('HGET', instancesKey, instanceId)
@@ -321,7 +401,7 @@ end
 
 redis.call('HSET', instancesKey, instanceId, cjson.encode(inst))
 
--- Recalculate allocations
+-- Recalculate allocations (now considers actual usage via dynamicLimits)
 recalculateAllocations(instancesKey, allocationsKey, channel, modelCapacitiesKey, jobTypeResourcesKey)
 
 return 'OK'

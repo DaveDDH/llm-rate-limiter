@@ -69,8 +69,8 @@ export const executeOnModel = async <T, Args extends ArgsWithoutModelId = ArgsWi
     emitJobAdjustment: dctx.emitJobAdjustment,
     releaseResources: (result) => {
       dctx.memoryManager?.release(modelId);
-      const actual = { requests: result.requestCount, tokens: result.usage.input + result.usage.output };
-      releaseBackend(dctx.backendCtx(modelId, ctx.jobId, ctx.jobType), actual);
+      const actual = { requests: result.requestCount, tokens: result.usage.input + result.usage.output + result.usage.cached };
+      releaseBackend(dctx.backendCtx(modelId, ctx.jobId, ctx.jobType), actual, reservationContext.windowStarts);
     },
   });
 };
@@ -90,11 +90,15 @@ const handleError = async <T, Args extends ArgsWithoutModelId = ArgsWithoutModel
 ): Promise<LLMJobResult<T>> => {
   const { dctx, ctx, modelId, reservationContext, error } = params;
   dctx.memoryManager?.release(modelId);
-  // Note: reservation is NOT released here because it was consumed during job execution.
-  // The time window counter will naturally reset on the next minute boundary.
-  // However, if this error happened before job execution started, we should release.
-  // For now, keep the existing behavior - let time windows reset naturally.
-  releaseBackend(dctx.backendCtx(modelId, ctx.jobId, ctx.jobType), { requests: ZERO, tokens: ZERO });
+
+  // Extract actual usage from DelegationError, or use zero for other errors
+  // When reject(usage) is called, DelegationError carries the actual usage
+  const actualUsage = isDelegationError(error)
+    ? error.usage
+    : { requests: ZERO, tokens: ZERO };
+
+  releaseBackend(dctx.backendCtx(modelId, ctx.jobId, ctx.jobType), actualUsage, reservationContext.windowStarts);
+
   if (isDelegationError(error)) {
     if (dctx.getAvailableModelExcluding(ctx.triedModels) === null) {
       ctx.triedModels.clear();

@@ -256,11 +256,23 @@ class RedisBackendImpl {
   readonly release = async (context: BackendReleaseContext): Promise<void> => {
     const { keys, redis } = this;
     const { instances, allocations, channel, modelCapacities, jobTypeResources } = keys;
+    const windowStarts = context.windowStarts ?? {};
     await evalScript(
       redis,
       RELEASE_SCRIPT,
       [instances, allocations, channel, modelCapacities, jobTypeResources],
-      [context.instanceId, String(Date.now()), context.jobType, context.modelId]
+      [
+        context.instanceId,
+        String(Date.now()),
+        context.jobType,
+        context.modelId,
+        String(context.actual.tokens),
+        String(context.actual.requests),
+        String(windowStarts.tpmWindowStart ?? ''),
+        String(windowStarts.rpmWindowStart ?? ''),
+        String(windowStarts.tpdWindowStart ?? ''),
+        String(windowStarts.rpdWindowStart ?? ''),
+      ]
     );
   };
 

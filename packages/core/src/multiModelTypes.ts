@@ -417,6 +417,23 @@ export interface ModelSlotAllocation {
 /** Multi-dimensional slot allocation by job type and model */
 export type SlotsByJobTypeAndModel = Record<string, Record<string, ModelSlotAllocation>>;
 
+/**
+ * Dynamic limits per model based on remaining global capacity after actual usage.
+ * Calculated as: (globalLimit - globalActualUsage) / instanceCount
+ */
+export interface DynamicLimits {
+  [modelId: string]: {
+    /** Remaining tokens per minute for this instance */
+    tokensPerMinute?: number;
+    /** Remaining requests per minute for this instance */
+    requestsPerMinute?: number;
+    /** Remaining tokens per day for this instance */
+    tokensPerDay?: number;
+    /** Remaining requests per day for this instance */
+    requestsPerDay?: number;
+  };
+}
+
 /** Allocation info for a specific instance from the distributed backend */
 export interface AllocationInfo {
   /** Number of active instances sharing the rate limits */
@@ -426,6 +443,11 @@ export interface AllocationInfo {
    * Structure: { [jobType]: { [modelId]: { slots, tokensPerMinute, requestsPerMinute } } }
    */
   slotsByJobTypeAndModel: SlotsByJobTypeAndModel;
+  /**
+   * Dynamic limits per model based on remaining global capacity after actual usage.
+   * When present, instances should use these limits instead of dividing config by instanceCount.
+   */
+  dynamicLimits?: DynamicLimits;
 }
 
 /** Callback for allocation updates from distributed backend */
@@ -461,6 +483,17 @@ export interface BackendReleaseContext {
   estimated: BackendEstimatedResources;
   /** Actual resources used (zero if job failed before execution) */
   actual: BackendActualResources;
+  /** Window start timestamps for distributed usage tracking */
+  windowStarts?: {
+    /** TPM window start (ms since epoch) */
+    tpmWindowStart?: number;
+    /** RPM window start (ms since epoch) */
+    rpmWindowStart?: number;
+    /** TPD window start (ms since epoch) */
+    tpdWindowStart?: number;
+    /** RPD window start (ms since epoch) */
+    rpdWindowStart?: number;
+  };
 }
 
 /**

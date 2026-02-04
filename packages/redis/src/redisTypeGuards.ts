@@ -1,7 +1,7 @@
 /**
  * Type guards and parsing utilities for the Redis backend.
  */
-import type { AllocationInfo } from '@llm-rate-limiter/core';
+import type { AllocationInfo, DynamicLimits } from '@llm-rate-limiter/core';
 
 import type { AllocationData, RedisBackendStats, RedisJobTypeStats } from './types.js';
 
@@ -22,6 +22,20 @@ export const isRedisBackendStats = (d: unknown): d is RedisBackendStats =>
 
 export const isRedisJobTypeStats = (d: unknown): d is RedisJobTypeStats['jobTypes'] => isObject(d);
 
+/** Type guard for DynamicLimits - validates structure of dynamic limits per model */
+export const isDynamicLimits = (d: unknown): d is DynamicLimits => {
+  if (!isObject(d)) return false;
+  for (const modelLimits of Object.values(d)) {
+    if (!isObject(modelLimits)) return false;
+    const limits = modelLimits;
+    if (limits.tokensPerMinute !== undefined && typeof limits.tokensPerMinute !== 'number') return false;
+    if (limits.requestsPerMinute !== undefined && typeof limits.requestsPerMinute !== 'number') return false;
+    if (limits.tokensPerDay !== undefined && typeof limits.tokensPerDay !== 'number') return false;
+    if (limits.requestsPerDay !== undefined && typeof limits.requestsPerDay !== 'number') return false;
+  }
+  return true;
+};
+
 const DEFAULT_INSTANCE_COUNT = 1;
 const defaultAlloc: AllocationInfo = {
   instanceCount: DEFAULT_INSTANCE_COUNT,
@@ -34,10 +48,15 @@ export const parseAllocation = (json: string | null): AllocationInfo => {
   try {
     const parsed: unknown = JSON.parse(json);
     if (isAllocationData(parsed)) {
-      return {
+      const result: AllocationInfo = {
         instanceCount: parsed.instanceCount,
         slotsByJobTypeAndModel: parsed.slotsByJobTypeAndModel,
       };
+      // Include dynamicLimits if present and valid
+      if ('dynamicLimits' in parsed && isDynamicLimits(parsed.dynamicLimits)) {
+        result.dynamicLimits = parsed.dynamicLimits;
+      }
+      return result;
     }
     return defaultAlloc;
   } catch {

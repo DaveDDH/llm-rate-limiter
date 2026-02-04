@@ -239,6 +239,10 @@ export interface RateLimitUpdate {
   tokensPerMinute?: number;
   /** New requests per minute limit */
   requestsPerMinute?: number;
+  /** New tokens per day limit */
+  tokensPerDay?: number;
+  /** New requests per day limit */
+  requestsPerDay?: number;
 }
 
 /**

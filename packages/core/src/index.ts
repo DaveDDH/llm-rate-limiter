@@ -55,6 +55,7 @@ export type {
   BackendEstimatedResources,
   BackendActualResources,
   AllocationInfo,
+  DynamicLimits,
   AllocationCallback,
   Unsubscribe,
   DistributedAvailability,

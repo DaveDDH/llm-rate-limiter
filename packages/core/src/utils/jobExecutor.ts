@@ -19,6 +19,8 @@ export interface JobExecutionState {
   rejected: boolean;
   shouldDelegate: boolean;
   rejectedWithoutDelegation: boolean;
+  /** Usage recorded at rejection time */
+  rejectUsage: { requests: number; tokens: number } | null;
 }
 
 /** Create initial job execution state */
@@ -26,6 +28,7 @@ export const createJobExecutionState = (): JobExecutionState => ({
   rejected: false,
   shouldDelegate: false,
   rejectedWithoutDelegation: false,
+  rejectUsage: null,
 });
 
 /** Context for job execution on a specific model */
@@ -59,6 +62,11 @@ const createRejectHandler = (
     mutableState.rejected = true;
     const usageEntry: UsageEntry = { modelId, ...usage };
     addUsageWithCost(ctx, modelId, usageEntry);
+    // Store usage for DelegationError - reject implies 1 request was made
+    mutableState.rejectUsage = {
+      requests: 1,
+      tokens: usage.inputTokens + usage.outputTokens + usage.cachedTokens,
+    };
     mutableState.shouldDelegate = opts?.delegate !== false;
     if (!mutableState.shouldDelegate) {
       mutableState.rejectedWithoutDelegation = true;
@@ -72,7 +80,7 @@ const checkRejection = (state: JobExecutionState): void => {
     throw new Error('Job rejected without delegation');
   }
   if (state.shouldDelegate) {
-    throw new DelegationError();
+    throw new DelegationError(state.rejectUsage ?? { requests: 0, tokens: 0 });
   }
 };
 
