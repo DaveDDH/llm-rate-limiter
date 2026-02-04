@@ -116,7 +116,7 @@ This report summarizes the verification of all documentation files in the `docs/
 
 ---
 
-### Issue #6: RELEASE_SCRIPT resource adjustment not implemented - **DESIGN COMPLETE**
+### Issue #6: RELEASE_SCRIPT resource adjustment not implemented - **RESOLVED**
 
 **Location:** Lines 281-284
 
@@ -126,20 +126,22 @@ This report summarizes the verification of all documentation files in the `docs/
 > - Accept actual resource usage for capacity adjustment
 > - Only adjust time-windowed limits if within same window
 
-**Actual implementation:**
-- Releases specific job-type + model slot ✓
-- Decrements in-flight tracking ✓
-- Triggers reallocation ✓
-- **MISSING**: No mechanism to accept actual resource usage or adjust time-windowed limits
+**Status:** FIXED
 
-**Status:** DESIGN COMPLETE - See `docs/actual-usage-adjustment-design.md`
+**Resolution:**
+- Actual usage adjustment is a **LOCAL** concern, not distributed via Redis
+- The Redis backend tracks SLOTS (discrete counts), not actual token/request usage
+- TPM/RPM limits are enforced LOCALLY by each instance via `TimeWindowCounter`
 
-**Design Summary:**
-- Created comprehensive design document for the "Actual Usage Adjustment" feature
-- Key behavior: Refund unused capacity when actual < estimated, within same time window
-- Time-windowed limits (TPM, RPM, TPD, RPD): Only adjust if job completes within same window
-- Non-time-windowed limits (concurrent, memory): Always release immediately
-- Implementation pending
+**Implementation:**
+- Added `JobWindowStarts` and `ReservationContext` types to `packages/core/src/types.ts`
+- Added `getWindowStart()` and `subtractIfSameWindow()` methods to `TimeWindowCounter`
+- Updated `LLMRateLimiter.tryReserve()` to return `ReservationContext` with window starts
+- Updated `recordRequestUsage()` and `recordTokenUsage()` to only refund if same window
+- Updated multi-model integration to pass `ReservationContext` through the execution flow
+- Removed legacy `subtract()` method - all refunds now use window-aware `subtractIfSameWindow()`
+- Updated `docs/distributed-slots-design.md` to clarify actual usage is a local concern
+- See `docs/actual-usage-adjustment-design.md` for the detailed design document
 
 ---
 
@@ -152,4 +154,4 @@ This report summarizes the verification of all documentation files in the `docs/
 | e2e-distributed-slots-tests.md | Missing config presets | ~~Low~~ | ✓ **FIXED** - Added all 14 presets to documentation |
 | distributed-slots-design.md | UPDATE_RATIOS_SCRIPT | ~~Medium~~ | ✓ **FIXED** - Removed (ratios are local by design) |
 | distributed-slots-design.md | Ratio synchronization | ~~Medium~~ | ✓ **FIXED** - Clarified ratios are local by design |
-| distributed-slots-design.md | RELEASE_SCRIPT resource adjustment | Medium | ✓ **DESIGN COMPLETE** - See `docs/actual-usage-adjustment-design.md` |
+| distributed-slots-design.md | RELEASE_SCRIPT resource adjustment | ~~Medium~~ | ✓ **FIXED** - Implemented time-window-aware refunds locally |

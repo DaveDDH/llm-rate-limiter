@@ -12,6 +12,8 @@ import type {
   InternalLimiterConfig,
   InternalLimiterInstance,
   InternalLimiterStats,
+  JobWindowStarts,
+  ReservationContext,
 } from './types.js';
 import { CapacityWaitQueue } from './utils/capacityWaitQueue.js';
 import { validateConfig } from './utils/configValidation.js';
@@ -27,6 +29,8 @@ export type {
   InternalLimiterStats,
   InternalLimiterInstance,
   BaseResourcesPerEvent,
+  JobWindowStarts,
+  ReservationContext,
 } from './types.js';
 
 const ZERO = 0;
@@ -51,7 +55,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
   private rpdCounter: TimeWindowCounter | null = null;
   private tpmCounter: TimeWindowCounter | null = null;
   private tpdCounter: TimeWindowCounter | null = null;
-  private readonly capacityWaitQueue: CapacityWaitQueue;
+  private readonly capacityWaitQueue: CapacityWaitQueue<ReservationContext>;
 
   constructor(config: InternalLimiterConfig) {
     validateConfig(config);
@@ -135,7 +139,11 @@ class LLMRateLimiter implements InternalLimiterInstance {
     this.tpdCounter = this.createCounter(this.config.tokensPerDay, MS_PER_DAY, 'TPD');
   }
 
-  private async waitForTimeWindowCapacity(): Promise<void> {
+  /**
+   * Wait for time window capacity and reserve it.
+   * Returns JobWindowStarts for time-aware refunds at job completion.
+   */
+  private async waitForTimeWindowCapacity(): Promise<JobWindowStarts> {
     // Debug: log current state
     const tpmStats = this.tpmCounter?.getStats();
     this.log('[DEBUG] waitForTimeWindowCapacity', {
@@ -147,18 +155,25 @@ class LLMRateLimiter implements InternalLimiterInstance {
     });
 
     // When estimates are 0, don't wait - we'll record actual usage after the job
+    // Return current window starts for tracking (even though no capacity was reserved)
     if (this.estimatedNumberOfRequests === ZERO && this.estimatedUsedTokens === ZERO) {
       this.log('Skipping capacity wait - estimates are 0');
-      return;
+      return {
+        rpmWindowStart: this.rpmCounter?.getWindowStart(),
+        rpdWindowStart: this.rpdCounter?.getWindowStart(),
+        tpmWindowStart: this.tpmCounter?.getWindowStart(),
+        tpdWindowStart: this.tpdCounter?.getWindowStart(),
+      };
     }
-    const { promise, resolve } = Promise.withResolvers<undefined>();
+    const { promise, resolve } = Promise.withResolvers<JobWindowStarts>();
     let waitCount = 0;
     const checkCapacity = (): void => {
-      if (this.tryReserveCapacity()) {
+      const windowStarts = this.tryReserveCapacity();
+      if (windowStarts !== null) {
         if (waitCount > 0) {
           this.log('Capacity available after waiting', { waitCount });
         }
-        resolve(undefined);
+        resolve(windowStarts);
         return;
       }
       waitCount++;
@@ -175,17 +190,27 @@ class LLMRateLimiter implements InternalLimiterInstance {
       setTimeout(checkCapacity, Math.min(waitTime, DEFAULT_POLL_INTERVAL_MS));
     };
     checkCapacity();
-    await promise;
+    return promise;
   }
 
   /**
    * Atomically check capacity and reserve if available.
-   * Returns true if reservation succeeded, false if no capacity.
+   * Returns JobWindowStarts if reservation succeeded, null if no capacity.
+   * Captures window starts BEFORE adding to counters for time-aware refunds.
    */
-  private tryReserveCapacity(): boolean {
+  private tryReserveCapacity(): JobWindowStarts | null {
     if (!this.hasTimeWindowCapacityForEstimates()) {
-      return false;
+      return null;
     }
+
+    // Capture window starts BEFORE adding to counters
+    const windowStarts: JobWindowStarts = {
+      rpmWindowStart: this.rpmCounter?.getWindowStart(),
+      rpdWindowStart: this.rpdCounter?.getWindowStart(),
+      tpmWindowStart: this.tpmCounter?.getWindowStart(),
+      tpdWindowStart: this.tpdCounter?.getWindowStart(),
+    };
+
     // Reserve immediately after checking - this is atomic within single-threaded JS
     if (this.estimatedNumberOfRequests > ZERO) {
       this.rpmCounter?.add(this.estimatedNumberOfRequests);
@@ -195,7 +220,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
       this.tpmCounter?.add(this.estimatedUsedTokens);
       this.tpdCounter?.add(this.estimatedUsedTokens);
     }
-    return true;
+    return windowStarts;
   }
 
   /** Check capacity for actual estimates (used when waiting) */
@@ -233,41 +258,65 @@ class LLMRateLimiter implements InternalLimiterInstance {
     return Math.min(...times);
   }
 
-  private recordRequestUsage(actualRequests: number): void {
+  /**
+   * Record actual request usage with time-window awareness.
+   * Only refunds unused capacity if still within the same time window.
+   */
+  private recordRequestUsage(actualRequests: number, windowStarts: JobWindowStarts): void {
     if (this.estimatedNumberOfRequests === ZERO) {
+      // No estimate = no pre-reservation, add actual to current window
       this.rpmCounter?.add(actualRequests);
       this.rpdCounter?.add(actualRequests);
       return;
     }
     const refund = Math.max(ZERO, this.estimatedNumberOfRequests - actualRequests);
     if (refund > ZERO) {
-      this.rpmCounter?.subtract(refund);
-      this.rpdCounter?.subtract(refund);
+      // Only refund if same window - uses subtractIfSameWindow
+      if (windowStarts.rpmWindowStart !== undefined) {
+        this.rpmCounter?.subtractIfSameWindow(refund, windowStarts.rpmWindowStart);
+      }
+      if (windowStarts.rpdWindowStart !== undefined) {
+        this.rpdCounter?.subtractIfSameWindow(refund, windowStarts.rpdWindowStart);
+      }
     }
   }
 
-  private recordTokenUsage(actualTokens: number): void {
+  /**
+   * Record actual token usage with time-window awareness.
+   * Only refunds unused capacity if still within the same time window.
+   */
+  private recordTokenUsage(actualTokens: number, windowStarts: JobWindowStarts): void {
     if (this.estimatedUsedTokens === ZERO) {
+      // No estimate = no pre-reservation, add actual to current window
       this.tpmCounter?.add(actualTokens);
       this.tpdCounter?.add(actualTokens);
       return;
     }
     const refund = Math.max(ZERO, this.estimatedUsedTokens - actualTokens);
     if (refund > ZERO) {
-      this.tpmCounter?.subtract(refund);
-      this.tpdCounter?.subtract(refund);
+      // Only refund if same window - uses subtractIfSameWindow
+      if (windowStarts.tpmWindowStart !== undefined) {
+        this.tpmCounter?.subtractIfSameWindow(refund, windowStarts.tpmWindowStart);
+      }
+      if (windowStarts.tpdWindowStart !== undefined) {
+        this.tpdCounter?.subtractIfSameWindow(refund, windowStarts.tpdWindowStart);
+      }
     }
   }
 
-  private recordActualUsage(result: InternalJobResult): void {
+  /**
+   * Record actual usage with time-window awareness.
+   * Only refunds unused capacity if still within the same time window.
+   */
+  private recordActualUsage(result: InternalJobResult, windowStarts: JobWindowStarts): void {
     const { requestCount: actualRequests, usage } = result;
-    this.recordRequestUsage(actualRequests);
-    this.recordTokenUsage(usage.input + usage.output);
+    this.recordRequestUsage(actualRequests, windowStarts);
+    this.recordTokenUsage(usage.input + usage.output, windowStarts);
   }
 
   async queueJob<T extends InternalJobResult>(job: () => Promise<T> | T): Promise<T> {
-    // Wait for time window capacity
-    await this.waitForTimeWindowCapacity();
+    // Wait for time window capacity - returns window starts for time-aware refunds
+    const windowStarts = await this.waitForTimeWindowCapacity();
 
     // Acquire memory (in KB)
     if (this.memorySemaphore !== null) {
@@ -285,8 +334,8 @@ class LLMRateLimiter implements InternalLimiterInstance {
       // Execute the job
       const result = await job();
 
-      // Record actual usage (or refund difference if estimates were provided)
-      this.recordActualUsage(result);
+      // Record actual usage with window context (only refunds if same window)
+      this.recordActualUsage(result, windowStarts);
 
       return result;
     } finally {
@@ -337,13 +386,22 @@ class LLMRateLimiter implements InternalLimiterInstance {
 
   /**
    * Atomically check and reserve ALL capacity types (time windows, memory, concurrency).
-   * Returns true if capacity was reserved, false if no capacity available.
+   * Returns ReservationContext if capacity was reserved, null if no capacity available.
+   * The context contains window starts for time-aware refunds at release.
    */
-  tryReserve(): boolean {
+  tryReserve(): ReservationContext | null {
     // Check ALL capacity types first (memory, concurrency, time windows)
     if (!this.hasCapacity()) {
-      return false;
+      return null;
     }
+
+    // Capture window starts BEFORE adding to counters
+    const windowStarts: JobWindowStarts = {
+      rpmWindowStart: this.rpmCounter?.getWindowStart(),
+      rpdWindowStart: this.rpdCounter?.getWindowStart(),
+      tpmWindowStart: this.tpmCounter?.getWindowStart(),
+      tpdWindowStart: this.tpdCounter?.getWindowStart(),
+    };
 
     // Reserve time window capacity
     if (this.estimatedNumberOfRequests > ZERO) {
@@ -360,8 +418,8 @@ class LLMRateLimiter implements InternalLimiterInstance {
       const memoryToReserve = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
       if (!this.memorySemaphore.tryAcquire(memoryToReserve)) {
         // Rollback time window reservation
-        this.releaseTimeWindowReservation();
-        return false;
+        this.releaseTimeWindowReservation(windowStarts);
+        return null;
       }
     }
 
@@ -373,41 +431,54 @@ class LLMRateLimiter implements InternalLimiterInstance {
           const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
           this.memorySemaphore.release(memoryToRelease);
         }
-        this.releaseTimeWindowReservation();
-        return false;
+        this.releaseTimeWindowReservation(windowStarts);
+        return null;
       }
     }
 
-    return true;
+    return { windowStarts };
   }
 
-  /** Release only time window reservations (used for rollback) */
-  private releaseTimeWindowReservation(): void {
+  /**
+   * Release only time window reservations (used for rollback and release).
+   * Respects time window boundaries - only refunds if still in same window.
+   */
+  private releaseTimeWindowReservation(windowStarts: JobWindowStarts): void {
     if (this.estimatedNumberOfRequests > ZERO) {
-      this.rpmCounter?.subtract(this.estimatedNumberOfRequests);
-      this.rpdCounter?.subtract(this.estimatedNumberOfRequests);
+      if (windowStarts.rpmWindowStart !== undefined) {
+        this.rpmCounter?.subtractIfSameWindow(this.estimatedNumberOfRequests, windowStarts.rpmWindowStart);
+      }
+      if (windowStarts.rpdWindowStart !== undefined) {
+        this.rpdCounter?.subtractIfSameWindow(this.estimatedNumberOfRequests, windowStarts.rpdWindowStart);
+      }
     }
     if (this.estimatedUsedTokens > ZERO) {
-      this.tpmCounter?.subtract(this.estimatedUsedTokens);
-      this.tpdCounter?.subtract(this.estimatedUsedTokens);
+      if (windowStarts.tpmWindowStart !== undefined) {
+        this.tpmCounter?.subtractIfSameWindow(this.estimatedUsedTokens, windowStarts.tpmWindowStart);
+      }
+      if (windowStarts.tpdWindowStart !== undefined) {
+        this.tpdCounter?.subtractIfSameWindow(this.estimatedUsedTokens, windowStarts.tpdWindowStart);
+      }
     }
   }
 
   /**
    * Release previously reserved capacity (all types: time windows, memory, concurrency).
    * Used when a job fails before execution after calling tryReserve().
+   * Respects time window boundaries - only refunds time-windowed limits if still in same window.
+   * @param context The reservation context from tryReserve()
    */
-  releaseReservation(): void {
-    // Release time window reservations
-    this.releaseTimeWindowReservation();
+  releaseReservation(context: ReservationContext): void {
+    // Release time window reservations (respects window boundaries)
+    this.releaseTimeWindowReservation(context.windowStarts);
 
-    // Release memory
+    // Release memory (not time-windowed - always release)
     if (this.memorySemaphore !== null) {
       const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
       this.memorySemaphore.release(memoryToRelease);
     }
 
-    // Release concurrency slot
+    // Release concurrency slot (not time-windowed - always release)
     this.concurrencySemaphore?.release();
 
     // Notify queue that capacity may be available
@@ -418,9 +489,9 @@ class LLMRateLimiter implements InternalLimiterInstance {
    * Wait for capacity using a FIFO queue with timeout.
    * Jobs are served in order when capacity becomes available.
    * @param maxWaitMS Maximum time to wait (0 = fail fast, no waiting)
-   * @returns Promise resolving to true if capacity was reserved, false if timed out
+   * @returns Promise resolving to ReservationContext if capacity was reserved, null if timed out
    */
-  waitForCapacityWithTimeout(maxWaitMS: number): Promise<boolean> {
+  waitForCapacityWithTimeout(maxWaitMS: number): Promise<ReservationContext | null> {
     return this.capacityWaitQueue.waitForCapacity(() => this.tryReserve(), maxWaitMS);
   }
 
@@ -433,24 +504,41 @@ class LLMRateLimiter implements InternalLimiterInstance {
   }
 
   /**
+   * Create an empty window starts object (for cases where we need a context but no reservation happened).
+   */
+  private createEmptyWindowStarts(): JobWindowStarts {
+    return {
+      rpmWindowStart: this.rpmCounter?.getWindowStart(),
+      rpdWindowStart: this.rpdCounter?.getWindowStart(),
+      tpmWindowStart: this.tpmCounter?.getWindowStart(),
+      tpdWindowStart: this.tpdCounter?.getWindowStart(),
+    };
+  }
+
+  /**
    * Queue a job with pre-reserved capacity (all types already reserved via tryReserve()).
    * Skips all capacity acquisition since everything was already reserved atomically.
+   * @param job The job function to execute
+   * @param context The reservation context from tryReserve() for window-aware refunds
    */
-  async queueJobWithReservedCapacity<T extends InternalJobResult>(job: () => Promise<T> | T): Promise<T> {
+  async queueJobWithReservedCapacity<T extends InternalJobResult>(
+    job: () => Promise<T> | T,
+    context: ReservationContext
+  ): Promise<T> {
     // All capacity (time windows, memory, concurrency) already reserved via tryReserve()
     try {
       // Execute the job
       const result = await job();
 
-      // Record actual usage (or refund difference if estimates were provided)
-      this.recordActualUsage(result);
+      // Record actual usage with window context (only refunds if same window)
+      this.recordActualUsage(result, context.windowStarts);
 
       return result;
     } finally {
-      // Release concurrency slot (was reserved in tryReserve)
+      // Release concurrency slot (was reserved in tryReserve - not time-windowed)
       this.concurrencySemaphore?.release();
 
-      // Release memory (was reserved in tryReserve)
+      // Release memory (was reserved in tryReserve - not time-windowed)
       if (this.memorySemaphore !== null) {
         const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
         this.memorySemaphore.release(memoryToRelease);

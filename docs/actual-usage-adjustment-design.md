@@ -1,8 +1,23 @@
 # Actual Usage Adjustment - Design Document
 
+**Status: IMPLEMENTED**
+
 ## Overview
 
 This document describes the design for adjusting capacity based on actual resource consumption after a job completes, rather than relying solely on estimates.
+
+### Implementation Summary
+
+The feature has been implemented with the following key changes:
+
+| File | Changes |
+|------|---------|
+| `packages/core/src/types.ts` | Added `JobWindowStarts`, `ReservationContext` types |
+| `packages/core/src/utils/timeWindowCounter.ts` | Added `getWindowStart()`, `subtractIfSameWindow()` |
+| `packages/core/src/rateLimiter.ts` | Updated `tryReserve()` to return context, window-aware refunds |
+| `packages/core/src/utils/jobDelegation.ts` | Pass reservation context through execution flow |
+| `packages/core/src/utils/jobExecutor.ts` | Use reservation context in `queueJobWithReservedCapacity()` |
+| `packages/core/src/utils/capacityWaitQueue.ts` | Made generic to support `ReservationContext` |
 
 ## Problem Statement
 

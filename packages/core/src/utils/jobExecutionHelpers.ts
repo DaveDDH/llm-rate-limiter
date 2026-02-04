@@ -3,6 +3,7 @@
  */
 import type { MaxWaitMSConfig, ResourceEstimationsPerJob } from '../jobTypeTypes.js';
 import type { ArgsWithoutModelId, JobArgs, JobCallbackContext, JobUsage } from '../multiModelTypes.js';
+import type { ReservationContext } from '../types.js';
 
 const ZERO = 0;
 const ONE = 1;
@@ -165,17 +166,17 @@ export interface SelectModelWithWaitParams {
   hasCapacityForModel: (modelId: string) => boolean;
   /**
    * Function to atomically check and reserve capacity for a model.
-   * Returns true if capacity was reserved, false otherwise.
+   * Returns ReservationContext if capacity was reserved, null otherwise.
    */
-  tryReserveForModel: (modelId: string) => boolean;
+  tryReserveForModel: (modelId: string) => ReservationContext | null;
   /** Function to get maxWaitMS for a job type and model */
   getMaxWaitMSForModel: (modelId: string) => number;
   /**
    * Function to wait for capacity using a FIFO queue with timeout.
    * Jobs are served in order when capacity becomes available.
-   * Returns true if capacity was reserved, false if timed out.
+   * Returns ReservationContext if capacity was reserved, null if timed out.
    */
-  waitForCapacityWithTimeoutForModel: (modelId: string, maxWaitMS: number) => Promise<boolean>;
+  waitForCapacityWithTimeoutForModel: (modelId: string, maxWaitMS: number) => Promise<ReservationContext | null>;
   /** Called when starting to wait for a model (for job tracking) */
   onWaitingForModel?: (modelId: string, maxWaitMS: number) => void;
 }
@@ -184,6 +185,8 @@ export interface SelectModelWithWaitParams {
 export interface SelectModelResult {
   /** Selected model ID, or null if all models exhausted */
   modelId: string | null;
+  /** Reservation context for the selected model (null if no model selected) */
+  reservationContext: ReservationContext | null;
   /** Whether all models were exhausted without finding capacity */
   allModelsExhausted: boolean;
 }
@@ -206,6 +209,7 @@ const tryModelAtIndex = async (
   if (index >= escalationOrder.length) {
     return {
       modelId: null,
+      reservationContext: null,
       allModelsExhausted: modelsAttempted > ZERO || triedModels.size >= escalationOrder.length,
     };
   }
@@ -218,10 +222,10 @@ const tryModelAtIndex = async (
   const maxWaitMS = getMaxWaitMSForModel(modelId);
   onWaitingForModel?.(modelId, maxWaitMS);
 
-  // Wait for capacity using FIFO queue with timeout
-  const reserved = await waitForCapacityWithTimeoutForModel(modelId, maxWaitMS);
-  if (reserved) {
-    return { modelId, allModelsExhausted: false };
+  // Wait for capacity using FIFO queue with timeout - returns ReservationContext or null
+  const reservationContext = await waitForCapacityWithTimeoutForModel(modelId, maxWaitMS);
+  if (reservationContext !== null) {
+    return { modelId, reservationContext, allModelsExhausted: false };
   }
 
   return await tryModelAtIndex(params, index + ONE, modelsAttempted + ONE);

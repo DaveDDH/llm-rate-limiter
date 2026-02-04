@@ -295,6 +295,15 @@ end
 - Decrement in-flight tracking
 - Trigger reallocation to redistribute freed capacity
 
+**Note on Actual Usage Adjustment:**
+- **Actual usage adjustment is a LOCAL concern** - it is NOT handled by Redis
+- The Redis backend tracks SLOTS (discrete counts), not actual token/request usage
+- TPM/RPM limits are enforced LOCALLY by each instance via `TimeWindowCounter`
+- When a job completes, actual usage is compared to estimated usage LOCALLY
+- Refunds (when actual < estimated) are applied LOCALLY to the instance's `TimeWindowCounter`
+- Refunds only occur if the job completes within the same time window it started (time-window-aware)
+- See `docs/actual-usage-adjustment-design.md` for the detailed design
+
 Note: Ratio adjustments are handled locally by each instance and do not require Redis scripts.
 
 ### 3. TypeScript Changes

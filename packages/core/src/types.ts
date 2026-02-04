@@ -166,6 +166,36 @@ export interface InternalLimiterStats {
 }
 
 // =============================================================================
+// Window Tracking Types (for time-aware capacity refunds)
+// =============================================================================
+
+/**
+ * Window start timestamps captured at reservation time.
+ * Used to determine if a job finishes within the same time window it started.
+ * Each limit type (RPM, RPD, TPM, TPD) has its own window boundary.
+ */
+export interface JobWindowStarts {
+  /** RPM window start (ms since epoch) - resets every minute */
+  rpmWindowStart?: number;
+  /** RPD window start (ms since epoch) - resets every day */
+  rpdWindowStart?: number;
+  /** TPM window start (ms since epoch) - resets every minute */
+  tpmWindowStart?: number;
+  /** TPD window start (ms since epoch) - resets every day */
+  tpdWindowStart?: number;
+}
+
+/**
+ * Context returned when capacity is reserved.
+ * Must be passed back at release time for window-aware refunds.
+ * Refunds only happen if the job completes within the same time window.
+ */
+export interface ReservationContext {
+  /** Window starts at the time capacity was reserved */
+  windowStarts: JobWindowStarts;
+}
+
+// =============================================================================
 // Instance Type
 // =============================================================================
 
@@ -186,29 +216,36 @@ export interface InternalLimiterInstance {
   /**
    * Queue a job with pre-reserved capacity (skips capacity wait).
    * Use this after calling tryReserve() to avoid double-reservation.
+   * @param job The job function to execute
+   * @param context The reservation context from tryReserve() for window-aware refunds
    */
-  queueJobWithReservedCapacity: <T extends InternalJobResult>(job: () => Promise<T> | T) => Promise<T>;
+  queueJobWithReservedCapacity: <T extends InternalJobResult>(
+    job: () => Promise<T> | T,
+    context: ReservationContext
+  ) => Promise<T>;
   /** Stop all intervals (for cleanup) */
   stop: () => void;
   /** Check if all limits have capacity (non-blocking) */
   hasCapacity: () => boolean;
   /**
    * Atomically check and reserve capacity.
-   * Returns true if capacity was reserved, false if no capacity.
-   * This is used during model selection to ensure capacity is actually available.
+   * Returns ReservationContext if capacity was reserved, null if no capacity.
+   * The context contains window starts for time-aware refunds at release.
    */
-  tryReserve: () => boolean;
+  tryReserve: () => ReservationContext | null;
   /**
    * Release previously reserved capacity (when job fails before execution).
+   * Respects time window boundaries - only refunds if still in same window.
+   * @param context The reservation context from tryReserve()
    */
-  releaseReservation: () => void;
+  releaseReservation: (context: ReservationContext) => void;
   /**
    * Wait for capacity using a FIFO queue with timeout.
    * Jobs are served in order when capacity becomes available.
    * @param maxWaitMS Maximum time to wait (0 = fail fast, no waiting)
-   * @returns Promise resolving to true if capacity was reserved, false if timed out
+   * @returns Promise resolving to ReservationContext if reserved, null if timed out
    */
-  waitForCapacityWithTimeout: (maxWaitMS: number) => Promise<boolean>;
+  waitForCapacityWithTimeout: (maxWaitMS: number) => Promise<ReservationContext | null>;
   /** Get current statistics */
   getStats: () => InternalLimiterStats;
   /** Update rate limits dynamically (for distributed coordination) */

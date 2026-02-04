@@ -266,8 +266,8 @@ class LLMRateLimiter implements LLMRateLimiterInstance<string> {
       memoryManager: this.memoryManager,
       hasCapacityForModel: (m) => this.hasCapacityForModel(m),
       tryReserveForModel: (m) => this.getModelLimiter(m).tryReserve(),
-      releaseReservationForModel: (m) => {
-        this.getModelLimiter(m).releaseReservation();
+      releaseReservationForModel: (m, ctx) => {
+        this.getModelLimiter(m).releaseReservation(ctx);
       },
       getAvailableModelExcluding: (e) => this.getAvailableModelExcluding(e),
       backendCtx: (m, j, t) => this.backendCtx(m, j, t),

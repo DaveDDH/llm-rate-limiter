@@ -81,9 +81,37 @@ export class TimeWindowCounter {
     this.count += amount;
   }
 
-  subtract(amount: number): void {
+  /**
+   * Get current window start timestamp.
+   * Call this at reservation time to capture which window the job started in.
+   * @returns Window start timestamp (ms since epoch, aligned to window boundary)
+   */
+  getWindowStart(): number {
     this.checkAndResetWindow();
+    return this.windowStart;
+  }
+
+  /**
+   * Subtract amount only if still in the same time window.
+   * Used for time-aware capacity refunds - prevents refunding across window boundaries.
+   * @param amount The amount to subtract (refund)
+   * @param windowStart The window start captured at reservation time
+   * @returns true if subtraction was applied, false if window has changed (no refund)
+   */
+  subtractIfSameWindow(amount: number, windowStart: number): boolean {
+    this.checkAndResetWindow();
+    if (this.windowStart !== windowStart) {
+      // Window has changed since reservation - no refund
+      this.log(`Refund skipped (window changed)`, {
+        amount,
+        reservedInWindow: windowStart,
+        currentWindow: this.windowStart,
+      });
+      return false;
+    }
     this.count = Math.max(ZERO, this.count - amount);
+    this.log(`Refund applied`, { amount, newCount: this.count });
+    return true;
   }
 
   getTimeUntilReset(): number {

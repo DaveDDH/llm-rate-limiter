@@ -11,7 +11,7 @@ import type {
   TokenUsageEntry,
   UsageEntry,
 } from '../multiModelTypes.js';
-import type { InternalJobResult, InternalLimiterInstance } from '../types.js';
+import type { InternalJobResult, InternalLimiterInstance, ReservationContext } from '../types.js';
 import { DelegationError, buildJobArgs, calculateTotalCost } from './jobExecutionHelpers.js';
 
 /** Mutable state for job execution callbacks */
@@ -32,6 +32,8 @@ export const createJobExecutionState = (): JobExecutionState => ({
 export interface ModelJobContext<T, Args extends ArgsWithoutModelId = ArgsWithoutModelId> {
   ctx: JobExecutionContext<T, Args>;
   modelId: string;
+  /** Reservation context for time-window-aware capacity refunds */
+  reservationContext: ReservationContext;
   limiter: InternalLimiterInstance;
   addUsageWithCost: (ctx: { usage: JobUsage }, modelId: string, usage: UsageEntry) => void;
   emitAvailabilityChange: (modelId: string) => void;
@@ -125,6 +127,7 @@ export const executeJobWithCallbacks = async <T, Args extends ArgsWithoutModelId
   const {
     ctx,
     modelId,
+    reservationContext,
     limiter,
     addUsageWithCost,
     emitAvailabilityChange,
@@ -138,7 +141,7 @@ export const executeJobWithCallbacks = async <T, Args extends ArgsWithoutModelId
 
   emitAvailabilityChange(modelId);
   const resultContainer: { data: T | null } = { data: null };
-  // Use queueJobWithReservedCapacity since capacity was already reserved during model selection
+  // Use queueJobWithReservedCapacity with reservation context for time-window-aware refunds
   const internalResult = await limiter.queueJobWithReservedCapacity(async () => {
     const jobArgs = buildJobArgs<Args>(modelId, ctx.args);
     const result = await ctx.job(jobArgs, handleReject);
@@ -146,7 +149,7 @@ export const executeJobWithCallbacks = async <T, Args extends ArgsWithoutModelId
     ({ data: resultContainer.data } = result);
     addSuccessUsage(result, modelId, ctx, addUsageWithCost);
     return buildInternalJobResult(result);
-  });
+  }, reservationContext);
 
   emitJobAdjustment(ctx.jobType, internalResult, modelId);
   releaseResources(internalResult);
