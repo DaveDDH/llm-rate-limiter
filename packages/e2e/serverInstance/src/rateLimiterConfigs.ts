@@ -525,6 +525,53 @@ export const slotCalcUnevenRatiosConfig: RateLimiterPreset = {
 // jobTypeD: floor((100K/10K) / 2 * 0.1) = floor(5 * 0.1) = 0
 // Note: Low ratios may result in 0 slots per instance
 
+// Memory-based slot calculation config
+// Tests that memory is a LOCAL constraint: finalSlots = min(distributedSlots, floor(memoryForJobType / estimatedMemoryKB))
+// Use high TPM so distributed slots are high, then memory becomes the limiting factor
+const MEMORY_TEST_TPM = 10000000; // 10M TPM (very high, won't be limiting)
+const MEMORY_TEST_HEAVY_KB = 10240; // 10MB per job (heavy memory usage)
+const MEMORY_TEST_LIGHT_KB = 1024; // 1MB per job (light memory usage)
+
+export const slotCalcMemoryConfig: RateLimiterPreset = {
+  models: {
+    'test-model': {
+      tokensPerMinute: MEMORY_TEST_TPM,
+      pricing: { input: 1, cached: 0.1, output: 2 },
+    },
+  },
+  escalationOrder: ['test-model'],
+  resourceEstimations: {
+    heavyMemoryJob: {
+      estimatedUsedTokens: 1000,
+      estimatedNumberOfRequests: 1,
+      estimatedUsedMemoryKB: MEMORY_TEST_HEAVY_KB,
+      ratio: { initialValue: 0.5 },
+    },
+    lightMemoryJob: {
+      estimatedUsedTokens: 1000,
+      estimatedNumberOfRequests: 1,
+      estimatedUsedMemoryKB: MEMORY_TEST_LIGHT_KB,
+      ratio: { initialValue: 0.5 },
+    },
+  },
+};
+// Memory slot calculation (assuming 100MB instance memory):
+//
+// Distributed slots (TPM-based, 2 instances):
+//   heavyMemoryJob: floor((10M / 1K) / 2 * 0.5) = floor(2500) = 2500
+//   lightMemoryJob: floor((10M / 1K) / 2 * 0.5) = floor(2500) = 2500
+//
+// Local memory slots (100MB total, split by ratio):
+//   heavyMemoryJob memory = 100MB × 0.5 = 50MB
+//   lightMemoryJob memory = 100MB × 0.5 = 50MB
+//
+//   heavyMemoryJob local = floor(50MB / 10MB) = 5 slots
+//   lightMemoryJob local = floor(50MB / 1MB) = 50 slots
+//
+// Final (min of distributed and local):
+//   heavyMemoryJob = min(2500, 5) = 5 slots   ← Memory limited
+//   lightMemoryJob = min(2500, 50) = 50 slots ← Memory limited (but higher due to smaller memory footprint)
+
 // =============================================================================
 // Config Registry
 // =============================================================================
@@ -543,7 +590,8 @@ export type ConfigPresetName =
   | 'slotCalc-tpm-rpm'
   | 'slotCalc-multi-model'
   | 'slotCalc-ratios'
-  | 'slotCalc-uneven-ratios';
+  | 'slotCalc-uneven-ratios'
+  | 'slotCalc-memory';
 
 export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   default: defaultConfig,
@@ -560,6 +608,7 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'slotCalc-multi-model': slotCalcMultiModelConfig,
   'slotCalc-ratios': slotCalcRatiosConfig,
   'slotCalc-uneven-ratios': slotCalcUnevenRatiosConfig,
+  'slotCalc-memory': slotCalcMemoryConfig,
 };
 
 export const getConfigPreset = (name: ConfigPresetName): RateLimiterPreset => {

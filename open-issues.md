@@ -84,19 +84,19 @@ The design specifies that slot calculation should use `min(TPM-based, RPM-based,
 
 ### Issue #5: `slotCalc-memory` test preset missing
 
-**Status:** Open
+**Status:** RESOLVED
 
 **Description:**
 The test preset `slotCalc-memory` is documented in `docs/e2e-distributed-slots-tests.md` but not implemented in the test configuration.
 
 **Impact:** Medium - Memory-based slot calculation tests cannot run
 
-**Files to modify:**
-- `packages/e2e/serverInstance/src/rateLimiterConfigs.ts`
-
-**Recommended fix:**
-1. Implement `slotCalc-memory` configuration preset
-2. Add memory-based slot calculation tests
+**Resolution:**
+- Added `slotCalcMemoryConfig` preset with high TPM (10M) and two job types with different memory estimates
+- `heavyMemoryJob`: 10MB per job (`estimatedUsedMemoryKB: 10240`)
+- `lightMemoryJob`: 1MB per job (`estimatedUsedMemoryKB: 1024`)
+- Added `'slotCalc-memory'` to `ConfigPresetName` type
+- Added config to `configPresets` record
 
 ---
 
@@ -176,7 +176,7 @@ this.recordTokenUsage(usage.input + usage.output, windowStarts);
 | Priority | Count | Issues |
 |----------|-------|--------|
 | High | 0 | - |
-| Medium | 1 | #5 |
+| Medium | 0 | - |
 | Low | 4 | #6, #7, #8, #9 |
-| **Total Open** | **5** | |
-| **Resolved** | **4** | #1, #2, #3, #4 |
+| **Total Open** | **4** | |
+| **Resolved** | **5** | #1, #2, #3, #4, #5 |
