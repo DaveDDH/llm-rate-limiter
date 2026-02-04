@@ -53,7 +53,7 @@ We must test ALL possible combinations of rate limit types:
 | `slotCalc-tpd` | TPD only (1M) | 2 job types | TPD-based slot calculation |
 | `slotCalc-rpd` | RPD only (10K) | 2 job types | RPD-based slot calculation |
 | `slotCalc-concurrent` | maxConcurrentRequests only (100) | 2 job types | Concurrency-based slot calculation |
-| `slotCalc-memory` | Memory limit (1GB) | 2 job types, different memory estimates | Memory-based slot calculation |
+| `slotCalc-memory` | Memory limit (1GB) | 2 job types, different memory estimates | Memory-based slot calculation *(NOT YET IMPLEMENTED - requires static memory limit support in core)* |
 | `slotCalc-tpm-rpm` | TPM (100K) + RPM (500) | 2 job types | Mixed limits (should use limiting factor) |
 | `slotCalc-multi-model` | Model A: TPM, Model B: concurrent | 2 job types | Different limit types per model |
 | `slotCalc-ratios` | TPM (100K) | 3 job types: ratio 0.5, 0.3, 0.2 | Different ratio combinations |

@@ -248,6 +248,17 @@ describe('Instance Scaling', () => {
       await verifySlots(PORT_A, 3);
       await verifySlots(PORT_B, 3);
       await verifySlots(PORT_C, 3);
-    }, BEFORE_ALL_TIMEOUT_MS * 2);
+
+      // Step 4: C leaves, A and B each have 5 slots
+      await killInstance(PORT_C);
+      await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === 2, INSTANCE_CLEANUP_TIMEOUT_MS);
+      await verifySlots(PORT_A, 5);
+      await verifySlots(PORT_B, 5);
+
+      // Step 5: B leaves, A has 10 slots
+      await killInstance(PORT_B);
+      await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === 1, INSTANCE_CLEANUP_TIMEOUT_MS);
+      await verifySlots(PORT_A, 10);
+    }, BEFORE_ALL_TIMEOUT_MS * 3);
   });
 });
