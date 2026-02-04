@@ -1,6 +1,7 @@
 /**
  * Tracks availability changes and emits callbacks when slots change.
  */
+import type { ResourceEstimationsPerJob } from '../jobTypeTypes.js';
 import type {
   AllocationInfo,
   Availability,
@@ -8,10 +9,13 @@ import type {
   LLMRateLimiterStats,
   OnAvailableSlotsChange,
   RelativeAvailabilityAdjustment,
+  SlotsByJobTypeAndModel,
 } from '../multiModelTypes.js';
 import type { InternalLimiterStats } from '../types.js';
 
 const ZERO = 0;
+const ONE = 1;
+const DEFAULT_RATIO = 1;
 
 /** Estimated resources per job, used to calculate available slots */
 export interface EstimatedResources {
@@ -25,6 +29,8 @@ export interface AvailabilityTrackerConfig {
   callback: OnAvailableSlotsChange | undefined;
   getStats: () => LLMRateLimiterStats;
   estimatedResources: EstimatedResources;
+  /** Resource estimations per job type (needed for per-job-type memory calculation) */
+  resourceEstimationsPerJob?: ResourceEstimationsPerJob;
 }
 
 /** Helper to get minimum value across models for a stat */
@@ -68,6 +74,25 @@ const addSlotCandidate = (slots: number[], value: number | null, divisor: number
   if (value !== null && divisor > ZERO) slots.push(Math.floor(value / divisor));
 };
 
+/** Sum slots across all job types and models from distributed allocation */
+const sumDistributedSlots = (slotsByJobTypeAndModel: SlotsByJobTypeAndModel): number => {
+  let total = ZERO;
+  for (const jobTypeAlloc of Object.values(slotsByJobTypeAndModel)) {
+    total += sumModelSlots(jobTypeAlloc);
+  }
+  return total;
+};
+
+/** Sum slots for a single job type across all models */
+const sumModelSlots = (modelAllocations: Record<string, { slots: number }> | undefined): number => {
+  if (modelAllocations === undefined) return ZERO;
+  let total = ZERO;
+  for (const modelAlloc of Object.values(modelAllocations)) {
+    total += modelAlloc.slots;
+  }
+  return total;
+};
+
 /** Calculate the number of slots (minimum jobs that can run) */
 const calculateSlots = (availability: Availability, estimated: EstimatedResources): number => {
   const { tokensPerMinute, tokensPerDay, requestsPerMinute, requestsPerDay, concurrentRequests, memoryKB } =
@@ -89,13 +114,15 @@ export class AvailabilityTracker {
   private readonly callback: OnAvailableSlotsChange | undefined;
   private readonly getStats: () => LLMRateLimiterStats;
   private readonly estimated: EstimatedResources;
+  private readonly resourceEstimationsPerJob: ResourceEstimationsPerJob | undefined;
   private distributedAllocation: AllocationInfo | null = null;
 
   constructor(config: AvailabilityTrackerConfig) {
-    const { callback, getStats, estimatedResources } = config;
+    const { callback, getStats, estimatedResources, resourceEstimationsPerJob } = config;
     this.callback = callback;
     this.getStats = getStats;
     this.estimated = estimatedResources;
+    this.resourceEstimationsPerJob = resourceEstimationsPerJob;
   }
 
   /**
@@ -134,15 +161,74 @@ export class AvailabilityTracker {
       memoryKB,
     };
 
-    // Calculate local slots
-    const localSlots = calculateSlots({ ...partialAvailability, slots: ZERO }, this.estimated);
-
-    // Apply distributed slot allocation (use min of local and distributed)
-    const { distributedAllocation } = this;
-    const slots =
-      distributedAllocation === null ? localSlots : Math.min(localSlots, distributedAllocation.slots);
+    // Calculate slots with per-job-type memory constraint
+    const { distributedAllocation, resourceEstimationsPerJob } = this;
+    const slots = this.calculateSlotsWithMemoryConstraint(
+      partialAvailability,
+      distributedAllocation,
+      resourceEstimationsPerJob,
+      memoryKB
+    );
 
     return { slots, ...partialAvailability };
+  }
+
+  /**
+   * Calculate total slots applying per-job-type memory constraint.
+   * Memory is LOCAL - each instance applies its own memory limit.
+   *
+   * For each job type:
+   *   memoryForJobType = totalMemory × ratio
+   *   localMemorySlots = floor(memoryForJobType / estimatedMemoryKB)
+   *   finalSlots = min(distributedSlots, localMemorySlots)
+   */
+  private calculateSlotsWithMemoryConstraint(
+    availability: Omit<Availability, 'slots'>,
+    allocation: AllocationInfo | null,
+    resourcesPerJob: ResourceEstimationsPerJob | undefined,
+    totalMemoryKB: number | null
+  ): number {
+    // No distributed allocation - use legacy local calculation
+    if (allocation === null) {
+      return calculateSlots({ ...availability, slots: ZERO }, this.estimated);
+    }
+
+    // No per-job-type config - sum distributed slots without memory constraint
+    if (resourcesPerJob === undefined) {
+      return sumDistributedSlots(allocation.slotsByJobTypeAndModel);
+    }
+
+    // Calculate per-job-type slots with memory constraint
+    let totalSlots = ZERO;
+    const jobTypeIds = Object.keys(allocation.slotsByJobTypeAndModel);
+    const jobTypeCount = jobTypeIds.length;
+
+    for (const jobTypeId of jobTypeIds) {
+      const jobTypeAlloc = allocation.slotsByJobTypeAndModel[jobTypeId];
+      const jobTypeConfig = resourcesPerJob[jobTypeId];
+
+      // Get ratio for this job type (default to even distribution)
+      const ratio = jobTypeConfig?.ratio?.initialValue ?? DEFAULT_RATIO / jobTypeCount;
+
+      // Get estimated memory for this job type
+      const estimatedMemoryKB = jobTypeConfig?.estimatedUsedMemoryKB ?? ZERO;
+
+      // Sum distributed slots for this job type (across all models)
+      const distributedSlotsForJobType = sumModelSlots(jobTypeAlloc);
+
+      // Calculate local memory slots for this job type
+      let localMemorySlots = Number.POSITIVE_INFINITY;
+      if (totalMemoryKB !== null && estimatedMemoryKB > ZERO) {
+        const memoryForJobType = totalMemoryKB * ratio;
+        localMemorySlots = Math.floor(memoryForJobType / estimatedMemoryKB);
+      }
+
+      // Final slots = min(distributed, localMemory)
+      const finalSlotsForJobType = Math.min(distributedSlotsForJobType, localMemorySlots);
+      totalSlots += Math.max(ZERO, finalSlotsForJobType);
+    }
+
+    return totalSlots;
   }
 
   /** Check for changes and emit callback if availability changed */

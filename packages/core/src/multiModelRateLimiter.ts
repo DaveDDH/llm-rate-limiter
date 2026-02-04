@@ -139,7 +139,7 @@ class LLMRateLimiter implements LLMRateLimiterInstance<string> {
     this.backendUnsubscribe = unsubscribe;
     if (allocation !== null) {
       this.applyAllocationToLimiters(allocation);
-      this.log('Registered with backend', { instanceId: this.instanceId, slots: allocation.slots });
+      this.log('Registered with backend', { instanceId: this.instanceId, instanceCount: allocation.instanceCount });
     }
   }
 

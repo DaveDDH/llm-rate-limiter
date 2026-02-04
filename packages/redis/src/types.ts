@@ -206,8 +206,6 @@ export interface InstanceData {
  * Internal allocation data stored in Redis.
  */
 export interface AllocationData {
-  /** Total allocated slots (sum of all job-type/model slots) */
-  slots: number;
   /** Number of active instances sharing the rate limits */
   instanceCount: number;
   /** Slot allocation by job type and model */

@@ -49,6 +49,7 @@ export const createAvailabilityTracker = (
     callback: config.onAvailableSlotsChange,
     getStats,
     estimatedResources,
+    resourceEstimationsPerJob: config.resourceEstimationsPerJob,
   });
   tracker.initialize();
   return tracker;

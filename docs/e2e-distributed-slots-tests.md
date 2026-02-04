@@ -53,7 +53,7 @@ We must test ALL possible combinations of rate limit types:
 | `slotCalc-tpd` | TPD only (1M) | 2 job types | TPD-based slot calculation |
 | `slotCalc-rpd` | RPD only (10K) | 2 job types | RPD-based slot calculation |
 | `slotCalc-concurrent` | maxConcurrentRequests only (100) | 2 job types | Concurrency-based slot calculation |
-| `slotCalc-memory` | Memory limit (1GB) | 2 job types, different memory estimates | Memory-based slot calculation *(NOT YET IMPLEMENTED - requires static memory limit support in core)* |
+| `slotCalc-memory` | TPM (high) + local memory constraint | 2 job types, different memory estimates | Memory is LOCAL: `finalSlots = min(distributedSlots, floor(memoryForJobType / estimatedMemoryKB))` |
 | `slotCalc-tpm-rpm` | TPM (100K) + RPM (500) | 2 job types | Mixed limits (should use limiting factor) |
 | `slotCalc-multi-model` | Model A: TPM, Model B: concurrent | 2 job types | Different limit types per model |
 | `slotCalc-ratios` | TPM (100K) | 3 job types: ratio 0.5, 0.3, 0.2 | Different ratio combinations |
@@ -321,7 +321,7 @@ scaleJob: 10K tokens/job, ratio 1.0
 | What We Check | What We Compare Against | Expected Result |
 |---------------|------------------------|-----------------|
 | Boot instance A | N/A | Instance A starts successfully |
-| Query A's allocation | Expected slots for 1 instance | `allocation.slots` = 10 |
+| Query A's allocation | Expected slots for 1 instance | `allocation.slotsByJobTypeAndModel.scaleJob['scale-model'].slots` = 10 |
 | `allocation.instanceCount` | 1 | Exactly 1 instance registered |
 
 **Key Verification:** A single instance gets the full capacity.
@@ -332,8 +332,8 @@ scaleJob: 10K tokens/job, ratio 1.0
 |---------------|------------------------|-----------------|
 | Boot instance B (while A running) | N/A | Instance B starts successfully |
 | Wait for allocation propagation | N/A | Both instances receive updated allocation |
-| Query A's allocation | Expected slots for 2 instances | `allocation.slots` = 5 |
-| Query B's allocation | Expected slots for 2 instances | `allocation.slots` = 5 |
+| Query A's allocation | Expected slots for 2 instances | `allocation.slotsByJobTypeAndModel.scaleJob['scale-model'].slots` = 5 |
+| Query B's allocation | Expected slots for 2 instances | `allocation.slotsByJobTypeAndModel.scaleJob['scale-model'].slots` = 5 |
 | `allocation.instanceCount` on both | 2 | Both see 2 instances registered |
 
 **Key Verification:** When B joins, A's allocation is reduced from 10 to 5 slots. B also gets 5 slots. Total capacity preserved.
@@ -344,7 +344,7 @@ scaleJob: 10K tokens/job, ratio 1.0
 |---------------|------------------------|-----------------|
 | Kill instance B | N/A | Instance B shuts down gracefully |
 | Wait for cleanup/reallocation | Instance timeout + propagation | A receives updated allocation |
-| Query A's allocation | Expected slots for 1 instance | `allocation.slots` = 10 |
+| Query A's allocation | Expected slots for 1 instance | `allocation.slotsByJobTypeAndModel.scaleJob['scale-model'].slots` = 10 |
 | `allocation.instanceCount` on A | 1 | Only 1 instance registered |
 
 **Key Verification:** When B leaves, A's allocation increases from 5 back to 10 slots.
@@ -533,7 +533,7 @@ const instance = await createServer({
 
 // Query allocation
 const allocation = await fetchAllocation(instance.port);
-console.log(allocation.slots); // e.g., 10
+console.log(allocation.slotsByJobTypeAndModel.scaleJob['scale-model'].slots); // e.g., 10
 
 // Shut down instance
 await instance.close();

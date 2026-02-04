@@ -318,7 +318,6 @@ describe('Slot Calculation Correctness', () => {
 
       expect(response.allocation).not.toBeNull();
       expect(response.allocation?.slotsByJobTypeAndModel).toBeDefined();
-      expect(typeof response.allocation?.slots).toBe('number');
       expect(typeof response.allocation?.instanceCount).toBe('number');
     });
   });

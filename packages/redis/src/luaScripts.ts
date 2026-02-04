@@ -52,7 +52,6 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
   -- Calculate slots for each instance
   for _, instId in ipairs(instanceIds) do
     local slotsByJobTypeAndModel = {}
-    local totalSlots = 0
 
     for _, jobTypeId in ipairs(jobTypeIds) do
       local jobType = jobTypeResources[jobTypeId]
@@ -99,13 +98,11 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
           tokensPerMinute = tpm,
           requestsPerMinute = rpm
         }
-        totalSlots = totalSlots + slots
       end
     end
 
     -- Store allocation
     local allocData = cjson.encode({
-      slots = totalSlots,
       instanceCount = instanceCount,
       slotsByJobTypeAndModel = slotsByJobTypeAndModel
     })
@@ -232,7 +229,6 @@ if not modelAlloc or modelAlloc.slots <= 0 then return "0" end
 
 -- Decrement slot
 modelAlloc.slots = modelAlloc.slots - 1
-alloc.slots = alloc.slots - 1
 redis.call('HSET', allocationsKey, instanceId, cjson.encode(alloc))
 
 -- Increment in-flight

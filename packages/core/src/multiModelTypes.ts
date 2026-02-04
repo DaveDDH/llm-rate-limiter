@@ -415,8 +415,6 @@ export type SlotsByJobTypeAndModel = Record<string, Record<string, ModelSlotAllo
 
 /** Allocation info for a specific instance from the distributed backend */
 export interface AllocationInfo {
-  /** Total slots (sum across all job types and models) */
-  slots: number;
   /** Number of active instances sharing the rate limits */
   instanceCount: number;
   /**

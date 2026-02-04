@@ -128,23 +128,20 @@ Where:
 | fill     | openai    | 200           | 100         | 0.3     | 30      |
 | fill     | deepinfra | 200           | 100         | 0.3     | 30      |
 
-### New AllocationInfo Structure
+### AllocationInfo Structure
 
-Current:
-```typescript
-interface AllocationInfo {
-  slots: number;
-  instanceCount: number;
-}
-```
+The allocation structure provides per-job-type per-model slot breakdown:
 
-Required:
 ```typescript
 interface AllocationInfo {
   instanceCount: number;
   slotsByJobTypeAndModel: {
     [jobType: string]: {
-      [modelId: string]: number;
+      [modelId: string]: {
+        slots: number;
+        tokensPerMinute: number;
+        requestsPerMinute: number;
+      };
     };
   };
 }
@@ -301,15 +298,21 @@ end
 
 ### 4. Pub/Sub Messages
 
-Update allocation change notifications to include full breakdown:
+Allocation change notifications include full breakdown:
 ```json
 {
   "instanceId": "instance-1",
   "allocation": {
     "instanceCount": 2,
     "slotsByJobTypeAndModel": {
-      "summary": { "openai": 70, "deepinfra": 70 },
-      "fill": { "openai": 30, "deepinfra": 30 }
+      "summary": {
+        "openai": { "slots": 70, "tokensPerMinute": 500000, "requestsPerMinute": 0 },
+        "deepinfra": { "slots": 70, "tokensPerMinute": 0, "requestsPerMinute": 250 }
+      },
+      "fill": {
+        "openai": { "slots": 30, "tokensPerMinute": 500000, "requestsPerMinute": 0 },
+        "deepinfra": { "slots": 30, "tokensPerMinute": 0, "requestsPerMinute": 250 }
+      }
     }
   }
 }
