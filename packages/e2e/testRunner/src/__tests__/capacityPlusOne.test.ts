@@ -82,8 +82,8 @@ describe('Capacity Plus One', () => {
     const first50Jobs = jobsSortedBySentTime.slice(0, TOTAL_CAPACITY);
     const quickJobs = first50Jobs.filter((j) => (j.queueDurationMs ?? 0) < 500);
 
-    // Most of the first 50 jobs should complete quickly
-    expect(quickJobs.length).toBeGreaterThanOrEqual(TOTAL_CAPACITY - 5);
+    // All first 50 jobs should complete quickly (no waiting for rate limit)
+    expect(quickJobs.length).toBe(TOTAL_CAPACITY);
   });
 
   it('should have the 51st job wait for rate limit window reset', () => {
@@ -93,9 +93,9 @@ describe('Capacity Plus One', () => {
 
     const job51QueueDuration = job51?.queueDurationMs ?? 0;
 
-    // The job should have waited at least MIN_WAIT_FOR_RATE_LIMIT_RESET_MS
-    // This proves it waited for the rate limit to reset
-    expect(job51QueueDuration).toBeGreaterThanOrEqual(MIN_WAIT_FOR_RATE_LIMIT_RESET_MS);
+    // The job must have waited for the rate limit window to reset
+    // This should be at least MIN_WAIT_FOR_RATE_LIMIT_RESET_MS (not instant like the first 50)
+    expect(job51QueueDuration).toBeGreaterThan(MIN_WAIT_FOR_RATE_LIMIT_RESET_MS);
   });
 
   it('should complete all jobs through the full lifecycle', () => {

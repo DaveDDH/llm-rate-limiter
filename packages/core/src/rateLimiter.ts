@@ -158,7 +158,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
     const { promise, resolve } = Promise.withResolvers<undefined>();
     let waitCount = 0;
     const checkCapacity = (): void => {
-      if (this.hasTimeWindowCapacityForEstimates()) {
+      if (this.tryReserveCapacity()) {
         if (waitCount > 0) {
           this.log('Capacity available after waiting', { waitCount });
         }
@@ -180,6 +180,26 @@ class LLMRateLimiter implements InternalLimiterInstance {
     };
     checkCapacity();
     await promise;
+  }
+
+  /**
+   * Atomically check capacity and reserve if available.
+   * Returns true if reservation succeeded, false if no capacity.
+   */
+  private tryReserveCapacity(): boolean {
+    if (!this.hasTimeWindowCapacityForEstimates()) {
+      return false;
+    }
+    // Reserve immediately after checking - this is atomic within single-threaded JS
+    if (this.estimatedNumberOfRequests > ZERO) {
+      this.rpmCounter?.add(this.estimatedNumberOfRequests);
+      this.rpdCounter?.add(this.estimatedNumberOfRequests);
+    }
+    if (this.estimatedUsedTokens > ZERO) {
+      this.tpmCounter?.add(this.estimatedUsedTokens);
+      this.tpdCounter?.add(this.estimatedUsedTokens);
+    }
+    return true;
   }
 
   /** Check capacity for actual estimates (used when waiting) */
@@ -249,18 +269,6 @@ class LLMRateLimiter implements InternalLimiterInstance {
     this.recordTokenUsage(usage.input + usage.output);
   }
 
-  private reserveResources(): void {
-    // Reserve estimated resources BEFORE job execution (only if estimates are provided)
-    if (this.estimatedNumberOfRequests > ZERO) {
-      this.rpmCounter?.add(this.estimatedNumberOfRequests);
-      this.rpdCounter?.add(this.estimatedNumberOfRequests);
-    }
-    if (this.estimatedUsedTokens > ZERO) {
-      this.tpmCounter?.add(this.estimatedUsedTokens);
-      this.tpdCounter?.add(this.estimatedUsedTokens);
-    }
-  }
-
   async queueJob<T extends InternalJobResult>(job: () => Promise<T> | T): Promise<T> {
     // Wait for time window capacity
     await this.waitForTimeWindowCapacity();
@@ -276,8 +284,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
     }
 
     try {
-      // Reserve estimated resources before job execution
-      this.reserveResources();
+      // Resources already reserved in tryReserveCapacity() during waitForTimeWindowCapacity()
 
       // Execute the job
       const result = await job();
@@ -327,6 +334,108 @@ class LLMRateLimiter implements InternalLimiterInstance {
       return false;
     }
     return this.hasTimeWindowCapacity();
+  }
+
+  /**
+   * Atomically check and reserve ALL capacity types (time windows, memory, concurrency).
+   * Returns true if capacity was reserved, false if no capacity available.
+   */
+  tryReserve(): boolean {
+    // Check ALL capacity types first (memory, concurrency, time windows)
+    if (!this.hasCapacity()) {
+      return false;
+    }
+
+    // Reserve time window capacity
+    if (this.estimatedNumberOfRequests > ZERO) {
+      this.rpmCounter?.add(this.estimatedNumberOfRequests);
+      this.rpdCounter?.add(this.estimatedNumberOfRequests);
+    }
+    if (this.estimatedUsedTokens > ZERO) {
+      this.tpmCounter?.add(this.estimatedUsedTokens);
+      this.tpdCounter?.add(this.estimatedUsedTokens);
+    }
+
+    // Reserve memory capacity (non-blocking)
+    if (this.memorySemaphore !== null) {
+      const memoryToReserve = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
+      if (!this.memorySemaphore.tryAcquire(memoryToReserve)) {
+        // Rollback time window reservation
+        this.releaseTimeWindowReservation();
+        return false;
+      }
+    }
+
+    // Reserve concurrency slot (non-blocking)
+    if (this.concurrencySemaphore !== null) {
+      if (!this.concurrencySemaphore.tryAcquire()) {
+        // Rollback memory and time window reservations
+        if (this.memorySemaphore !== null) {
+          const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
+          this.memorySemaphore.release(memoryToRelease);
+        }
+        this.releaseTimeWindowReservation();
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /** Release only time window reservations (used for rollback) */
+  private releaseTimeWindowReservation(): void {
+    if (this.estimatedNumberOfRequests > ZERO) {
+      this.rpmCounter?.subtract(this.estimatedNumberOfRequests);
+      this.rpdCounter?.subtract(this.estimatedNumberOfRequests);
+    }
+    if (this.estimatedUsedTokens > ZERO) {
+      this.tpmCounter?.subtract(this.estimatedUsedTokens);
+      this.tpdCounter?.subtract(this.estimatedUsedTokens);
+    }
+  }
+
+  /**
+   * Release previously reserved capacity (all types: time windows, memory, concurrency).
+   * Used when a job fails before execution after calling tryReserve().
+   */
+  releaseReservation(): void {
+    // Release time window reservations
+    this.releaseTimeWindowReservation();
+
+    // Release memory
+    if (this.memorySemaphore !== null) {
+      const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
+      this.memorySemaphore.release(memoryToRelease);
+    }
+
+    // Release concurrency slot
+    this.concurrencySemaphore?.release();
+  }
+
+  /**
+   * Queue a job with pre-reserved capacity (all types already reserved via tryReserve()).
+   * Skips all capacity acquisition since everything was already reserved atomically.
+   */
+  async queueJobWithReservedCapacity<T extends InternalJobResult>(job: () => Promise<T> | T): Promise<T> {
+    // All capacity (time windows, memory, concurrency) already reserved via tryReserve()
+    try {
+      // Execute the job
+      const result = await job();
+
+      // Record actual usage (or refund difference if estimates were provided)
+      this.recordActualUsage(result);
+
+      return result;
+    } finally {
+      // Release concurrency slot (was reserved in tryReserve)
+      this.concurrencySemaphore?.release();
+
+      // Release memory (was reserved in tryReserve)
+      if (this.memorySemaphore !== null) {
+        const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
+        this.memorySemaphore.release(memoryToRelease);
+      }
+    }
   }
 
   getStats(): InternalLimiterStats {

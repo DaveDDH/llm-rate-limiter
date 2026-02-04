@@ -183,10 +183,25 @@ export interface RateLimitUpdate {
 export interface InternalLimiterInstance {
   /** Queue a job - job must return object with usage and requestCount properties */
   queueJob: <T extends InternalJobResult>(job: () => Promise<T> | T) => Promise<T>;
+  /**
+   * Queue a job with pre-reserved capacity (skips capacity wait).
+   * Use this after calling tryReserve() to avoid double-reservation.
+   */
+  queueJobWithReservedCapacity: <T extends InternalJobResult>(job: () => Promise<T> | T) => Promise<T>;
   /** Stop all intervals (for cleanup) */
   stop: () => void;
   /** Check if all limits have capacity (non-blocking) */
   hasCapacity: () => boolean;
+  /**
+   * Atomically check and reserve capacity.
+   * Returns true if capacity was reserved, false if no capacity.
+   * This is used during model selection to ensure capacity is actually available.
+   */
+  tryReserve: () => boolean;
+  /**
+   * Release previously reserved capacity (when job fails before execution).
+   */
+  releaseReservation: () => void;
   /** Get current statistics */
   getStats: () => InternalLimiterStats;
   /** Update rate limits dynamically (for distributed coordination) */

@@ -103,11 +103,13 @@ class LLMRateLimiter implements LLMRateLimiterInstance<string> {
       this.label,
       config.onLog
     );
-    initializeJobTypeCapacity(this.jobTypeManager, calculateJobTypeCapacity(config.models));
+    const jobTypeCapacity = calculateJobTypeCapacity(config.models, this.resourceEstimationsPerJob);
+    initializeJobTypeCapacity(this.jobTypeManager, jobTypeCapacity);
 
     this.log('Initialized', {
       models: this.escalationOrder,
       jobTypes: getJobTypeKeysFromConfig(this.resourceEstimationsPerJob),
+      jobTypeCapacity,
     });
   }
 
@@ -263,6 +265,10 @@ class LLMRateLimiter implements LLMRateLimiterInstance<string> {
       activeJobs: this.activeJobs,
       memoryManager: this.memoryManager,
       hasCapacityForModel: (m) => this.hasCapacityForModel(m),
+      tryReserveForModel: (m) => this.getModelLimiter(m).tryReserve(),
+      releaseReservationForModel: (m) => {
+        this.getModelLimiter(m).releaseReservation();
+      },
       getAvailableModelExcluding: (e) => this.getAvailableModelExcluding(e),
       backendCtx: (m, j, t) => this.backendCtx(m, j, t),
       getModelLimiter: (m) => this.getModelLimiter(m),

@@ -143,13 +143,17 @@ class RedisBackendImpl {
   }
 
   private handleMessage(_channel: string, message: string): void {
+    console.log(`[DEBUG] handleMessage received:`, message);
     try {
       const parsed: unknown = JSON.parse(message);
       /* istanbul ignore if -- Defensive: Lua script sends valid messages */
       if (!isParsedMessage(parsed)) return;
       const callback = this.subscriptions.get(parsed.instanceId);
+      console.log(`[DEBUG] Message for ${parsed.instanceId}, callback exists: ${callback !== undefined}`);
       if (callback !== undefined) {
-        callback(parseAllocation(parsed.allocation));
+        const allocation = parseAllocation(parsed.allocation);
+        console.log(`[DEBUG] Calling callback with allocation:`, JSON.stringify(allocation));
+        callback(allocation);
       }
     } catch {
       // Ignore parse errors
@@ -215,8 +219,17 @@ class RedisBackendImpl {
 
   readonly subscribe = (instanceId: string, callback: AllocationCallback): Unsubscribe => {
     this.subscriptions.set(instanceId, callback);
-    void this.setupSubscriber();
-    void this.fetchAndCallbackAllocation(instanceId, callback);
+    // Setup subscriber and fetch allocation - both async but we track them
+    this.setupSubscriber()
+      .then(() => {
+        console.log(`[DEBUG] ${instanceId} subscription ready`);
+      })
+      .catch(() => {
+        console.log(`[DEBUG] ${instanceId} subscription failed`);
+      });
+    this.fetchAndCallbackAllocation(instanceId, callback).catch(() => {
+      // Ignore errors
+    });
     return () => {
       this.subscriptions.delete(instanceId);
     };

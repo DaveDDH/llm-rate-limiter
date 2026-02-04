@@ -37,6 +37,10 @@ export interface DelegationContext {
   activeJobs: Map<string, ActiveJobInfo>;
   memoryManager: { acquire: (m: string) => Promise<void>; release: (m: string) => void } | null;
   hasCapacityForModel: (modelId: string) => boolean;
+  /** Atomically reserve capacity for a model. Returns true if reserved. */
+  tryReserveForModel: (modelId: string) => boolean;
+  /** Release previously reserved capacity for a model. */
+  releaseReservationForModel: (modelId: string) => void;
   getAvailableModelExcluding: (exclude: ReadonlySet<string>) => string | null;
   backendCtx: (modelId: string, jobId: string, jobType: string) => BackendOperationContext;
   getModelLimiter: (modelId: string) => InternalLimiterInstance;
@@ -83,6 +87,8 @@ const handleError = async <T, Args extends ArgsWithoutModelId = ArgsWithoutModel
 ): Promise<LLMJobResult<T>> => {
   const { dctx, ctx, modelId, error } = params;
   dctx.memoryManager?.release(modelId);
+  // Note: reservation is NOT released here because it was consumed during job execution.
+  // The time window counter will naturally reset on the next minute boundary.
   releaseBackend(dctx.backendCtx(modelId, ctx.jobId, ctx.jobType), { requests: ZERO, tokens: ZERO });
   if (isDelegationError(error)) {
     if (dctx.getAvailableModelExcluding(ctx.triedModels) === null) {
@@ -104,6 +110,7 @@ export const executeWithDelegation = async <T, Args extends ArgsWithoutModelId =
     escalationOrder: dctx.escalationOrder,
     triedModels: ctx.triedModels,
     hasCapacityForModel: dctx.hasCapacityForModel,
+    tryReserveForModel: dctx.tryReserveForModel,
     getMaxWaitMSForModel: (m) => getMaxWaitMS(dctx.resourceEstimationsPerJob, ctx.jobType, m),
     pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
     onWaitingForModel: (modelId, maxWaitMS) => {
@@ -120,16 +127,29 @@ export const executeWithDelegation = async <T, Args extends ArgsWithoutModelId =
     return await executeWithDelegation(dctx, ctx);
   }
 
+  // Capacity was reserved by tryReserveForModel during selectModelWithWait
   ctx.triedModels.add(selectedModel);
   addJobTriedModel(dctx.activeJobs, ctx.jobId, selectedModel);
-  await dctx.memoryManager?.acquire(selectedModel);
+
+  // Try to acquire memory
+  try {
+    await dctx.memoryManager?.acquire(selectedModel);
+  } catch {
+    // Release the reserved capacity since we can't proceed
+    dctx.releaseReservationForModel(selectedModel);
+    throw new Error('Failed to acquire memory');
+  }
+
+  // Try to acquire backend
   if (!(await acquireBackend(dctx.backendCtx(selectedModel, ctx.jobId, ctx.jobType)))) {
     dctx.memoryManager?.release(selectedModel);
+    dctx.releaseReservationForModel(selectedModel);
     if (ctx.triedModels.size >= dctx.escalationOrder.length) {
       throw new Error('All models rejected by backend');
     }
     return await executeWithDelegation(dctx, ctx);
   }
+
   try {
     return await executeOnModel(dctx, ctx, selectedModel);
   } catch (error) {

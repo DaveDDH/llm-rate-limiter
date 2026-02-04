@@ -99,18 +99,58 @@ export const buildModelStats = (
 };
 
 const ZERO = 0;
+const ONE = 1;
 const DEFAULT_JOB_TYPE_CAPACITY = 100;
+const DEFAULT_TOKENS_PER_JOB = 1000;
+
+/** Calculate average estimated tokens per job from resource estimations */
+const calculateAverageTokensPerJob = (resourceEstimationsPerJob: ResourceEstimationsPerJob | undefined): number => {
+  if (resourceEstimationsPerJob === undefined) {
+    return DEFAULT_TOKENS_PER_JOB;
+  }
+  const jobTypes = Object.values(resourceEstimationsPerJob);
+  if (jobTypes.length === ZERO) {
+    return DEFAULT_TOKENS_PER_JOB;
+  }
+  const totalTokens = jobTypes.reduce((sum, job) => sum + (job.estimatedUsedTokens ?? ZERO), ZERO);
+  const avgTokens = totalTokens / jobTypes.length;
+  return avgTokens > ZERO ? avgTokens : DEFAULT_TOKENS_PER_JOB;
+};
+
+/** Calculate concurrent capacity from TPM-based limits.
+ * Estimates how many jobs can run concurrently based on tokens per minute
+ * and average tokens per job. Uses a conservative factor since jobs
+ * don't complete instantly. */
+const calculateTpmBasedCapacity = (tokensPerMinute: number, avgTokensPerJob: number): number => {
+  // Estimate: TPM / tokens per job gives theoretical max concurrent jobs
+  // A job using avgTokensPerJob tokens can run TPM/avgTokensPerJob times per minute
+  // For concurrent capacity, we use this as an upper bound
+  return Math.floor(tokensPerMinute / avgTokensPerJob);
+};
 
 /** Calculate total capacity for job types from models config.
- * Uses the sum of maxConcurrentRequests across all models,
- * since jobs can run on any available model. */
-export const calculateJobTypeCapacity = (models: Record<string, ModelRateLimitConfig>): number => {
+ * Uses the sum of maxConcurrentRequests across all models.
+ * For models without maxConcurrentRequests but with tokensPerMinute,
+ * estimates concurrent capacity from TPM and average tokens per job. */
+export const calculateJobTypeCapacity = (
+  models: Record<string, ModelRateLimitConfig>,
+  resourceEstimationsPerJob?: ResourceEstimationsPerJob
+): number => {
+  const avgTokensPerJob = calculateAverageTokensPerJob(resourceEstimationsPerJob);
   let totalCapacity = ZERO;
+
   for (const modelConfig of Object.values(models)) {
-    const { maxConcurrentRequests } = modelConfig;
+    const { maxConcurrentRequests, tokensPerMinute } = modelConfig;
+
     if (typeof maxConcurrentRequests === 'number' && maxConcurrentRequests > ZERO) {
+      // Model has explicit concurrent request limit
       totalCapacity += maxConcurrentRequests;
+    } else if (typeof tokensPerMinute === 'number' && tokensPerMinute > ZERO) {
+      // Model has TPM limit - estimate concurrent capacity
+      const estimatedCapacity = calculateTpmBasedCapacity(tokensPerMinute, avgTokensPerJob);
+      totalCapacity += Math.max(ONE, estimatedCapacity);
     }
   }
+
   return totalCapacity > ZERO ? totalCapacity : DEFAULT_JOB_TYPE_CAPACITY;
 };

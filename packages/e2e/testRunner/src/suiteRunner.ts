@@ -12,6 +12,8 @@ import { sendJob, sleep } from './testUtils.js';
 const ZERO = 0;
 const SLEEP_AFTER_SEND_MS = 200;
 const DEFAULT_WAIT_TIMEOUT_MS = 30000;
+const MS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
 
 /** Configuration for a test suite run */
 export interface SuiteConfig {
@@ -32,6 +34,25 @@ export interface SuiteConfig {
    * If not set, uses equal distribution.
    */
   proxyRatio?: string;
+  /**
+   * Wait until the next minute boundary (00 seconds) before sending jobs.
+   * This ensures deterministic maxWaitMS calculations. Default: false.
+   */
+  waitForMinuteBoundary?: boolean;
+  /**
+   * Send all jobs in parallel instead of sequentially.
+   * This ensures all jobs arrive at the same time. Default: false.
+   */
+  sendJobsInParallel?: boolean;
+  /**
+   * Jobs to send after a delay (for escalation tests).
+   * These jobs are sent after the main jobs have been registered.
+   */
+  delayedJobs?: Array<{ jobId: string; jobType: string; payload: Record<string, unknown> }>;
+  /**
+   * Delay in ms before sending delayedJobs. Default: 500ms.
+   */
+  delayedJobsDelayMs?: number;
 }
 
 /** Get the directory of this module */
@@ -47,6 +68,21 @@ const getOutputPath = (suiteName: string): string => {
 
 /** Delay to allow distributed allocation to propagate after instance registration */
 const ALLOCATION_PROPAGATION_DELAY_MS = 500;
+
+/**
+ * Wait until the next minute boundary (00 seconds).
+ * This ensures deterministic maxWaitMS calculations in tests.
+ */
+const waitUntilNextMinute = async (): Promise<void> => {
+  const now = new Date();
+  const secondsUntilNextMinute = SECONDS_PER_MINUTE - now.getSeconds();
+  const msUntilNextMinute = secondsUntilNextMinute * MS_PER_SECOND - now.getMilliseconds();
+  if (msUntilNextMinute > ZERO) {
+    console.log(`[Suite] Waiting ${msUntilNextMinute}ms until next minute boundary...`);
+    await sleep(msUntilNextMinute);
+    console.log(`[Suite] Minute boundary reached, proceeding...`);
+  }
+};
 
 /** Reset proxy job counts */
 const resetProxy = async (proxyUrl: string): Promise<void> => {
@@ -95,6 +131,10 @@ export const runSuite = async (config: SuiteConfig): Promise<TestData> => {
     waitTimeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
     saveToFile = true,
     proxyRatio,
+    waitForMinuteBoundary = false,
+    sendJobsInParallel = false,
+    delayedJobs = [],
+    delayedJobsDelayMs = 500,
   } = config;
 
   // 1. Reset proxy and optionally set distribution ratio
@@ -129,35 +169,59 @@ export const runSuite = async (config: SuiteConfig): Promise<TestData> => {
   const initialStates = await aggregator.fetchState();
   collector.addSnapshot('initial', initialStates);
 
-  // 6. Send all jobs
-  for (const job of jobs) {
-    collector.recordJobSent(job.jobId, job.jobType, proxyUrl);
-    await sendJob(proxyUrl, job);
+  // 6. Optionally wait for minute boundary
+  if (waitForMinuteBoundary) {
+    await waitUntilNextMinute();
   }
 
-  // 7. Take post-send snapshot
+  // 7. Send all jobs (sequentially or in parallel)
+  if (sendJobsInParallel) {
+    // Record all jobs as sent first
+    for (const job of jobs) {
+      collector.recordJobSent(job.jobId, job.jobType, proxyUrl);
+    }
+    // Send all jobs in parallel
+    await Promise.all(jobs.map((job) => sendJob(proxyUrl, job)));
+  } else {
+    // Send jobs sequentially
+    for (const job of jobs) {
+      collector.recordJobSent(job.jobId, job.jobType, proxyUrl);
+      await sendJob(proxyUrl, job);
+    }
+  }
+
+  // 7b. Send delayed jobs (for escalation tests - ensures they arrive after main jobs are queued)
+  if (delayedJobs.length > ZERO) {
+    await sleep(delayedJobsDelayMs);
+    for (const job of delayedJobs) {
+      collector.recordJobSent(job.jobId, job.jobType, proxyUrl);
+    }
+    await Promise.all(delayedJobs.map((job) => sendJob(proxyUrl, job)));
+  }
+
+  // 8. Take post-send snapshot
   await sleep(SLEEP_AFTER_SEND_MS);
   const afterSendStates = await aggregator.fetchState();
   collector.addSnapshot('after-sending-jobs', afterSendStates);
 
-  // 8. Wait for jobs to complete
+  // 9. Wait for jobs to complete
   try {
     await aggregator.waitForNoActiveJobs({ timeoutMs: waitTimeoutMs });
   } catch {
     // Timeout is not fatal - we still want to collect the data
   }
 
-  // 9. Take final snapshot
+  // 10. Take final snapshot
   const finalStates = await aggregator.fetchState();
   collector.addSnapshot('final', finalStates);
 
-  // 10. Stop listeners
+  // 11. Stop listeners
   collector.stopEventListeners();
 
-  // 11. Get the collected data
+  // 12. Get the collected data
   const data = collector.getData();
 
-  // 12. Optionally save to file
+  // 13. Optionally save to file
   if (saveToFile) {
     const filePath = getOutputPath(suiteName);
     await mkdir(dirname(filePath), { recursive: true });

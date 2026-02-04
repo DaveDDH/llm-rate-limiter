@@ -43,11 +43,15 @@ describe('Rate Limit Queuing', () => {
   });
 
   it('should show jobs waiting in snapshots when rate limit is reached', () => {
-    // Check that some snapshot shows activeJobs > 0 (jobs waiting/processing)
-    const snapshotsWithActiveJobs = data.snapshots.filter((s) =>
-      Object.values(s.instances).some((inst) => inst.activeJobs > 0)
+    // The post-send snapshot (index 1) should show active jobs being processed
+    const postSendSnapshot = data.snapshots[1];
+    expect(postSendSnapshot).toBeDefined();
+
+    const totalActiveJobs = Object.values(postSendSnapshot?.instances ?? {}).reduce(
+      (sum, inst) => sum + inst.activeJobs,
+      0
     );
-    expect(snapshotsWithActiveJobs.length).toBeGreaterThan(0);
+    expect(totalActiveJobs).toBe(NUM_JOBS);
   });
 
   it('should record all job lifecycle events', () => {

@@ -164,24 +164,26 @@ export interface WaitForModelResult {
 }
 
 /**
- * Wait for a specific model to have capacity, with timeout support.
- * @param hasCapacity - Function to check if the model has capacity
+ * Wait for a specific model to have capacity and atomically reserve it.
+ * @param hasCapacity - Function to check if the model has capacity (fast, non-reserving)
+ * @param tryReserve - Function to atomically reserve capacity (returns true if reserved)
  * @param maxWaitMS - Maximum time to wait (0 = fail fast, > 0 = wait up to this time)
  * @param pollIntervalMs - Polling interval for checking capacity
- * @returns Promise that resolves to true if capacity became available, false if timeout
+ * @returns Promise that resolves to true if capacity was reserved, false if timeout
  */
 export const waitForSpecificModelCapacity = async (
   hasCapacity: () => boolean,
+  tryReserve: () => boolean,
   maxWaitMS: number,
   pollIntervalMs: number
 ): Promise<boolean> => {
   // Fail fast: don't wait at all
   if (maxWaitMS === ZERO) {
-    return hasCapacity();
+    return tryReserve();
   }
 
-  // Check immediately first
-  if (hasCapacity()) {
+  // Try to reserve immediately
+  if (tryReserve()) {
     return true;
   }
 
@@ -189,7 +191,8 @@ export const waitForSpecificModelCapacity = async (
   const startTime = Date.now();
 
   const checkCapacity = (): void => {
-    if (hasCapacity()) {
+    // Use hasCapacity for fast check, then tryReserve to actually claim
+    if (hasCapacity() && tryReserve()) {
       resolve(true);
       return;
     }
@@ -210,7 +213,7 @@ export const waitForSpecificModelCapacity = async (
     }
   };
 
-  // Start polling (first check already done above)
+  // Start polling (first attempt already done above)
   setTimeout(checkCapacity, Math.min(pollIntervalMs, maxWaitMS));
   return await promise;
 };
@@ -223,6 +226,11 @@ export interface SelectModelWithWaitParams {
   triedModels: ReadonlySet<string>;
   /** Function to check if a specific model has capacity */
   hasCapacityForModel: (modelId: string) => boolean;
+  /**
+   * Function to atomically check and reserve capacity for a model.
+   * Returns true if capacity was reserved, false otherwise.
+   */
+  tryReserveForModel: (modelId: string) => boolean;
   /** Function to get maxWaitMS for a job type and model */
   getMaxWaitMSForModel: (modelId: string) => number;
   /** Polling interval for capacity checks */
@@ -249,6 +257,7 @@ const tryModelAtIndex = async (
     escalationOrder,
     triedModels,
     hasCapacityForModel,
+    tryReserveForModel,
     getMaxWaitMSForModel,
     pollIntervalMs,
     onWaitingForModel,
@@ -270,12 +279,13 @@ const tryModelAtIndex = async (
   const maxWaitMS = getMaxWaitMSForModel(modelId);
   onWaitingForModel?.(modelId, maxWaitMS);
 
-  const gotCapacity = await waitForSpecificModelCapacity(
+  const reserved = await waitForSpecificModelCapacity(
     () => hasCapacityForModel(modelId),
+    () => tryReserveForModel(modelId),
     maxWaitMS,
     pollIntervalMs
   );
-  if (gotCapacity) {
+  if (reserved) {
     return { modelId, allModelsExhausted: false };
   }
 

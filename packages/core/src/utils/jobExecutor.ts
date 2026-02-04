@@ -138,7 +138,8 @@ export const executeJobWithCallbacks = async <T, Args extends ArgsWithoutModelId
 
   emitAvailabilityChange(modelId);
   const resultContainer: { data: T | null } = { data: null };
-  const internalResult = await limiter.queueJob(async () => {
+  // Use queueJobWithReservedCapacity since capacity was already reserved during model selection
+  const internalResult = await limiter.queueJobWithReservedCapacity(async () => {
     const jobArgs = buildJobArgs<Args>(modelId, ctx.args);
     const result = await ctx.job(jobArgs, handleReject);
     checkRejection(state);

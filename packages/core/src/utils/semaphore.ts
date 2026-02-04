@@ -62,6 +62,19 @@ export class Semaphore {
   }
 
   /**
+   * Try to acquire permits without blocking.
+   * @param permits Number of permits to acquire (default: 1)
+   * @returns true if permits were acquired, false if not available
+   */
+  tryAcquire(permits = ONE_PERMIT): boolean {
+    if (this.permits >= permits && this.queue.length === ZERO_PERMITS) {
+      this.permits -= permits;
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Acquire permits. If not enough permits are available, wait until they are released.
    * @param permits Number of permits to acquire (default: 1)
    */

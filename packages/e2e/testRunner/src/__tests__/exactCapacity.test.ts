@@ -62,16 +62,16 @@ describe('Exact Capacity', () => {
     }
   });
 
-  it('should distribute jobs across instances', () => {
-    // With 2 instances, jobs should be distributed (not all on one instance)
+  it('should distribute jobs evenly across both instances', () => {
+    // With 2 instances and 1:1 ratio, jobs should be split 25/25
     const instanceIds = Object.keys(data.summary.byInstance);
-    expect(instanceIds.length).toBeGreaterThan(0);
+    expect(instanceIds.length).toBe(2);
 
-    // At least some jobs should be on each active instance
+    // Each instance should have exactly 25 jobs
     for (const instanceId of instanceIds) {
       const instanceStats = data.summary.byInstance[instanceId];
       expect(instanceStats).toBeDefined();
-      expect(instanceStats?.total).toBeGreaterThan(0);
+      expect(instanceStats?.total).toBe(EXACT_CAPACITY / 2);
     }
   });
 
