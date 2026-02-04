@@ -8,7 +8,7 @@ This document summarizes discrepancies between the design documentation and actu
 
 | Issue | Status | Severity | Document |
 |-------|--------|----------|----------|
-| `reject()` missing `requestCount` | 🔴 OPEN | High | actual-usage-adjustment-design.md |
+| `reject()` missing `requestCount` | ✅ RESOLVED | High | actual-usage-adjustment-design.md |
 | Ratios not local as documented | 🔴 OPEN | High | distributed-slots-design.md |
 | Memory not enforced per-job-type | 🔴 OPEN | Medium | memory-based-slot-calculation.md |
 | Redis field names differ | ✅ RESOLVED | Medium | distributed-capacity-tracking-design.md |
@@ -18,38 +18,7 @@ This document summarizes discrepancies between the design documentation and actu
 
 ## 🔴 Open Issues
 
-### 1. `reject()` Callback Missing `requestCount` Parameter
-
-**Document**: `docs/actual-usage-adjustment-design.md`
-**Severity**: High
-**Location**: `packages/core/src/utils/jobExecutor.ts:56-74`
-
-**Design Specification** (lines 116-139):
-```typescript
-interface RejectUsage {
-  requestCount: number;  // User should provide this
-  inputTokens: number;
-  outputTokens: number;
-  cachedTokens: number;
-}
-```
-
-**Actual Implementation**:
-```typescript
-// packages/core/src/utils/jobExecutor.ts:67
-mutableState.rejectUsage = {
-  requests: 1,  // HARDCODED TO 1
-  tokens: usage.inputTokens + usage.outputTokens + usage.cachedTokens,
-};
-```
-
-**Impact**: Jobs that make multiple API calls before failing cannot report the actual request count. RPM/RPD counters will always show 1 request regardless of actual usage.
-
-**Fix Required**: Add optional `requestCount` field to `TokenUsageEntry` interface and use it in the reject handler instead of hardcoding to 1.
-
----
-
-### 2. Dynamic Ratios Are NOT Local-Only
+### 1. Dynamic Ratios Are NOT Local-Only
 
 **Document**: `docs/distributed-slots-design.md`
 **Severity**: High
@@ -76,7 +45,7 @@ The `JobTypeManager` (packages/core/src/utils/jobTypeManager.ts:216-241) does ad
 
 ---
 
-### 3. Memory Constraints Not Enforced Per-Job-Type
+### 2. Memory Constraints Not Enforced Per-Job-Type
 
 **Document**: `docs/memory-based-slot-calculation.md`
 **Severity**: Medium
@@ -102,6 +71,17 @@ The `JobTypeManager` (packages/core/src/utils/jobTypeManager.ts:216-241) does ad
 ---
 
 ## ✅ Resolved Issues
+
+### 3. `reject()` Callback ~~Missing `requestCount`~~ (FIXED)
+
+**Document**: `docs/actual-usage-adjustment-design.md`
+**Resolved**: 2024-02-04
+
+**Original Issue**: The reject handler hardcoded `requests: 1` instead of allowing users to provide the actual request count for jobs that make multiple API calls before failing.
+
+**Resolution**: Added optional `requestCount` field to `TokenUsageEntry` interface in `packages/core/src/multiModelTypes.ts`. Updated reject handler in `packages/core/src/utils/jobExecutor.ts` to use `usage.requestCount ?? 1`.
+
+---
 
 ### 4. Redis Hash Field Names ~~Differ from Design~~ (FIXED)
 
@@ -156,16 +136,15 @@ Core features correctly implemented:
 ## Recommendations
 
 ### Immediate Actions
-1. **Add `requestCount` to reject callback** - Critical for multi-request job tracking
-2. **Update distributed-slots documentation** - Clarify that ratios are NOT local in distributed mode
+1. **Update distributed-slots documentation** - Clarify that ratios are NOT local in distributed mode
 
 ### Documentation Updates
-3. Document the global memory semaphore approach vs. per-job-type calculation
-4. Add documentation for window reset notification feature in maxWaitMS
+2. Document the global memory semaphore approach vs. per-job-type calculation
+3. Add documentation for window reset notification feature in maxWaitMS
 
 ### Future Consideration
-5. Evaluate whether per-instance local ratios should be implemented as designed, or if the current global ratio approach is acceptable
-6. Consider implementing per-job-type memory semaphores if isolation is required
+4. Evaluate whether per-instance local ratios should be implemented as designed, or if the current global ratio approach is acceptable
+5. Consider implementing per-job-type memory semaphores if isolation is required
 
 ---
 
@@ -173,8 +152,8 @@ Core features correctly implemented:
 
 | Issue | Status | Primary Files | Key Lines |
 |-------|--------|---------------|-----------|
-| reject() requestCount | 🔴 OPEN | `packages/core/src/utils/jobExecutor.ts` | 56-74 |
 | Local ratios | 🔴 OPEN | `packages/redis/src/luaScripts.ts` | 101-122 |
 | Memory per-job-type | 🔴 OPEN | `packages/core/src/utils/memoryManager.ts` | 45-49 |
+| reject() requestCount | ✅ RESOLVED | `packages/core/src/multiModelTypes.ts`, `jobExecutor.ts` | 173-186, 65-69 |
 | Redis field names | ✅ RESOLVED | `packages/redis/src/luaScripts.ts` | 365-387 |
 | Daily TTL | ✅ RESOLVED | `packages/redis/src/luaScripts.ts` | 359 |

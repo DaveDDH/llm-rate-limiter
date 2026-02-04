@@ -62,9 +62,9 @@ const createRejectHandler = (
     mutableState.rejected = true;
     const usageEntry: UsageEntry = { modelId, ...usage };
     addUsageWithCost(ctx, modelId, usageEntry);
-    // Store usage for DelegationError - reject implies 1 request was made
+    // Store usage for DelegationError - use provided requestCount or default to 1
     mutableState.rejectUsage = {
-      requests: 1,
+      requests: usage.requestCount ?? 1,
       tokens: usage.inputTokens + usage.outputTokens + usage.cachedTokens,
     };
     mutableState.shouldDelegate = opts?.delegate !== false;

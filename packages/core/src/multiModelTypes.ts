@@ -177,6 +177,12 @@ export interface TokenUsageEntry {
   cachedTokens: number;
   /** Number of output tokens generated */
   outputTokens: number;
+  /**
+   * Number of LLM API requests made (optional, defaults to 1).
+   * Important for reject(): if a job made multiple API calls before failing,
+   * provide the actual count for accurate RPM/RPD tracking.
+   */
+  requestCount?: number;
 }
 
 /**
