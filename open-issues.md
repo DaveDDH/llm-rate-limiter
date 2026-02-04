@@ -104,33 +104,28 @@ The test preset `slotCalc-memory` is documented in `docs/e2e-distributed-slots-t
 
 ### Issue #6: Debug console.log statements in production code
 
-**Status:** Open
+**Status:** NOT RELEVANT
 
 **Description:**
 Several files contain debug `console.log` statements that should be removed before production.
 
 **Impact:** Low - Clutters logs, potential performance impact
 
-**Files to modify:**
-
-| File | Line(s) |
-|------|---------|
-| `packages/core/src/multiModelRateLimiter.ts` | 154, 157, 163, 183 |
-| `packages/core/src/utils/timeWindowCounter.ts` | 39 |
+**Note:** Marked as not relevant per user decision.
 
 ---
 
 ### Issue #7: Document numbering issue in e2e tests doc
 
-**Status:** Open
+**Status:** RESOLVED
 
 **Description:**
 "Test Case 6" appears twice in the Slot Calculation section of the E2E tests documentation.
 
 **Impact:** Low - Documentation clarity
 
-**Files to modify:**
-- `docs/e2e-distributed-slots-tests.md`
+**Resolution:**
+Verified that the documentation now has correct numbering (Test Cases 1-7 in Slot Calculation section). The duplicate no longer exists.
 
 ---
 
@@ -177,6 +172,7 @@ this.recordTokenUsage(usage.input + usage.output, windowStarts);
 |----------|-------|--------|
 | High | 0 | - |
 | Medium | 0 | - |
-| Low | 4 | #6, #7, #8, #9 |
-| **Total Open** | **4** | |
-| **Resolved** | **5** | #1, #2, #3, #4, #5 |
+| Low | 2 | #8, #9 |
+| **Total Open** | **2** | |
+| **Resolved** | **6** | #1, #2, #3, #4, #5, #7 |
+| **Not Relevant** | **1** | #6 |
