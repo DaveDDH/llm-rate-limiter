@@ -2,157 +2,155 @@
 
 ## Overview
 
-This document describes the current behavior of the Redis backend's slot allocation system and the required changes to support proper per-job-type per-model capacity calculation.
+This document describes the Redis backend's slot allocation system, which uses a **pool-based approach** where Redis tracks capacity per-model and local instances distribute that capacity across job types.
 
-## Backend Architecture
+## Architecture: Pool-Based Allocation
 
-The Redis backend coordinates capacity across multiple server instances using:
+The system separates concerns between Redis (global coordination) and local instances (job type distribution):
 
-1. **Instance Registry**: Tracks all active instances with their `inFlight` request counts
-2. **Allocation Hash**: Stores slot allocations per instance
-3. **Pub/Sub Channel**: Notifies instances when allocations change
-4. **Lua Scripts**: Atomic operations for acquire/release/reallocation
+| Concern | Handled By | Description |
+|---------|------------|-------------|
+| Model capacity | Redis | Global limits, fair instance division |
+| Actual usage tracking | Redis | TPM/RPM/TPD/RPD counters per model |
+| Instance coordination | Redis | Heartbeats, cleanup, reallocation |
+| Job type ratios | Local | Dynamic adjustment based on load |
+| Job type enforcement | Local | Which job types can use pool slots |
 
-### Base Slot Calculation
+### Why Pool-Based?
 
-The system calculates a `totalCapacity` number in `redisBackendFactory.ts`:
+Ratios are intentionally **local to each instance**:
+- Each instance may have different traffic patterns
+- Local adjustment allows each instance to optimize for its own workload
+- Avoids thundering herd problems where all instances react simultaneously
+- Dynamic ratio changes take effect immediately without Redis coordination
 
-```typescript
-const calculateTotalCapacity = (models: RedisBackendInitConfig['models']): number => {
-  let totalCapacity = 0;
-  const defaultCapacityPerModel = 100;
-  for (const modelConfig of Object.values(models)) {
-    const { maxConcurrentRequests } = modelConfig;
-    totalCapacity += maxConcurrentRequests ?? defaultCapacityPerModel;
-  }
-  return totalCapacity;
-};
-```
+If Redis enforced per-job-type slots, local ratio adjustments would be ignored.
 
-**Note**: When `maxConcurrentRequests` is not specified, models default to a capacity of 100.
+## Backend Components
 
-### Allocation Algorithm (Lua)
+1. **Instance Registry**: Tracks active instances with heartbeats
+2. **Pool Allocation Hash**: Stores per-model slot pools per instance
+3. **Global Usage Counters**: Tracks actual tokens/requests per model per time window
+4. **Pub/Sub Channel**: Notifies instances when allocations change
+5. **Lua Scripts**: Atomic operations for acquire/release/reallocation
 
-The `REALLOCATION_LOGIC` in `luaScripts.ts` distributes slots using fair-share:
+## Allocation Structure
 
-```lua
-local fairShare = math.floor(totalCapacity / instanceCount)
-local available = math.max(0, totalCapacity - totalInFlight)
-
-for _, n in ipairs(needs) do
-  local allocation = math.floor((n.need / totalNeed) * available)
-  -- Store single 'slots' number per instance
-  redis.call('HSET', allocationsKey, n.id, cjson.encode({
-    slots=allocation,
-    instanceCount=instanceCount
-  }))
-end
-```
-
-### Acquire/Release Flow
-
-1. **Acquire** (`ACQUIRE_SCRIPT`):
-   - Checks if instance has `slots > 0`
-   - Decrements `slots`, increments `inFlight`
-   - Returns "0" if no slots available (job rejected)
-
-2. **Release** (`RELEASE_SCRIPT`):
-   - Decrements `inFlight`
-   - Triggers reallocation to redistribute freed capacity
-
-## Design Principles
-
-1. **Job Types Are Static**: Job types are defined upfront at configuration time, not dynamically registered.
-
-2. **Slots Are Hard Limits**: Slots must be calculated with extreme accuracy. They are not soft guidance—they represent actual capacity that the system guarantees.
-
-3. **Real Usage Adjustment**: After a job completes, the system adjusts capacity based on actual resource consumption (not just estimates). Time-window considerations apply:
-   - **Time-windowed limits (TPM, RPM)**: Only adjust if still within the same time window. If a job started in minute 10 but finished in minute 11, do NOT adjust minute 11's capacity (limits were reset).
-   - **Non-time-windowed limits (concurrent, memory)**: Always update immediately, as these are not time-window dependent.
-
-4. **Dynamic Ratios**: Ratios are not fixed—they adjust automatically based on LOCAL load (see Dynamic Ratio System below). Ratios are intentionally local to each instance, not synchronized across instances.
-
-### Multi-Dimensional Capacity
-
-Capacity must be tracked across these dimensions:
-- **Per Model**: Each model has different limits (TPM, RPM, concurrent)
-- **Per Job Type**: Different jobs consume different resources
-- **Per Instance**: Fair distribution across server instances
-
-### Slot Calculation Formula
-
-```
-slots[jobType][model] = (modelCapacity / estimatedResourcePerJob) / instanceCount * jobTypeRatio
-```
-
-Where:
-- `modelCapacity`: The limiting factor for this model (TPM, RPM, or concurrent)
-- `estimatedResourcePerJob`: Expected resource consumption for this job type on this model
-- `instanceCount`: Number of active instances (from backend)
-- `jobTypeRatio`: Current ratio for this job type (dynamic, based on load)
-
-### Example Calculation
-
-**Configuration:**
-- 2 job types: `summary` (ratio: 0.7), `fill` (ratio: 0.3)
-- 2 models:
-  - `openai`: 1M TPM, ~5000 tokens/job → 200 slots base
-  - `deepinfra`: 200 concurrent
-- 2 instances
-
-**Calculation:**
-
-| Job Type | Model     | Base Capacity | / Instances | × Ratio | = Slots |
-|----------|-----------|---------------|-------------|---------|---------|
-| summary  | openai    | 200           | 100         | 0.7     | 70      |
-| summary  | deepinfra | 200           | 100         | 0.7     | 70      |
-| fill     | openai    | 200           | 100         | 0.3     | 30      |
-| fill     | deepinfra | 200           | 100         | 0.3     | 30      |
-
-### AllocationInfo Structure
-
-The allocation structure provides per-job-type per-model slot breakdown:
+Redis sends per-model pools, not per-job-type slots:
 
 ```typescript
 interface AllocationInfo {
   instanceCount: number;
-  slotsByJobTypeAndModel: {
-    [jobType: string]: {
-      [modelId: string]: {
-        slots: number;
-        tokensPerMinute: number;
-        requestsPerMinute: number;
-      };
+  pools: {
+    [modelId: string]: {
+      totalSlots: number;        // This instance's share of model capacity
+      tokensPerMinute: number;   // Remaining TPM / instanceCount
+      requestsPerMinute: number;
+      tokensPerDay: number;
+      requestsPerDay: number;
     };
   };
+  dynamicLimits?: DynamicLimits;  // For rate limiter updates
 }
 ```
 
-### onAvailableSlotsChange Callback
+### Pool Calculation Formula
 
-The callback must provide per-job-type per-model breakdown so clients can:
-1. Display accurate availability to users
-2. Make informed decisions about which jobs to accept
-3. Implement proper backpressure
-
-```typescript
-onAvailableSlotsChange: (info: AllocationInfo) => void;
 ```
+pool[model].totalSlots = floor((remainingCapacity / estimatedResourcePerJob) / instanceCount)
+```
+
+Where:
+- `remainingCapacity`: Global limit minus global actual usage (from dynamicLimits)
+- `estimatedResourcePerJob`: Weighted average or maximum across job types
+- `instanceCount`: Number of active instances
+
+## Local Distribution
+
+Each instance receives its pool allocation and distributes across job types locally:
+
+```
+Instance receives: pool["gpt-4"].totalSlots = 10
+
+Local ratios (managed by JobTypeManager):
+  summary: 0.6
+  chat: 0.4
+
+Local slot allocation:
+  summary: floor(10 * 0.6) = 6 slots
+  chat: floor(10 * 0.4) = 4 slots
+```
+
+### When Ratios Change
+
+```
+JobTypeManager adjusts ratios based on load:
+  summary: 0.6 → 0.8
+  chat: 0.4 → 0.2
+
+Local recalculation (instant, no Redis):
+  summary: floor(10 * 0.8) = 8 slots
+  chat: floor(10 * 0.2) = 2 slots
+
+Redis is unaware - pool still has 10 slots.
+Local layer decides job type distribution.
+```
+
+## Acquire/Release Flow
+
+### Acquire (Two-Layer Check)
+
+```
+Job arrives for "summary" job type on "gpt-4" model:
+
+1. LOCAL CHECK: "Do I have summary capacity?"
+   → inFlight[summary] < localSlots[summary]
+   → Pass: 0 < 8
+
+2. REDIS CHECK: "Can I use 1 slot from gpt-4 pool?"
+   → backend.acquire(instanceId, modelId)
+   → Pass: pool[gpt-4].totalSlots > 0
+   → Decrement pool slot
+
+3. Job proceeds
+```
+
+### Release
+
+```
+Job completes with actual usage:
+
+1. LOCAL: Decrement inFlight[summary]
+
+2. REDIS: backend.release({
+     instanceId, modelId,
+     actual: { tokens, requests },
+     windowStarts: { tpmWindowStart, ... }
+   })
+
+3. REDIS updates global usage counters
+
+4. REDIS recalculates pools for all instances
+
+5. Pub/Sub broadcasts new allocations
+```
+
+### Lua Script Behavior
+
+**ACQUIRE_SCRIPT**:
+- Input: `instanceId`, `modelId` (no job type)
+- Checks: `pool[model].totalSlots > 0`
+- Action: Decrement pool slot, increment in-flight
+
+**RELEASE_SCRIPT**:
+- Input: `instanceId`, `modelId`, `actual`, `windowStarts`
+- Action: Update global usage counters, trigger reallocation
 
 ## Dynamic Ratio System (Local Per-Instance)
 
-The system supports dynamic ratio adjustment based on load. **Ratios are intentionally LOCAL to each instance** — they are not synchronized across instances via Redis.
-
-**Why local ratios?**
-- Each instance may have different traffic patterns (e.g., Instance A serves Product A, Instance B serves Product B)
-- Local adjustment allows each instance to optimize for its own workload
-- Avoids thundering herd problems where all instances react simultaneously
-- Simpler, faster, more resilient (no Redis dependency for ratio changes)
-- The distributed part (fair capacity division) already happens at the slot allocation level via `instanceCount`
-
 ### Ratio Configuration
 
-Job types can be configured as **flexible** or **fixed** via `JobTypeRatioConfig`:
+Job types can be **flexible** or **fixed**:
 
 ```typescript
 interface JobTypeRatioConfig {
@@ -175,14 +173,6 @@ const resourceEstimations = {
 };
 ```
 
-### Load Measurement
-
-Load is measured as percentage of allocated slots:
-
-```typescript
-loadPercentage = inFlight / allocatedSlots
-```
-
 ### Adjustment Algorithm
 
 The `JobTypeManager.adjustRatios()` method:
@@ -192,11 +182,10 @@ The `JobTypeManager.adjustRatios()` method:
 3. **Calculate Contributions**: Donors contribute proportional to their underutilization
 4. **Transfer Capacity**: Receivers get capacity proportional to their load level
 5. **Normalize Ratios**: Ensure all ratios sum to 1
-6. **Recalculate Slots**: Update `allocatedSlots` for each job type
+6. **Recalculate Local Slots**: Apply ratios to pool allocations
 
 ### Adjustment Triggers
 
-Ratios are recalculated:
 - **Periodically**: Every 5 seconds (configurable via `adjustmentIntervalMs`)
 - **On Release**: After every 10 job completions (configurable via `releasesPerAdjustment`)
 
@@ -215,62 +204,128 @@ interface RatioAdjustmentConfig {
 
 ### Example Flow
 
-**Initial State** (100 total slots):
-- JobA (flexible): ratio=0.3 → 30 slots, 5 in-flight (16.7% load)
-- JobB (flexible): ratio=0.4 → 40 slots, 38 in-flight (95% load)
-- JobC (fixed): ratio=0.3 → 30 slots, 10 in-flight (33% load)
+**Initial State** (pool has 100 slots):
+- JobA (flexible): ratio=0.3 → 30 local slots, 5 in-flight (16.7% load)
+- JobB (flexible): ratio=0.4 → 40 local slots, 38 in-flight (95% load)
+- JobC (fixed): ratio=0.3 → 30 local slots, 10 in-flight (33% load)
 
-**After Adjustment**:
-- JobA: 16.7% < 30% → **DONOR**, contributes capacity
-- JobB: 95% > 70% → **RECEIVER**, gets capacity
+**After Local Adjustment**:
+- JobA: 16.7% < 30% → **DONOR**
+- JobB: 95% > 70% → **RECEIVER**
 - JobC: Fixed → **UNCHANGED**
 
-**Result**:
-- JobA: ratio=0.133 → 13 slots
-- JobB: ratio=0.567 → 56 slots
-- JobC: ratio=0.3 → 30 slots (unchanged)
-
-### Impact on Local Slot Calculation
-
-When ratios change locally on an instance:
-1. The instance's `JobTypeManager` recalculates local slot allocations
-2. The `availabilityTracker` is notified via callback
-3. Local availability is updated immediately
-4. **No Redis communication occurs** — ratios are purely local
-
-The distributed backend only tracks:
-- Instance count (for fair division of global capacity)
-- In-flight requests (for coordination)
-- Base slot allocations (before local ratio adjustment)
+**Result** (pool still has 100 slots):
+- JobA: ratio=0.133 → 13 local slots
+- JobB: ratio=0.567 → 56 local slots
+- JobC: ratio=0.3 → 30 local slots (unchanged)
 
 ## Pub/Sub Messages
 
-Allocation change notifications include full breakdown:
+Allocation change notifications include pool breakdown:
+
 ```json
 {
   "instanceId": "instance-1",
   "allocation": {
     "instanceCount": 2,
-    "slotsByJobTypeAndModel": {
-      "summary": {
-        "openai": { "slots": 70, "tokensPerMinute": 500000, "requestsPerMinute": 0 },
-        "deepinfra": { "slots": 70, "tokensPerMinute": 0, "requestsPerMinute": 250 }
+    "pools": {
+      "gpt-4": {
+        "totalSlots": 50,
+        "tokensPerMinute": 500000,
+        "requestsPerMinute": 250,
+        "tokensPerDay": 5000000,
+        "requestsPerDay": 2500
       },
-      "fill": {
-        "openai": { "slots": 30, "tokensPerMinute": 500000, "requestsPerMinute": 0 },
-        "deepinfra": { "slots": 30, "tokensPerMinute": 0, "requestsPerMinute": 250 }
+      "claude-3": {
+        "totalSlots": 30,
+        "tokensPerMinute": 300000,
+        "requestsPerMinute": 150,
+        "tokensPerDay": 3000000,
+        "requestsPerDay": 1500
       }
+    },
+    "dynamicLimits": {
+      "gpt-4": { "tokensPerMinute": 500000, ... },
+      "claude-3": { "tokensPerMinute": 300000, ... }
     }
   }
 }
 ```
 
-## Ratio Management (Local Only)
+## Information Boundaries
 
-Ratios are managed **locally** by each instance's `JobTypeManager`:
-1. Each instance monitors its own load per job type
-2. `JobTypeManager.adjustRatios()` recalculates ratios based on local load
-3. Local slot allocations are updated immediately
-4. No Redis synchronization occurs
+### What Redis Knows
+- Active instances (for fair division)
+- Global actual usage per model (TPM, RPM, TPD, RPD)
+- Per-model capacity limits
+- Instance heartbeats and in-flight counts
 
-This design allows each instance to optimize for its specific traffic pattern without global coordination overhead.
+### What Redis Does NOT Know
+- Job type ratios
+- Per-job-type slot counts
+- Local load distribution decisions
+
+### What Local Instance Knows
+- Its pool allocation per model
+- Its local ratios per job type
+- Its local in-flight counts per job type
+
+## Edge Cases
+
+### Floor Rounding Gives Zero Slots
+
+```
+Pool: 2 slots, jobTypeA ratio: 0.3
+floor(2 * 0.3) = 0 slots
+
+Mitigation: Local manager guarantees minCapacity (e.g., 1)
+```
+
+### Ratio Sum Exceeds 1.0
+
+```
+After aggressive adjustment:
+  jobTypeA: 0.7, jobTypeB: 0.5 (total: 1.2)
+
+floor(5 * 0.7) = 3
+floor(5 * 0.5) = 2
+Total: 5 (matches pool)
+
+Result: Floor function naturally handles this.
+```
+
+### All Job Types Want Same Model
+
+```
+Pool: 5 slots
+jobTypeA wants 4, jobTypeB wants 4
+
+First 5 jobs (any type) get slots.
+Remaining jobs wait in local queue.
+```
+
+## Design Invariants
+
+1. **Pool Sum**: `sum(instance.pool[model].slots) <= globalCapacity / estimatedResource`
+2. **Local Ratio Sum**: `sum(localRatio[jobType]) ≈ 1.0`
+3. **In-Flight Constraint**: `inFlight[jobType] <= floor(pool.slots * ratio[jobType])`
+4. **Global Usage**: `sum(instance.actualUsage) == globalActualUsage`
+
+## Design Principles
+
+1. **Single Source of Truth**
+   - Ratios: Local JobTypeManager only
+   - Model capacity: Redis only
+
+2. **Separation of Concerns**
+   - Redis: Global coordination, fair instance division, actual usage tracking
+   - Local: Ratio management, job type distribution, queue management
+
+3. **Acquire Still Goes to Redis**
+   - Prevents over-allocation across instances
+   - Tracks global in-flight for fair distribution
+
+4. **No Job Type in Redis**
+   - Clean separation of concerns
+   - Simpler Lua scripts
+   - Local ratio changes work immediately

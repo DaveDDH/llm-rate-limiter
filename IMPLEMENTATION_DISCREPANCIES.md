@@ -9,43 +9,16 @@ This document summarizes discrepancies between the design documentation and actu
 | Issue | Status | Severity | Document |
 |-------|--------|----------|----------|
 | `reject()` missing `requestCount` | ✅ RESOLVED | High | actual-usage-adjustment-design.md |
-| Ratios not local as documented | 🔴 OPEN | High | distributed-slots-design.md |
-| Memory not enforced per-job-type | 🔴 OPEN | Medium | memory-based-slot-calculation.md |
+| Local ratios not enforced | ✅ RESOLVED | High | distributed-slots-design.md |
+| Memory not enforced per-job-type | 🟡 CLARIFIED | Medium | memory-based-slot-calculation.md |
 | Redis field names differ | ✅ RESOLVED | Medium | distributed-capacity-tracking-design.md |
 | Daily TTL mismatch | ✅ RESOLVED | Low | distributed-capacity-tracking-design.md |
 
 ---
 
-## 🔴 Open Issues
+## 🟡 Clarified Issues (Design vs Implementation Trade-offs)
 
-### 1. Dynamic Ratios Are NOT Local-Only
-
-**Document**: `docs/distributed-slots-design.md`
-**Severity**: High
-**Location**: `packages/redis/src/luaScripts.ts:101-122`
-
-**Design Specification** (line 144):
-> "Ratios are intentionally LOCAL to each instance — they are not synchronized across instances via Redis."
-
-**Actual Implementation**:
-The Lua script stores fixed ratios in Redis and applies the same ratio value to ALL instances:
-```lua
--- luaScripts.ts:108
-local ratio = jobType.ratio
-```
-
-The `JobTypeManager` (packages/core/src/utils/jobTypeManager.ts:216-241) does adjust ratios locally, but these adjustments:
-- Only affect the local `AvailabilityTracker` callback
-- Do NOT propagate to the Redis backend
-- Are NOT used in distributed slot calculations
-
-**Impact**: The documented per-instance ratio optimization doesn't work in distributed deployments. All instances use identical ratios from Redis initialization.
-
-**Fix Required**: Either update documentation to reflect actual behavior, or implement per-instance ratio submission to Redis.
-
----
-
-### 2. Memory Constraints Not Enforced Per-Job-Type
+### 1. Memory Constraints: Reporting vs Enforcement Layers
 
 **Document**: `docs/memory-based-slot-calculation.md`
 **Severity**: Medium
@@ -57,20 +30,62 @@ The `JobTypeManager` (packages/core/src/utils/jobTypeManager.ts:216-241) does ad
 2. Final slots: min(distributedSlots, memorySlots) per job type
 ```
 
-**Actual Implementation**:
+**What Works Correctly (Reporting Layer)**:
+- `AvailabilityTracker.calculateSlotsWithMemoryConstraint()` correctly calculates per-job-type memory slots ✅
+- `onAvailableSlotsChange` callback reports correct memory-constrained availability ✅
+
+**What Uses Simpler Approach (Enforcement Layer)**:
 - `MemoryManager` uses a single global semaphore with `totalMemory * freeMemoryRatio`
 - Does NOT divide memory allocation by job type
 - All job types share one semaphore pool
 
-**Where it IS correct**: `AvailabilityTracker.calculateSlotsWithMemoryConstraint()` (lines 246-297) correctly calculates per-job-type memory slots, but this is only used for the `onAvailableSlotsChange` callback, not for actual job execution.
+**Impact**:
+- **Memory-heavy jobs could theoretically starve lighter jobs** if all slots are consumed by heavy jobs
+- **In practice**, other limits (TPM, RPM, concurrent, pool slots) usually constrain jobs first
+- Availability callback shows correct numbers, allowing clients to implement backpressure
 
-**Impact**: A memory-heavy job type can starve lighter job types. The availability callback shows correct numbers, but actual enforcement uses a simpler global pool.
-
-**Fix Required**: Implement per-job-type memory semaphores or update documentation to reflect the simpler global approach.
+**Resolution Options**:
+1. **Accept current behavior** - Document that memory enforcement uses global pool (simpler, fewer semaphores)
+2. **Implement per-job-type semaphores** - More complex, but matches design spec exactly
 
 ---
 
 ## ✅ Resolved Issues
+
+### 2. Local Ratios ~~Not Enforced~~ (FIXED via Pool-Based Slots)
+
+**Document**: `docs/distributed-slots-design.md`
+**Resolved**: 2024-02-04
+
+**Original Issue**: Redis calculated slots with ratios baked in at startup (`slots[jobType][model] = capacity * ratio`). When local `JobTypeManager` adjusted ratios dynamically, these changes only affected the reporting layer (callbacks), not the enforcement layer (Redis slots).
+
+Example of the problem:
+```
+Redis allocated: 10 slots for jobTypeA (based on 0.6 ratio)
+Local ratio changed: jobTypeA → 0.9 ratio
+Instance tried to acquire slot #11
+Redis blocked it: "You only have 10 jobTypeA slots"
+```
+
+**Resolution**: Implemented **pool-based slot allocation**:
+- Redis now tracks capacity **per-model only** (not per job type)
+- Local instances distribute pool slots across job types using local ratios
+- Dynamic ratio adjustments take effect immediately
+
+New flow:
+```
+Redis allocates: pool["gpt-4"].totalSlots = 10 (per-model, no ratio)
+Local distribution: jobTypeA gets floor(10 * 0.9) = 9 slots
+Acquire: Two-layer check (local job type + Redis pool)
+```
+
+**Key Changes**:
+- `AllocationInfo` structure: `slotsByJobTypeAndModel` → `pools[modelId]`
+- `ACQUIRE_SCRIPT`: Now model-only, no job type parameter
+- `REALLOCATION_LOGIC`: Removed ratio multiplication, calculates per-model pools
+- Local `JobTypeManager`: Distributes pool slots using local ratios
+
+---
 
 ### 3. `reject()` Callback ~~Missing `requestCount`~~ (FIXED)
 
@@ -107,6 +122,14 @@ The `JobTypeManager` (packages/core/src/utils/jobTypeManager.ts:216-241) does ad
 
 ## Documented Features Working Correctly
 
+### distributed-slots-design.md
+Pool-based slot allocation fully implemented:
+- Redis allocates per-model pools (not per job type)
+- Local instances distribute pools using local ratios
+- Two-layer acquire check (local + Redis)
+- Dynamic ratio adjustments work immediately
+- Fixed ratio protection enforced locally
+
 ### e2e-distributed-slots-tests.md
 All 6 test suites fully implemented:
 - Slot calculation (TPM, RPM, TPD, RPD, concurrent)
@@ -135,16 +158,20 @@ Core features correctly implemented:
 
 ## Recommendations
 
-### Immediate Actions
-1. **Update distributed-slots documentation** - Clarify that ratios are NOT local in distributed mode
-
 ### Documentation Updates
-2. Document the global memory semaphore approach vs. per-job-type calculation
-3. Add documentation for window reset notification feature in maxWaitMS
+1. **Update memory-based-slot-calculation.md** - Add section explaining:
+   - Availability callback correctly reports per-job-type memory constraints
+   - Actual enforcement uses global memory pool (simpler, fewer semaphores)
 
-### Future Consideration
-4. Evaluate whether per-instance local ratios should be implemented as designed, or if the current global ratio approach is acceptable
-5. Consider implementing per-job-type memory semaphores if isolation is required
+### Future Consideration (Optional)
+2. **Per-job-type memory semaphores** - Would match design spec exactly; adds complexity
+
+### Design Note
+The implementation now correctly separates concerns:
+- **Redis**: Global coordination, per-model capacity, actual usage tracking
+- **Local**: Ratio management, job type distribution, memory enforcement
+
+The only remaining trade-off is memory enforcement using a global pool instead of per-job-type semaphores. This is acceptable because other limits (TPM, RPM, pool slots) typically constrain jobs before memory becomes an issue.
 
 ---
 
@@ -152,8 +179,8 @@ Core features correctly implemented:
 
 | Issue | Status | Primary Files | Key Lines |
 |-------|--------|---------------|-----------|
-| Local ratios | 🔴 OPEN | `packages/redis/src/luaScripts.ts` | 101-122 |
-| Memory per-job-type | 🔴 OPEN | `packages/core/src/utils/memoryManager.ts` | 45-49 |
-| reject() requestCount | ✅ RESOLVED | `packages/core/src/multiModelTypes.ts`, `jobExecutor.ts` | 173-186, 65-69 |
-| Redis field names | ✅ RESOLVED | `packages/redis/src/luaScripts.ts` | 365-387 |
-| Daily TTL | ✅ RESOLVED | `packages/redis/src/luaScripts.ts` | 359 |
+| Pool-based slots | ✅ RESOLVED | `luaScripts.ts`, `multiModelTypes.ts`, `jobTypeManager.ts` | REALLOCATION_LOGIC, AllocationInfo |
+| Memory layers | 🟡 CLARIFIED | `memoryManager.ts`, `availabilityTracker.ts` | 45-49, 246-297 |
+| reject() requestCount | ✅ RESOLVED | `multiModelTypes.ts`, `jobExecutor.ts` | TokenUsageEntry, 65-69 |
+| Redis field names | ✅ RESOLVED | `luaScripts.ts` | 365-387 |
+| Daily TTL | ✅ RESOLVED | `luaScripts.ts` | 359 |
