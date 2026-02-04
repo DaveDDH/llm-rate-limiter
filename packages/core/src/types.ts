@@ -49,7 +49,7 @@ export interface InternalJobResult {
 
 /**
  * Memory limit configuration.
- * Note: minCapacity and maxCapacity are now at the model level (ModelRateLimitConfig).
+ * Controls how much system memory the rate limiter can use.
  */
 export interface MemoryLimitConfig {
   /** Ratio of free memory to use, 0-1 (default: 0.8) */
@@ -93,9 +93,9 @@ export interface InternalLimiterConfigBase {
   tokensPerDay?: number;
   /** Maximum concurrent requests (optional) */
   maxConcurrentRequests?: number;
-  /** Minimum capacity floor - always run at least N jobs ignoring limits (default: 0) */
+  /** Minimum slot count per job type - always have at least N slots (default: 0) */
   minCapacity?: number;
-  /** Maximum capacity ceiling for the whole queue (optional) */
+  /** Maximum slot count per job type - never exceed N slots (optional) */
   maxCapacity?: number;
   /** Label for logging (default: 'LLMRateLimiter') */
   label?: string;
@@ -202,6 +202,13 @@ export interface InternalLimiterInstance {
    * Release previously reserved capacity (when job fails before execution).
    */
   releaseReservation: () => void;
+  /**
+   * Wait for capacity using a FIFO queue with timeout.
+   * Jobs are served in order when capacity becomes available.
+   * @param maxWaitMS Maximum time to wait (0 = fail fast, no waiting)
+   * @returns Promise resolving to true if capacity was reserved, false if timed out
+   */
+  waitForCapacityWithTimeout: (maxWaitMS: number) => Promise<boolean>;
   /** Get current statistics */
   getStats: () => InternalLimiterStats;
   /** Update rate limits dynamically (for distributed coordination) */

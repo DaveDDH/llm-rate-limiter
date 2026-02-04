@@ -155,69 +155,6 @@ export const getMaxWaitMS = (
   return modelMaxWaitMS;
 };
 
-/** Result of waiting for model capacity with timeout */
-export interface WaitForModelResult {
-  /** The model ID if capacity became available, null if timeout or all models exhausted */
-  modelId: string | null;
-  /** Whether the wait timed out */
-  timedOut: boolean;
-}
-
-/**
- * Wait for a specific model to have capacity and atomically reserve it.
- * @param hasCapacity - Function to check if the model has capacity (fast, non-reserving)
- * @param tryReserve - Function to atomically reserve capacity (returns true if reserved)
- * @param maxWaitMS - Maximum time to wait (0 = fail fast, > 0 = wait up to this time)
- * @param pollIntervalMs - Polling interval for checking capacity
- * @returns Promise that resolves to true if capacity was reserved, false if timeout
- */
-export const waitForSpecificModelCapacity = async (
-  hasCapacity: () => boolean,
-  tryReserve: () => boolean,
-  maxWaitMS: number,
-  pollIntervalMs: number
-): Promise<boolean> => {
-  // Fail fast: don't wait at all
-  if (maxWaitMS === ZERO) {
-    return tryReserve();
-  }
-
-  // Try to reserve immediately
-  if (tryReserve()) {
-    return true;
-  }
-
-  const { promise, resolve } = Promise.withResolvers<boolean>();
-  const startTime = Date.now();
-
-  const checkCapacity = (): void => {
-    // Use hasCapacity for fast check, then tryReserve to actually claim
-    if (hasCapacity() && tryReserve()) {
-      resolve(true);
-      return;
-    }
-
-    const elapsed = Date.now() - startTime;
-    if (elapsed >= maxWaitMS) {
-      resolve(false);
-      return;
-    }
-
-    // Schedule next check, but don't exceed the remaining time
-    const remaining = maxWaitMS - elapsed;
-    const nextInterval = Math.min(pollIntervalMs, remaining);
-    if (nextInterval > ZERO) {
-      setTimeout(checkCapacity, nextInterval);
-    } else {
-      resolve(false);
-    }
-  };
-
-  // Start polling (first attempt already done above)
-  setTimeout(checkCapacity, Math.min(pollIntervalMs, maxWaitMS));
-  return await promise;
-};
-
 /** Parameters for selecting a model with maxWaitMS support */
 export interface SelectModelWithWaitParams {
   /** Escalation order of models to try */
@@ -233,8 +170,12 @@ export interface SelectModelWithWaitParams {
   tryReserveForModel: (modelId: string) => boolean;
   /** Function to get maxWaitMS for a job type and model */
   getMaxWaitMSForModel: (modelId: string) => number;
-  /** Polling interval for capacity checks */
-  pollIntervalMs: number;
+  /**
+   * Function to wait for capacity using a FIFO queue with timeout.
+   * Jobs are served in order when capacity becomes available.
+   * Returns true if capacity was reserved, false if timed out.
+   */
+  waitForCapacityWithTimeoutForModel: (modelId: string, maxWaitMS: number) => Promise<boolean>;
   /** Called when starting to wait for a model (for job tracking) */
   onWaitingForModel?: (modelId: string, maxWaitMS: number) => void;
 }
@@ -256,10 +197,8 @@ const tryModelAtIndex = async (
   const {
     escalationOrder,
     triedModels,
-    hasCapacityForModel,
-    tryReserveForModel,
     getMaxWaitMSForModel,
-    pollIntervalMs,
+    waitForCapacityWithTimeoutForModel,
     onWaitingForModel,
   } = params;
 
@@ -279,12 +218,8 @@ const tryModelAtIndex = async (
   const maxWaitMS = getMaxWaitMSForModel(modelId);
   onWaitingForModel?.(modelId, maxWaitMS);
 
-  const reserved = await waitForSpecificModelCapacity(
-    () => hasCapacityForModel(modelId),
-    () => tryReserveForModel(modelId),
-    maxWaitMS,
-    pollIntervalMs
-  );
+  // Wait for capacity using FIFO queue with timeout
+  const reserved = await waitForCapacityWithTimeoutForModel(modelId, maxWaitMS);
   if (reserved) {
     return { modelId, allModelsExhausted: false };
   }

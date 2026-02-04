@@ -10,7 +10,7 @@ import type {
   InternalLimiterStats,
   LogFn,
 } from '../types.js';
-import { AvailabilityTracker } from './availabilityTracker.js';
+import { AvailabilityTracker, type ModelCapacityBounds } from './availabilityTracker.js';
 import { calculateMaxEstimatedResource } from './jobExecutionHelpers.js';
 import { buildModelLimiterConfig } from './multiModelHelpers.js';
 
@@ -36,6 +36,20 @@ export const calculateEstimatedResources = (
   ),
 });
 
+/** Extract capacity bounds (minCapacity/maxCapacity) from model configs */
+export const extractModelCapacityBounds = (
+  models: Record<string, ModelRateLimitConfig>
+): ModelCapacityBounds => {
+  const bounds: ModelCapacityBounds = {};
+  for (const [modelId, modelConfig] of Object.entries(models)) {
+    const { minCapacity, maxCapacity } = modelConfig;
+    if (minCapacity !== undefined || maxCapacity !== undefined) {
+      bounds[modelId] = { minCapacity, maxCapacity };
+    }
+  }
+  return bounds;
+};
+
 /** Create availability tracker if callback is configured */
 export const createAvailabilityTracker = (
   config: LLMRateLimiterConfig,
@@ -45,11 +59,13 @@ export const createAvailabilityTracker = (
   if (config.onAvailableSlotsChange === undefined) {
     return null;
   }
+  const modelCapacityBounds = extractModelCapacityBounds(config.models);
   const tracker = new AvailabilityTracker({
     callback: config.onAvailableSlotsChange,
     getStats,
     estimatedResources,
     resourceEstimationsPerJob: config.resourceEstimationsPerJob,
+    modelCapacityBounds,
   });
   tracker.initialize();
   return tracker;

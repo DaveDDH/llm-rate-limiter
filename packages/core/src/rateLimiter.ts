@@ -13,6 +13,7 @@ import type {
   InternalLimiterInstance,
   InternalLimiterStats,
 } from './types.js';
+import { CapacityWaitQueue } from './utils/capacityWaitQueue.js';
 import { validateConfig } from './utils/configValidation.js';
 import { getAvailableMemoryKB } from './utils/memoryUtils.js';
 import { Semaphore } from './utils/semaphore.js';
@@ -34,7 +35,6 @@ const MS_PER_MINUTE = 60000;
 const MS_PER_DAY = 86400000;
 const DEFAULT_POLL_INTERVAL_MS = 100;
 const DEFAULT_FREE_MEMORY_RATIO = 0.8;
-const DEFAULT_MIN_CAPACITY = 0;
 const DEFAULT_RECALCULATION_INTERVAL_MS = 1000;
 const DEFAULT_LABEL = 'LLMRateLimiter';
 
@@ -51,6 +51,7 @@ class LLMRateLimiter implements InternalLimiterInstance {
   private rpdCounter: TimeWindowCounter | null = null;
   private tpmCounter: TimeWindowCounter | null = null;
   private tpdCounter: TimeWindowCounter | null = null;
+  private readonly capacityWaitQueue: CapacityWaitQueue;
 
   constructor(config: InternalLimiterConfig) {
     validateConfig(config);
@@ -61,6 +62,9 @@ class LLMRateLimiter implements InternalLimiterInstance {
     this.estimatedNumberOfRequests = config.estimatedNumberOfRequests ?? ZERO;
     this.estimatedUsedTokens = config.estimatedUsedTokens ?? ZERO;
     this.estimatedUsedMemoryKB = config.estimatedUsedMemoryKB ?? ZERO;
+
+    // Initialize FIFO queue for capacity waiting
+    this.capacityWaitQueue = new CapacityWaitQueue(`${this.label}/WaitQueue`);
 
     this.initializeMemoryLimiter();
     this.initializeConcurrencyLimiter();
@@ -98,18 +102,10 @@ class LLMRateLimiter implements InternalLimiterInstance {
 
   private calculateMemoryCapacityKB(): number {
     // This method is only called when memory config exists (from initializeMemoryLimiter)
-    const { config } = this;
-    const { memory, minCapacity, maxCapacity } = config;
+    const { memory } = this.config;
     const freeKB = getAvailableMemoryKB();
     const ratio = memory?.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
-    const calculated = Math.floor(freeKB * ratio);
-
-    // Apply minCapacity and maxCapacity from main config
-    let clamped = Math.max(minCapacity ?? DEFAULT_MIN_CAPACITY, calculated);
-    if (maxCapacity !== undefined) {
-      clamped = Math.min(clamped, maxCapacity);
-    }
-    return clamped;
+    return Math.floor(freeKB * ratio);
   }
 
   private initializeConcurrencyLimiter(): void {
@@ -301,6 +297,9 @@ class LLMRateLimiter implements InternalLimiterInstance {
       if (this.memorySemaphore !== null) {
         this.memorySemaphore.release(this.estimatedUsedMemoryKB);
       }
+
+      // Notify queue that capacity may be available
+      this.notifyCapacityAvailable();
     }
   }
 
@@ -410,6 +409,27 @@ class LLMRateLimiter implements InternalLimiterInstance {
 
     // Release concurrency slot
     this.concurrencySemaphore?.release();
+
+    // Notify queue that capacity may be available
+    this.notifyCapacityAvailable();
+  }
+
+  /**
+   * Wait for capacity using a FIFO queue with timeout.
+   * Jobs are served in order when capacity becomes available.
+   * @param maxWaitMS Maximum time to wait (0 = fail fast, no waiting)
+   * @returns Promise resolving to true if capacity was reserved, false if timed out
+   */
+  waitForCapacityWithTimeout(maxWaitMS: number): Promise<boolean> {
+    return this.capacityWaitQueue.waitForCapacity(() => this.tryReserve(), maxWaitMS);
+  }
+
+  /**
+   * Notify the wait queue that capacity may be available.
+   * Called after releasing capacity to wake waiting jobs.
+   */
+  private notifyCapacityAvailable(): void {
+    this.capacityWaitQueue.notifyCapacityAvailable(() => this.tryReserve());
   }
 
   /**
@@ -435,6 +455,9 @@ class LLMRateLimiter implements InternalLimiterInstance {
         const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
         this.memorySemaphore.release(memoryToRelease);
       }
+
+      // Notify queue that capacity may be available
+      this.notifyCapacityAvailable();
     }
   }
 

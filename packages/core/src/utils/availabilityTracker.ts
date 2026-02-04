@@ -24,6 +24,15 @@ export interface EstimatedResources {
   estimatedUsedMemoryKB: number;
 }
 
+/** Capacity bounds for a single model */
+export interface ModelCapacityBound {
+  minCapacity?: number;
+  maxCapacity?: number;
+}
+
+/** Capacity bounds per model ID */
+export type ModelCapacityBounds = Record<string, ModelCapacityBound>;
+
 /** Configuration for the availability tracker */
 export interface AvailabilityTrackerConfig {
   callback: OnAvailableSlotsChange | undefined;
@@ -31,6 +40,8 @@ export interface AvailabilityTrackerConfig {
   estimatedResources: EstimatedResources;
   /** Resource estimations per job type (needed for per-job-type memory calculation) */
   resourceEstimationsPerJob?: ResourceEstimationsPerJob;
+  /** Capacity bounds (minCapacity/maxCapacity) per model */
+  modelCapacityBounds?: ModelCapacityBounds;
 }
 
 /** Helper to get minimum value across models for a stat */
@@ -83,12 +94,57 @@ const sumDistributedSlots = (slotsByJobTypeAndModel: SlotsByJobTypeAndModel): nu
   return total;
 };
 
-/** Sum slots for a single job type across all models */
+/** Sum slots for a single job type across all models (without clamping) */
 const sumModelSlots = (modelAllocations: Record<string, { slots: number }> | undefined): number => {
   if (modelAllocations === undefined) return ZERO;
   let total = ZERO;
   for (const modelAlloc of Object.values(modelAllocations)) {
     total += modelAlloc.slots;
+  }
+  return total;
+};
+
+/**
+ * Apply memory constraint (scaling) and then per-model clamping.
+ * Flow:
+ *   1. Sum distributed slots (no clamping) to get distributedTotal
+ *   2. constrainedTotal = min(distributedTotal, memorySlots)
+ *   3. scaleFactor = constrainedTotal / distributedTotal
+ *   4. For each model: clamp(floor(slots * scaleFactor), minCapacity, maxCapacity)
+ *   5. Return sum of clamped values
+ */
+const applyMemoryConstraintAndClamping = (
+  modelAllocations: Record<string, { slots: number }> | undefined,
+  memorySlots: number,
+  bounds: ModelCapacityBounds | undefined
+): number => {
+  if (modelAllocations === undefined) return ZERO;
+
+  // Step 1: Sum distributed slots without clamping
+  const distributedTotal = sumModelSlots(modelAllocations);
+  if (distributedTotal === ZERO) {
+    // No distributed slots - apply minCapacity for each model
+    let total = ZERO;
+    for (const modelId of Object.keys(modelAllocations)) {
+      const minCap = bounds?.[modelId]?.minCapacity ?? ZERO;
+      total += minCap;
+    }
+    return total;
+  }
+
+  // Step 2-3: Calculate scale factor from memory constraint
+  const constrainedTotal = Math.min(distributedTotal, memorySlots);
+  const scaleFactor = constrainedTotal / distributedTotal;
+
+  // Step 4-5: Scale each model's slots, then clamp, then sum
+  let total = ZERO;
+  for (const [modelId, modelAlloc] of Object.entries(modelAllocations)) {
+    const scaledSlots = Math.floor(modelAlloc.slots * scaleFactor);
+    const modelBounds = bounds?.[modelId];
+    const minCap = modelBounds?.minCapacity ?? ZERO;
+    const maxCap = modelBounds?.maxCapacity ?? Number.POSITIVE_INFINITY;
+    const clamped = Math.max(minCap, Math.min(maxCap, scaledSlots));
+    total += clamped;
   }
   return total;
 };
@@ -115,14 +171,16 @@ export class AvailabilityTracker {
   private readonly getStats: () => LLMRateLimiterStats;
   private readonly estimated: EstimatedResources;
   private readonly resourceEstimationsPerJob: ResourceEstimationsPerJob | undefined;
+  private readonly modelCapacityBounds: ModelCapacityBounds | undefined;
   private distributedAllocation: AllocationInfo | null = null;
 
   constructor(config: AvailabilityTrackerConfig) {
-    const { callback, getStats, estimatedResources, resourceEstimationsPerJob } = config;
+    const { callback, getStats, estimatedResources, resourceEstimationsPerJob, modelCapacityBounds } = config;
     this.callback = callback;
     this.getStats = getStats;
     this.estimated = estimatedResources;
     this.resourceEstimationsPerJob = resourceEstimationsPerJob;
+    this.modelCapacityBounds = modelCapacityBounds;
   }
 
   /**
@@ -174,13 +232,16 @@ export class AvailabilityTracker {
   }
 
   /**
-   * Calculate total slots applying per-job-type memory constraint.
+   * Calculate total slots applying per-job-type memory constraint and per-model clamping.
    * Memory is LOCAL - each instance applies its own memory limit.
    *
    * For each job type:
-   *   memoryForJobType = totalMemory × ratio
-   *   localMemorySlots = floor(memoryForJobType / estimatedMemoryKB)
-   *   finalSlots = min(distributedSlots, localMemorySlots)
+   *   1. Calculate memory slots: floor((totalMemory × ratio) / estimatedMemoryKB)
+   *   2. Apply memory constraint to distributed slots (scale down proportionally)
+   *   3. Clamp each model's scaled slots using minCapacity/maxCapacity
+   *   4. Sum clamped slots
+   *
+   * Clamping happens AFTER memory constraint, so minCapacity can override memory limits.
    */
   private calculateSlotsWithMemoryConstraint(
     availability: Omit<Availability, 'slots'>,
@@ -193,12 +254,19 @@ export class AvailabilityTracker {
       return calculateSlots({ ...availability, slots: ZERO }, this.estimated);
     }
 
-    // No per-job-type config - sum distributed slots without memory constraint
+    const { modelCapacityBounds } = this;
+
+    // No per-job-type config - no memory constraint, just sum with clamping
     if (resourcesPerJob === undefined) {
-      return sumDistributedSlots(allocation.slotsByJobTypeAndModel);
+      let total = ZERO;
+      for (const jobTypeAlloc of Object.values(allocation.slotsByJobTypeAndModel)) {
+        // No memory config means unlimited memory slots
+        total += applyMemoryConstraintAndClamping(jobTypeAlloc, Number.POSITIVE_INFINITY, modelCapacityBounds);
+      }
+      return total;
     }
 
-    // Calculate per-job-type slots with memory constraint
+    // Calculate per-job-type slots with memory constraint and per-model clamping
     let totalSlots = ZERO;
     const jobTypeIds = Object.keys(allocation.slotsByJobTypeAndModel);
     const jobTypeCount = jobTypeIds.length;
@@ -213,19 +281,16 @@ export class AvailabilityTracker {
       // Get estimated memory for this job type
       const estimatedMemoryKB = jobTypeConfig?.estimatedUsedMemoryKB ?? ZERO;
 
-      // Sum distributed slots for this job type (across all models)
-      const distributedSlotsForJobType = sumModelSlots(jobTypeAlloc);
-
       // Calculate local memory slots for this job type
-      let localMemorySlots = Number.POSITIVE_INFINITY;
+      let memorySlots = Number.POSITIVE_INFINITY;
       if (totalMemoryKB !== null && estimatedMemoryKB > ZERO) {
         const memoryForJobType = totalMemoryKB * ratio;
-        localMemorySlots = Math.floor(memoryForJobType / estimatedMemoryKB);
+        memorySlots = Math.floor(memoryForJobType / estimatedMemoryKB);
       }
 
-      // Final slots = min(distributed, localMemory)
-      const finalSlotsForJobType = Math.min(distributedSlotsForJobType, localMemorySlots);
-      totalSlots += Math.max(ZERO, finalSlotsForJobType);
+      // Apply memory constraint first, then clamp per model
+      const finalSlotsForJobType = applyMemoryConstraintAndClamping(jobTypeAlloc, memorySlots, modelCapacityBounds);
+      totalSlots += finalSlotsForJobType;
     }
 
     return totalSlots;

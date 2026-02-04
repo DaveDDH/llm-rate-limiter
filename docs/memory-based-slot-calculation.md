@@ -162,16 +162,32 @@ finalSlots = min(
 )
 ```
 
-### 4. minCapacity and maxCapacity Are Slot Bounds
+### 4. minCapacity and maxCapacity Are Per-Model Slot Bounds
 
-After all calculations, the final slot count is clamped:
+These bounds are defined **per model** in `ModelRateLimitConfig` and applied **after** memory constraint:
 
 ```
-clampedSlots = clamp(finalSlots, minCapacity, maxCapacity)
+For each jobType:
+  1. distributedTotal = sum of slots across all models
+  2. memorySlots = floor((totalMemory × ratio) / estimatedMemoryKB)
+  3. constrainedTotal = min(distributedTotal, memorySlots)
+  4. scaleFactor = constrainedTotal / distributedTotal
+
+  For each model:
+    scaledSlots = floor(distributedSlots × scaleFactor)
+    finalSlots = clamp(scaledSlots, model.minCapacity, model.maxCapacity)
 ```
 
-- `minCapacity`: Always use at least N slots (even if calculated = 0)
-- `maxCapacity`: Never use more than N slots (even if calculated > N)
+- `minCapacity`: Ensures at least N slots per model per job type (can **override** memory constraint)
+- `maxCapacity`: Caps at N slots per model per job type
+
+Example with `model-alpha: { minCapacity: 2, maxCapacity: 8 }` and memory constraint reducing slots by 50%:
+
+| Job Type | Distributed | After Memory (×0.5) | After Clamp |
+|----------|-------------|---------------------|-------------|
+| jobTypeA | 0 | 0 | 2 (min override) |
+| jobTypeB | 6 | 3 | 3 (within bounds) |
+| jobTypeC | 20 | 10 | 8 (max applied) |
 
 ## E2E Testing Memory Constraints
 

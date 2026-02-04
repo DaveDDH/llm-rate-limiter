@@ -28,7 +28,7 @@ import {
   toErrorObject,
 } from './jobExecutionHelpers.js';
 import { executeJobWithCallbacks } from './jobExecutor.js';
-import { DEFAULT_POLL_INTERVAL_MS, ZERO } from './rateLimiterOperations.js';
+import { ZERO } from './rateLimiterOperations.js';
 
 /** Context for job delegation operations */
 export interface DelegationContext {
@@ -112,7 +112,8 @@ export const executeWithDelegation = async <T, Args extends ArgsWithoutModelId =
     hasCapacityForModel: dctx.hasCapacityForModel,
     tryReserveForModel: dctx.tryReserveForModel,
     getMaxWaitMSForModel: (m) => getMaxWaitMS(dctx.resourceEstimationsPerJob, ctx.jobType, m),
-    pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
+    waitForCapacityWithTimeoutForModel: (m, maxWaitMS) =>
+      dctx.getModelLimiter(m).waitForCapacityWithTimeout(maxWaitMS),
     onWaitingForModel: (modelId, maxWaitMS) => {
       updateJobWaiting(dctx.activeJobs, ctx.jobId, modelId, maxWaitMS);
     },

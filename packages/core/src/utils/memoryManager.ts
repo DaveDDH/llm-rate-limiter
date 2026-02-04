@@ -10,7 +10,6 @@ import { Semaphore } from './semaphore.js';
 const ZERO = 0;
 const ONE = 1;
 const DEFAULT_FREE_MEMORY_RATIO = 0.8;
-const DEFAULT_MIN_CAPACITY = 0;
 const DEFAULT_RECALCULATION_INTERVAL_MS = 1000;
 const MEMORY_REASON: AvailabilityChangeReason = 'memory';
 
@@ -39,46 +38,14 @@ interface SharedMemoryState {
   referenceCount: number;
   availabilityCallbacks: Set<(reason: AvailabilityChangeReason, modelId: string) => void>;
   freeMemoryRatio: number;
-  minCapacity: number | undefined;
-  maxCapacity: number | undefined;
 }
 
 let sharedState: SharedMemoryState | null = null;
 
-/** Extract capacity bounds from models config (uses minimum across all models) */
-const extractCapacityBounds = (
-  config: LLMRateLimiterConfig
-): { minCapacity: number | undefined; maxCapacity: number | undefined } => {
-  let minCapacity: number | undefined = undefined;
-  let maxCapacity: number | undefined = undefined;
-
-  for (const modelConfig of Object.values(config.models)) {
-    if (modelConfig.minCapacity !== undefined) {
-      minCapacity =
-        minCapacity === undefined ? modelConfig.minCapacity : Math.min(minCapacity, modelConfig.minCapacity);
-    }
-    if (modelConfig.maxCapacity !== undefined) {
-      maxCapacity =
-        maxCapacity === undefined ? modelConfig.maxCapacity : Math.min(maxCapacity, modelConfig.maxCapacity);
-    }
-  }
-
-  return { minCapacity, maxCapacity };
-};
-
-/** Calculate memory capacity based on shared config and available memory */
-const calculateCapacity = (
-  freeMemoryRatio: number,
-  minCapacity: number | undefined,
-  maxCapacity: number | undefined
-): number => {
+/** Calculate memory capacity based on available memory and ratio */
+const calculateCapacity = (freeMemoryRatio: number): number => {
   const availableKB = getAvailableMemoryKB();
-  const calculated = Math.floor(availableKB * freeMemoryRatio);
-  let clamped = Math.max(minCapacity ?? DEFAULT_MIN_CAPACITY, calculated);
-  if (maxCapacity !== undefined) {
-    clamped = Math.min(clamped, maxCapacity);
-  }
-  return clamped;
+  return Math.floor(availableKB * freeMemoryRatio);
 };
 
 /** Initialize or get the shared memory state */
@@ -93,18 +60,13 @@ const getOrCreateSharedState = (
   }
 
   const freeMemoryRatio = config.memory?.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
-  const { minCapacity, maxCapacity } = extractCapacityBounds(config);
   const recalculationIntervalMs = config.memory?.recalculationIntervalMs ?? DEFAULT_RECALCULATION_INTERVAL_MS;
 
-  const semaphore = new Semaphore(
-    calculateCapacity(freeMemoryRatio, minCapacity, maxCapacity),
-    `${label}/Memory`,
-    onLog
-  );
+  const semaphore = new Semaphore(calculateCapacity(freeMemoryRatio), `${label}/Memory`, onLog);
   const availabilityCallbacks = new Set<(reason: AvailabilityChangeReason, modelId: string) => void>();
 
   const intervalId = setInterval(() => {
-    const newCapacity = calculateCapacity(freeMemoryRatio, minCapacity, maxCapacity);
+    const newCapacity = calculateCapacity(freeMemoryRatio);
     if (newCapacity !== semaphore.getStats().max) {
       semaphore.resize(newCapacity);
       for (const callback of availabilityCallbacks) {
@@ -119,8 +81,6 @@ const getOrCreateSharedState = (
     referenceCount: ONE,
     availabilityCallbacks,
     freeMemoryRatio,
-    minCapacity,
-    maxCapacity,
   };
 
   return sharedState;

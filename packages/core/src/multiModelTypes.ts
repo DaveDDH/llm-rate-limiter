@@ -45,9 +45,9 @@ export interface ModelRateLimitConfig {
   tokensPerDay?: number;
   /** Maximum concurrent requests for this model (optional) */
   maxConcurrentRequests?: number;
-  /** Minimum capacity floor for this model (default: 0) */
+  /** Minimum slot count per job type for this model (default: 0) */
   minCapacity?: number;
-  /** Maximum capacity ceiling for this model (optional) */
+  /** Maximum slot count per job type for this model (optional) */
   maxCapacity?: number;
   /** Pricing for cost calculation (USD per million tokens) */
   pricing: ModelPricing;
