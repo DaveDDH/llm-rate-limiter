@@ -21,7 +21,7 @@
     "test:redis": "npm run test -w @llm-rate-limiter/redis",
     "test:e2e": "npm run test -w @llm-rate-limiter/e2e-test-runner",
     "test:e2e:single": "npm run test -w @llm-rate-limiter/e2e-test-runner --",
-    "test:e2e:check": "npm run test:e2e:single -- --testPathPatterns=infrastructureBoot.test"
+    "test:e2e:verifySetup": "npm run test:e2e:single -- --testPathPatterns=infrastructureBoot.test"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
