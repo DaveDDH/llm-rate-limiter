@@ -1,7 +1,7 @@
 /**
  * Type definitions for rate limiter configuration presets.
  */
-import type { ResourceEstimationsPerJob } from '@llm-rate-limiter/core';
+import type { RatioAdjustmentConfig, ResourceEstimationsPerJob } from '@llm-rate-limiter/core';
 
 export interface RateLimiterPreset {
   models: Record<
@@ -21,6 +21,7 @@ export interface RateLimiterPreset {
   >;
   escalationOrder: readonly string[];
   resourceEstimations: ResourceEstimationsPerJob;
+  ratioAdjustmentConfig?: RatioAdjustmentConfig;
 }
 
 export type ConfigPresetName =
@@ -42,4 +43,8 @@ export type ConfigPresetName =
   | 'slotCalc-tpd-rpd'
   | 'slotCalc-zero-slots'
   | 'slotCalc-rpm-limiting'
-  | 'slotCalc-tpm-single';
+  | 'slotCalc-tpm-single'
+  | 'localRatio-twoTypes'
+  | 'localRatio-threeTypes'
+  | 'localRatio-equalThree'
+  | 'localRatio-zeroAlloc';

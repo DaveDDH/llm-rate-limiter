@@ -193,14 +193,33 @@ function logCapacityPerInterval(
   minTime: number,
   instanceIdMap: Map<string, string>
 ): void {
-  // Log the last snapshot content
-  const lastSnapshot = testData.snapshots[testData.snapshots.length - 1];
-  const lastTime = (lastSnapshot.timestamp - minTime) / MS_TO_SECONDS;
-  console.log(`=== Last snapshot at ${lastTime.toFixed(3)}s ===`);
-  for (const [fullId, state] of Object.entries(lastSnapshot.instances)) {
-    const shortId = instanceIdMap.get(fullId) ?? fullId;
-    const jobTypes = Object.entries(state.jobTypes).map(([jt, data]) => `${jt}:${data.slots}`);
-    console.log(`  ${shortId}: ${jobTypes.join(', ') || 'no jobTypes'}`);
+  // Debug: check interval 2 (0.27s)
+  const testInterval = points[2];
+  const testIntervalTime = minTime + testInterval.time * MS_TO_SECONDS;
+  console.log(`=== Debug interval 2 at ${testInterval.time.toFixed(2)}s ===`);
+  console.log(`intervalTime (absolute): ${testIntervalTime}`);
+  console.log(`minTime: ${minTime}`);
+
+  // Find the snapshot that would be selected
+  let selectedSnapshot: (typeof testData.snapshots)[0] | null = null;
+  let selectedTimestamp = -Infinity;
+  for (const snapshot of testData.snapshots) {
+    if (snapshot.timestamp <= testIntervalTime && snapshot.timestamp > selectedTimestamp) {
+      selectedSnapshot = snapshot;
+      selectedTimestamp = snapshot.timestamp;
+    }
+  }
+
+  if (selectedSnapshot) {
+    const relTime = (selectedSnapshot.timestamp - minTime) / MS_TO_SECONDS;
+    console.log(`Selected snapshot at ${relTime.toFixed(3)}s:`);
+    for (const [fullId, state] of Object.entries(selectedSnapshot.instances)) {
+      const shortId = instanceIdMap.get(fullId) ?? fullId;
+      const jobTypes = Object.entries(state.jobTypes).map(([jt, data]) => `${jt}:${data.slots}`);
+      console.log(`  ${shortId}: ${jobTypes.join(', ') || 'no jobTypes'}`);
+    }
+  } else {
+    console.log('No snapshot found!');
   }
 
   const capacityLog = points.slice(0, 50).map((p) => {

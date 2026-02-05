@@ -9,6 +9,12 @@ export type { RateLimiterPreset, ConfigPresetName } from './types.js';
 // Re-export individual configs
 export { defaultConfig } from './defaultConfig.js';
 export {
+  localRatioTwoTypesConfig,
+  localRatioThreeTypesConfig,
+  localRatioEqualThreeConfig,
+  localRatioZeroAllocConfig,
+} from './localRatioConfigs.js';
+export {
   slotCalculationConfig,
   fixedRatioConfig,
   flexibleRatioConfig,

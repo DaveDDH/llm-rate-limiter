@@ -3,6 +3,12 @@
  */
 import { defaultConfig } from './defaultConfig.js';
 import {
+  localRatioEqualThreeConfig,
+  localRatioThreeTypesConfig,
+  localRatioTwoTypesConfig,
+  localRatioZeroAllocConfig,
+} from './localRatioConfigs.js';
+import {
   slotCalcConcurrentConfig,
   slotCalcMultiModelConfig,
   slotCalcRpmConfig,
@@ -49,6 +55,10 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'slotCalc-zero-slots': slotCalcZeroSlotsConfig,
   'slotCalc-rpm-limiting': slotCalcRpmLimitingConfig,
   'slotCalc-tpm-single': slotCalcTpmSingleConfig,
+  'localRatio-twoTypes': localRatioTwoTypesConfig,
+  'localRatio-threeTypes': localRatioThreeTypesConfig,
+  'localRatio-equalThree': localRatioEqualThreeConfig,
+  'localRatio-zeroAlloc': localRatioZeroAllocConfig,
 };
 
 /** Get a configuration preset by name */

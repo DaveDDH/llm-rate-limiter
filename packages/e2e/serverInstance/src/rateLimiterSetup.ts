@@ -27,6 +27,7 @@ export const createRateLimiterInstance = (
     models: config.models,
     escalationOrder: config.escalationOrder,
     resourceEstimationsPerJob: config.resourceEstimations,
+    ratioAdjustmentConfig: config.ratioAdjustmentConfig,
     backend: createRedisBackend(redisUrl),
     onLog: (message, data) => logger.info(message, data),
     onAvailableSlotsChange: noopSlotsChange,

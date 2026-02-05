@@ -8,11 +8,11 @@ This document provides detailed documentation for each e2e test file, including 
 |-----------|------------|:-----------:|:-------:|
 | `infrastructureBoot.test.ts` | [Lowest](./complexity-lowest.md) | [x] | [x] |
 | `slotCalculation.test.ts` | [Low](./complexity-low.md#1-pool-slot-calculation) | [x] | [x] |
-| `localRatioDistribution.test.ts` | [Low](./complexity-low.md#2-local-ratio-distribution) | [ ] | [ ] |
+| `localRatioDistribution.test.ts` | [Low](./complexity-low.md#2-local-ratio-distribution) | [x] | [x] |
 | `memorySlotCalculation.test.ts` | [Low](./complexity-low.md#3-memory-slot-calculation) | [ ] | [ ] |
 | `singleJobOperations.test.ts` | [Low](./complexity-low.md#4-single-job-operations) | [ ] | [ ] |
 | `exactCapacity.test.ts` | [Low](./complexity-low.md#5-exact-capacity-test) | [ ] | [ ] |
-| `capacityPlusOne.test.ts` | [Low](./complexity-low.md#6-capacity-plus-one-test) | [ ] | [ ] |
+| `capacityPlusOne.test.ts` | [Low](./complexity-low.md#6-capacity-plus-one-test) | [x] | [x] |
 | `fixedRatioIsolation.test.ts` | [Low](./complexity-low.md#7-fixed-ratio-isolation-test) | [ ] | [ ] |
 | `rateLimitQueuing.test.ts` | [Low](./complexity-low.md#8-rate-limit-queuing-test) | [ ] | [ ] |
 | `actualUsageRefunds.test.ts` | [Medium](./complexity-medium.md#9-actual-usage-refunds) | [ ] | [ ] |

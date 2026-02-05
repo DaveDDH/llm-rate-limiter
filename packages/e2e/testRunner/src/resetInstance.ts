@@ -25,7 +25,11 @@ export type ConfigPresetName =
   | 'slotCalc-tpd-rpd'
   | 'slotCalc-zero-slots'
   | 'slotCalc-rpm-limiting'
-  | 'slotCalc-tpm-single';
+  | 'slotCalc-tpm-single'
+  | 'localRatio-twoTypes'
+  | 'localRatio-threeTypes'
+  | 'localRatio-equalThree'
+  | 'localRatio-zeroAlloc';
 
 /** Options for resetting an instance */
 export interface ResetOptions {
