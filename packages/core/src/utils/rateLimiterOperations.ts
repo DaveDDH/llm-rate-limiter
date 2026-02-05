@@ -191,19 +191,26 @@ export const stopBackendFactory = (factoryInstance: BackendFactoryInstance | nul
   return null;
 };
 
+/** Options for creating an optional job type manager. */
+export interface CreateOptionalJobTypeManagerOptions {
+  resourceEstimationsPerJob: ResourceEstimationsPerJob | undefined;
+  ratioAdjustmentConfig: RatioAdjustmentConfig | undefined;
+  label: string;
+  onLog?: LogFn;
+  onRatioChange?: (ratios: Map<string, number>) => void;
+}
+
 /**
  * Create job type manager if resources per job is configured.
  */
 export const createOptionalJobTypeManager = (
-  resourceEstimationsPerJob: ResourceEstimationsPerJob | undefined,
-  ratioAdjustmentConfig: RatioAdjustmentConfig | undefined,
-  label: string,
-  onLog?: LogFn,
-  onRatioChange?: (ratios: Map<string, number>) => void
-): JobTypeManager | null =>
-  resourceEstimationsPerJob === undefined
+  options: CreateOptionalJobTypeManagerOptions
+): JobTypeManager | null => {
+  const { resourceEstimationsPerJob, ratioAdjustmentConfig, label, onLog, onRatioChange } = options;
+  return resourceEstimationsPerJob === undefined
     ? null
     : createJobTypeManager({ resourceEstimationsPerJob, ratioAdjustmentConfig, label, onLog, onRatioChange });
+};
 
 /** Acquire job type slot params. */
 export interface AcquireJobTypeSlotParams {

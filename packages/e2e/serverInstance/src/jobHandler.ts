@@ -1,4 +1,5 @@
 import type { JobResult } from '@llm-rate-limiter/core';
+import { setTimeout as setTimeoutAsync } from 'node:timers/promises';
 
 import {
   MOCK_INPUT_TOKENS,
@@ -7,6 +8,8 @@ import {
   ZERO_CACHED_TOKENS,
 } from './constants.js';
 import { logger } from './logger.js';
+
+const ZERO = 0;
 
 interface JobData {
   processed: boolean;
@@ -33,24 +36,21 @@ interface JobErrorParams {
   totalCost: number;
 }
 
-/** Sleep for a given number of milliseconds */
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const processJob = async (params: ProcessJobParams): Promise<JobResult<JobData>> => {
   const { jobId, jobType, payload, modelId } = params;
 
   // Debug: log the raw payload to see what we receive
-  console.log(`[DEBUG] Job ${jobId} payload:`, JSON.stringify(payload));
+  logger.debug(`Job ${jobId} payload:`, { payload });
 
   logger.info(`Processing job ${jobId}`, { modelId, jobType, payload });
 
   // If durationMs is specified in payload, simulate processing time
-  const durationMs = typeof payload.durationMs === 'number' ? payload.durationMs : 0;
-  console.log(`[DEBUG] Job ${jobId} durationMs: ${durationMs}`);
+  const durationMs = typeof payload.durationMs === 'number' ? payload.durationMs : ZERO;
+  logger.debug(`Job ${jobId} durationMs: ${durationMs}`);
 
-  if (durationMs > 0) {
+  if (durationMs > ZERO) {
     logger.info(`Job ${jobId} simulating ${durationMs}ms processing time`);
-    await sleep(durationMs);
+    await setTimeoutAsync(durationMs);
   }
 
   return {

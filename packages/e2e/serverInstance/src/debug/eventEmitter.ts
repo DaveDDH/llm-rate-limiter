@@ -11,6 +11,7 @@ import type {
 } from './types.js';
 
 const ZERO = 0;
+const ONE = 1;
 
 interface SSEClientEntry {
   id: string;
@@ -21,7 +22,7 @@ interface SSEClientEntry {
  * Manages SSE connections and broadcasts debug events to connected clients.
  */
 export class DebugEventEmitter {
-  private readonly clients: Map<string, SSEClientEntry> = new Map();
+  private readonly clients = new Map<string, SSEClientEntry>();
   private readonly instanceId: string;
   private clientCounter = ZERO;
 
@@ -34,7 +35,7 @@ export class DebugEventEmitter {
    * Returns the client ID for later removal.
    */
   addClient(res: Response): string {
-    this.clientCounter++;
+    this.clientCounter += ONE;
     const id = `client-${this.clientCounter}`;
 
     this.clients.set(id, { id, res });
@@ -64,8 +65,8 @@ export class DebugEventEmitter {
   /**
    * Broadcast an event to all connected clients.
    */
-  private broadcast<T>(type: DebugEventType, payload: T): void {
-    const event: DebugEvent<T> = {
+  private broadcast(type: DebugEventType, payload: unknown): void {
+    const event: DebugEvent = {
       type,
       instanceId: this.instanceId,
       timestamp: Date.now(),

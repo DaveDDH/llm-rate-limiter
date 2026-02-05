@@ -20,16 +20,22 @@ export const isParsedMessage = (d: unknown): d is { instanceId: string; allocati
 export const isRedisBackendStats = (d: unknown): d is RedisBackendStats =>
   isObject(d) && 'totalInstances' in d;
 
+/** Validates that a single limit value is either undefined or a number */
+const isValidLimitValue = (value: unknown): boolean => value === undefined || typeof value === 'number';
+
+/** Validates a single model's limits object */
+const isValidModelLimits = (limits: Record<string, unknown>): boolean =>
+  isValidLimitValue(limits.tokensPerMinute) &&
+  isValidLimitValue(limits.requestsPerMinute) &&
+  isValidLimitValue(limits.tokensPerDay) &&
+  isValidLimitValue(limits.requestsPerDay);
+
 /** Type guard for DynamicLimits - validates structure of dynamic limits per model */
 export const isDynamicLimits = (d: unknown): d is DynamicLimits => {
   if (!isObject(d)) return false;
   for (const modelLimits of Object.values(d)) {
     if (!isObject(modelLimits)) return false;
-    const limits = modelLimits;
-    if (limits.tokensPerMinute !== undefined && typeof limits.tokensPerMinute !== 'number') return false;
-    if (limits.requestsPerMinute !== undefined && typeof limits.requestsPerMinute !== 'number') return false;
-    if (limits.tokensPerDay !== undefined && typeof limits.tokensPerDay !== 'number') return false;
-    if (limits.requestsPerDay !== undefined && typeof limits.requestsPerDay !== 'number') return false;
+    if (!isValidModelLimits(modelLimits)) return false;
   }
   return true;
 };
@@ -40,21 +46,36 @@ const defaultAlloc: AllocationInfo = {
   pools: {},
 };
 
+/** Extended allocation data that may include dynamic limits */
+interface AllocationDataWithLimits extends AllocationData {
+  dynamicLimits?: unknown;
+}
+
+/** Extracts validated dynamic limits from parsed data */
+const extractValidDynamicLimits = (parsed: AllocationDataWithLimits): DynamicLimits | undefined => {
+  if ('dynamicLimits' in parsed && isDynamicLimits(parsed.dynamicLimits)) {
+    return parsed.dynamicLimits;
+  }
+  return undefined;
+};
+
+/** Builds AllocationInfo from validated AllocationData */
+const buildAllocationInfo = (parsed: AllocationData): AllocationInfo => {
+  const { instanceCount, pools } = parsed;
+  const dynamicLimits = extractValidDynamicLimits(parsed);
+  if (dynamicLimits !== undefined) {
+    return { instanceCount, pools, dynamicLimits };
+  }
+  return { instanceCount, pools };
+};
+
 export const parseAllocation = (json: string | null): AllocationInfo => {
   /* istanbul ignore if -- Defensive: allocation data should exist */
   if (json === null) return defaultAlloc;
   try {
     const parsed: unknown = JSON.parse(json);
     if (isAllocationData(parsed)) {
-      const result: AllocationInfo = {
-        instanceCount: parsed.instanceCount,
-        pools: parsed.pools,
-      };
-      // Include dynamicLimits if present and valid
-      if ('dynamicLimits' in parsed && isDynamicLimits(parsed.dynamicLimits)) {
-        result.dynamicLimits = parsed.dynamicLimits;
-      }
-      return result;
+      return buildAllocationInfo(parsed);
     }
     return defaultAlloc;
   } catch {

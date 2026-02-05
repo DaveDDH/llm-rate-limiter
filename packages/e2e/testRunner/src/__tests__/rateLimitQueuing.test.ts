@@ -1,6 +1,7 @@
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
 const PROXY_URL = 'http://localhost:3000';
 const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
@@ -9,32 +10,35 @@ const JOB_DURATION_MS = 100;
 const WAIT_TIMEOUT_MS = 60000;
 const BEFORE_ALL_TIMEOUT_MS = 120000;
 
+/**
+ * Run the rate limit queuing test suite
+ */
+const runRateLimitQueuingTest = async (): Promise<TestData> => {
+  const jobs = generateJobsOfType(NUM_JOBS, 'summary', {
+    prefix: 'queuing-test',
+    durationMs: JOB_DURATION_MS,
+  });
+
+  return await runSuite({
+    suiteName: 'rate-limit-queuing',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs,
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: '1:1',
+  });
+};
+
 describe('Rate Limit Queuing', () => {
-  let data: TestData;
+  let data: TestData = createEmptyTestData();
 
   beforeAll(async () => {
-    // Send enough jobs to potentially exceed rate limit capacity
-    // Using 'summary' type which estimates 1 request and 10000 tokens per job
-    // Each job takes 100ms to process
-    const jobs = generateJobsOfType(NUM_JOBS, 'summary', {
-      prefix: 'queuing-test',
-      durationMs: JOB_DURATION_MS,
-    });
-
-    data = await runSuite({
-      suiteName: 'rate-limit-queuing',
-      proxyUrl: PROXY_URL,
-      instanceUrls: INSTANCE_URLS,
-      jobs,
-      waitTimeoutMs: WAIT_TIMEOUT_MS,
-      proxyRatio: '1:1',
-    });
+    data = await runRateLimitQueuingTest();
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should not reject any jobs immediately', () => {
-    // No job should have status 'failed' - all should complete or be queued
     const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
-    expect(failedJobs.length).toBe(0);
+    expect(failedJobs.length).toBe(ZERO_COUNT);
   });
 
   it('should eventually complete all jobs', () => {
@@ -43,19 +47,18 @@ describe('Rate Limit Queuing', () => {
   });
 
   it('should show jobs waiting in snapshots when rate limit is reached', () => {
-    // The post-send snapshot (index 1) should show active jobs being processed
-    const postSendSnapshot = data.snapshots[1];
+    const { snapshots } = data;
+    const [, postSendSnapshot] = snapshots;
     expect(postSendSnapshot).toBeDefined();
 
     const totalActiveJobs = Object.values(postSendSnapshot?.instances ?? {}).reduce(
       (sum, inst) => sum + inst.activeJobs,
-      0
+      ZERO_COUNT
     );
     expect(totalActiveJobs).toBe(NUM_JOBS);
   });
 
   it('should record all job lifecycle events', () => {
-    // Each job should have queued, started, and completed events
     for (const job of Object.values(data.jobs)) {
       const hasQueued = job.events.some((e) => e.type === 'queued');
       const hasStarted = job.events.some((e) => e.type === 'started');

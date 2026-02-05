@@ -125,6 +125,50 @@ const handleError = async <T, Args extends ArgsWithoutModelId = ArgsWithoutModel
   throw err;
 };
 
+/** Handle null model selection result */
+const handleNullModelSelection = async <T, Args extends ArgsWithoutModelId>(
+  dctx: DelegationContext,
+  ctx: JobExecutionContext<T, Args>,
+  allModelsExhausted: boolean
+): Promise<LLMJobResult<T>> => {
+  if (allModelsExhausted) {
+    throw new Error('All models exhausted: no capacity available within maxWaitMS');
+  }
+  ctx.triedModels.clear();
+  clearJobTriedModels(dctx.activeJobs, ctx.jobId);
+  return await executeWithDelegation(dctx, ctx);
+};
+
+/** Try to acquire memory, releasing reservation on failure */
+const tryAcquireMemory = async (
+  dctx: DelegationContext,
+  jobType: string,
+  selectedModel: string,
+  reservationContext: ReservationContext
+): Promise<void> => {
+  try {
+    await dctx.memoryManager?.acquire(jobType);
+  } catch (memoryError: unknown) {
+    dctx.releaseReservationForModel(selectedModel, reservationContext);
+    throw new Error('Failed to acquire memory', { cause: memoryError });
+  }
+};
+
+/** Handle backend rejection by retrying delegation */
+const handleBackendRejection = async <T, Args extends ArgsWithoutModelId>(
+  dctx: DelegationContext,
+  ctx: JobExecutionContext<T, Args>,
+  selectedModel: string,
+  reservationContext: ReservationContext
+): Promise<LLMJobResult<T>> => {
+  dctx.memoryManager?.release(ctx.jobType);
+  dctx.releaseReservationForModel(selectedModel, reservationContext);
+  if (ctx.triedModels.size >= dctx.escalationOrder.length) {
+    throw new Error('All models rejected by backend');
+  }
+  return await executeWithDelegation(dctx, ctx);
+};
+
 /** Execute job with delegation support */
 export const executeWithDelegation = async <T, Args extends ArgsWithoutModelId = ArgsWithoutModelId>(
   dctx: DelegationContext,
@@ -140,43 +184,24 @@ export const executeWithDelegation = async <T, Args extends ArgsWithoutModelId =
     hasCapacityForModel: dctx.hasCapacityForModel,
     tryReserveForModel: dctx.tryReserveForModel,
     getMaxWaitMSForModel: (m) => getMaxWaitMS(dctx.resourceEstimationsPerJob, ctx.jobType, m),
-    waitForCapacityWithTimeoutForModel: (m, maxWaitMS) =>
-      dctx.getModelLimiter(m).waitForCapacityWithTimeout(maxWaitMS),
+    waitForCapacityWithTimeoutForModel: async (m, maxWaitMS) =>
+      await dctx.getModelLimiter(m).waitForCapacityWithTimeout(maxWaitMS),
     onWaitingForModel: (modelId, maxWaitMS) => {
       updateJobWaiting(dctx.activeJobs, ctx.jobId, modelId, maxWaitMS);
     },
   });
 
   if (selectedModel === null || reservationContext === null) {
-    if (allModelsExhausted) {
-      throw new Error('All models exhausted: no capacity available within maxWaitMS');
-    }
-    ctx.triedModels.clear();
-    clearJobTriedModels(dctx.activeJobs, ctx.jobId);
-    return await executeWithDelegation(dctx, ctx);
+    return await handleNullModelSelection(dctx, ctx, allModelsExhausted);
   }
 
-  // Capacity was reserved by tryReserveForModel during selectModelWithWait
   ctx.triedModels.add(selectedModel);
   addJobTriedModel(dctx.activeJobs, ctx.jobId, selectedModel);
 
-  // Try to acquire memory for this job type
-  try {
-    await dctx.memoryManager?.acquire(ctx.jobType);
-  } catch {
-    // Release the reserved capacity since we can't proceed (respects time windows)
-    dctx.releaseReservationForModel(selectedModel, reservationContext);
-    throw new Error('Failed to acquire memory');
-  }
+  await tryAcquireMemory(dctx, ctx.jobType, selectedModel, reservationContext);
 
-  // Try to acquire backend
   if (!(await acquireBackend(dctx.backendCtx(selectedModel, ctx.jobId, ctx.jobType)))) {
-    dctx.memoryManager?.release(ctx.jobType);
-    dctx.releaseReservationForModel(selectedModel, reservationContext);
-    if (ctx.triedModels.size >= dctx.escalationOrder.length) {
-      throw new Error('All models rejected by backend');
-    }
-    return await executeWithDelegation(dctx, ctx);
+    return await handleBackendRejection(dctx, ctx, selectedModel, reservationContext);
   }
 
   try {

@@ -5,8 +5,9 @@
  * The factory pattern enables a clean API where models and resourceEstimationsPerJob are
  * configured once in the rate limiter, and the backend receives them automatically.
  */
+import type { BackendConfig } from './backendTypes.js';
 import type { ResourceEstimationsPerJob } from './jobTypeTypes.js';
-import type { BackendConfig, ModelsConfig } from './multiModelTypes.js';
+import type { ModelsConfig } from './multiModelTypes.js';
 
 // =============================================================================
 // Backend Factory Types

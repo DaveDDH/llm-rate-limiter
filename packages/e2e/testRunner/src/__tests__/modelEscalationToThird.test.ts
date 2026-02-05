@@ -18,81 +18,96 @@
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
 const PROXY_URL = 'http://localhost:3000';
 const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
 // Capacity to fill 2 minutes worth of each model
-// openai: 50/min × 2 = 100, xai: 400/min × 2 = 800
+// openai: 50/min x 2 = 100, xai: 400/min x 2 = 800
 // Total: 900 capacity jobs, so job 901 (escalation) reaches deepinfra
 const OPENAI_CAPACITY = 100;
 const XAI_CAPACITY = 800;
+const ESCALATION_JOB_COUNT = 1;
 
 // Duration longer than maxWaitMS default (~65s) to ensure timeout
 const JOB_DURATION_MS = 60000;
 
-// With 901 jobs and escalation delays:
-// All jobs need to go through openai timeout (65s) before reaching xai
-// Then xai processes 400/min, so 800 jobs = 2 min on xai
-// Plus 60s job duration = ~250s minimum
-// Adding buffer for minute boundaries and processing: 360s
+// Timeout values
 const WAIT_TIMEOUT_MS = 360000;
 const BEFORE_ALL_TIMEOUT_MS = 420000;
+const DELAYED_JOB_DELAY_MS = 500;
+
+/**
+ * Create jobs to fill openai capacity
+ */
+const createOpenaiJobs = (): ReturnType<typeof generateJobsOfType> =>
+  generateJobsOfType(OPENAI_CAPACITY, 'summary', {
+    prefix: 'openai-fill',
+    durationMs: JOB_DURATION_MS,
+  });
+
+/**
+ * Create jobs to fill xai capacity
+ */
+const createXaiJobs = (): ReturnType<typeof generateJobsOfType> =>
+  generateJobsOfType(XAI_CAPACITY, 'summary', {
+    prefix: 'xai-fill',
+    durationMs: JOB_DURATION_MS,
+  });
+
+/**
+ * Create the escalation job that will escalate to deepinfra
+ */
+const createEscalationJob = (): { jobId: string; jobType: string; payload: Record<string, unknown> } => ({
+  jobId: `escalate-to-third-${Date.now()}`,
+  jobType: 'summary',
+  payload: { testData: 'Should escalate to deepinfra', durationMs: JOB_DURATION_MS },
+});
+
+/**
+ * Run the model escalation to third test suite
+ */
+const runModelEscalationThirdTest = async (): Promise<TestData> => {
+  const openaiJobs = createOpenaiJobs();
+  const xaiJobs = createXaiJobs();
+  const capacityJobs = [...openaiJobs, ...xaiJobs];
+  const escalationJob = createEscalationJob();
+
+  return await runSuite({
+    suiteName: 'model-escalation-third',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs: capacityJobs,
+    delayedJobs: [escalationJob],
+    delayedJobsDelayMs: DELAYED_JOB_DELAY_MS,
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: '1:1',
+    waitForMinuteBoundary: true,
+    sendJobsInParallel: true,
+  });
+};
 
 describe('Model Escalation to Third Model', () => {
-  let data: TestData;
+  let data: TestData = createEmptyTestData();
 
   beforeAll(async () => {
-    // Jobs to fill openai capacity
-    const openaiJobs = generateJobsOfType(OPENAI_CAPACITY, 'summary', {
-      prefix: 'openai-fill',
-      durationMs: JOB_DURATION_MS,
-    });
-
-    // Jobs to fill xai capacity
-    const xaiJobs = generateJobsOfType(XAI_CAPACITY, 'summary', {
-      prefix: 'xai-fill',
-      durationMs: JOB_DURATION_MS,
-    });
-
-    // The job that will escalate to deepinfra
-    // Sent as delayed job to ensure it arrives after capacity jobs are queued
-    const escalationJob = {
-      jobId: `escalate-to-third-${Date.now()}`,
-      jobType: 'summary',
-      payload: { testData: 'Should escalate to deepinfra', durationMs: JOB_DURATION_MS },
-    };
-
-    // Send capacity jobs first, then the escalation job
-    const capacityJobs = [...openaiJobs, ...xaiJobs];
-
-    data = await runSuite({
-      suiteName: 'model-escalation-third',
-      proxyUrl: PROXY_URL,
-      instanceUrls: INSTANCE_URLS,
-      jobs: capacityJobs,
-      delayedJobs: [escalationJob],
-      delayedJobsDelayMs: 500,
-      waitTimeoutMs: WAIT_TIMEOUT_MS,
-      proxyRatio: '1:1',
-      waitForMinuteBoundary: true,
-      sendJobsInParallel: true,
-    });
+    data = await runModelEscalationThirdTest();
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should send all jobs', () => {
-    const expectedTotal = OPENAI_CAPACITY + XAI_CAPACITY + 1;
+    const expectedTotal = OPENAI_CAPACITY + XAI_CAPACITY + ESCALATION_JOB_COUNT;
     expect(Object.keys(data.jobs).length).toBe(expectedTotal);
   });
 
   it('should not reject any jobs', () => {
     const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
-    expect(failedJobs.length).toBe(0);
+    expect(failedJobs.length).toBe(ZERO_COUNT);
   });
 
   it('should complete all jobs', () => {
     const completedJobs = Object.values(data.jobs).filter((j) => j.status === 'completed');
-    const expectedTotal = OPENAI_CAPACITY + XAI_CAPACITY + 1;
+    const expectedTotal = OPENAI_CAPACITY + XAI_CAPACITY + ESCALATION_JOB_COUNT;
     expect(completedJobs.length).toBe(expectedTotal);
   });
 

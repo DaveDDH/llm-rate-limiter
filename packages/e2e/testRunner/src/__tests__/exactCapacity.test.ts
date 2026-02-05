@@ -11,6 +11,7 @@
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import { createEmptyTestData } from './testHelpers.js';
 
 const PROXY_URL = 'http://localhost:3000';
 const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
@@ -21,24 +22,36 @@ const JOB_DURATION_MS = 100;
 const WAIT_TIMEOUT_MS = 60000;
 const BEFORE_ALL_TIMEOUT_MS = 120000;
 
+// Constants
+const ZERO_COUNT = 0;
+const INSTANCE_COUNT = 2;
+const JOBS_PER_INSTANCE = EXACT_CAPACITY / INSTANCE_COUNT;
+
+/**
+ * Setup test data by running the suite
+ */
+const setupTestData = async (): Promise<TestData> => {
+  // Each job takes 100ms to process
+  const jobs = generateJobsOfType(EXACT_CAPACITY, 'summary', {
+    prefix: 'capacity-test',
+    durationMs: JOB_DURATION_MS,
+  });
+
+  return await runSuite({
+    suiteName: 'exact-capacity',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs,
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: '1:1',
+  });
+};
+
 describe('Exact Capacity', () => {
-  let data: TestData;
+  let data: TestData = createEmptyTestData();
 
   beforeAll(async () => {
-    // Each job takes 100ms to process
-    const jobs = generateJobsOfType(EXACT_CAPACITY, 'summary', {
-      prefix: 'capacity-test',
-      durationMs: JOB_DURATION_MS,
-    });
-
-    data = await runSuite({
-      suiteName: 'exact-capacity',
-      proxyUrl: PROXY_URL,
-      instanceUrls: INSTANCE_URLS,
-      jobs,
-      waitTimeoutMs: WAIT_TIMEOUT_MS,
-      proxyRatio: '1:1',
-    });
+    data = await setupTestData();
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should send exactly the capacity number of jobs', () => {
@@ -49,7 +62,7 @@ describe('Exact Capacity', () => {
     const completedJobs = Object.values(data.jobs).filter((j) => j.status === 'completed');
     const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
 
-    expect(failedJobs.length).toBe(0);
+    expect(failedJobs.length).toBe(ZERO_COUNT);
     expect(completedJobs.length).toBe(EXACT_CAPACITY);
   });
 
@@ -64,20 +77,24 @@ describe('Exact Capacity', () => {
 
   it('should distribute jobs evenly across both instances', () => {
     // With 2 instances and 1:1 ratio, jobs should be split 25/25
-    const instanceIds = Object.keys(data.summary.byInstance);
-    expect(instanceIds.length).toBe(2);
+    const { summary } = data;
+    const { byInstance } = summary;
+    const instanceIds = Object.keys(byInstance);
+    expect(instanceIds.length).toBe(INSTANCE_COUNT);
 
     // Each instance should have exactly 25 jobs
     for (const instanceId of instanceIds) {
-      const instanceStats = data.summary.byInstance[instanceId];
+      const { [instanceId]: instanceStats } = byInstance;
       expect(instanceStats).toBeDefined();
-      expect(instanceStats?.total).toBe(EXACT_CAPACITY / 2);
+      expect(instanceStats?.total).toBe(JOBS_PER_INSTANCE);
     }
   });
 
   it('should use the primary model for all jobs', () => {
     // All jobs should complete on openai/gpt-5.2 (primary model in escalation order)
-    const modelStats = data.summary.byModel['openai/gpt-5.2'];
+    const { summary } = data;
+    const { byModel } = summary;
+    const { 'openai/gpt-5.2': modelStats } = byModel;
     expect(modelStats).toBeDefined();
     expect(modelStats?.completed).toBe(EXACT_CAPACITY);
   });

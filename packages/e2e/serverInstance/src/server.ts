@@ -7,10 +7,17 @@ import { env } from './env.js';
 import { logger } from './logger.js';
 import { findAvailablePort } from './portUtils.js';
 import { createRoutes } from './routes.js';
-import { type ResetOptions, type ServerState, createServerState, resetServerState } from './serverState.js';
+import {
+  type ResetOptions,
+  type ResetResult,
+  type ServerState,
+  createServerState,
+  resetServerState,
+} from './serverState.js';
 import type { ServerConfig } from './types.js';
 
 const STATUS_LOG_INTERVAL_MS = 10000;
+const EMPTY_OBJECT_LENGTH = 0;
 
 interface CloseServerParams {
   server: Server;
@@ -49,7 +56,8 @@ export const createServer = async (config: ServerConfig = {}): Promise<ServerIns
   app.use(express.json());
 
   // Create reset function that captures redisUrl
-  const resetServer = async (options?: ResetOptions) => resetServerState(state, redisUrl, options);
+  const resetServer = async (options?: ResetOptions): Promise<ResetResult> =>
+    await resetServerState(state, redisUrl, options);
 
   // Mount main routes with state
   app.use('/api', createRoutes({ state }));
@@ -89,9 +97,7 @@ const logServerStatus = (state: ServerState, port: number): void => {
   });
 
   for (const [modelId, modelStats] of Object.entries(stats.models)) {
-    const tpm = modelStats.tokensPerMinute;
-    const rpm = modelStats.requestsPerMinute;
-    const conc = modelStats.concurrency;
+    const { tokensPerMinute: tpm, requestsPerMinute: rpm, concurrency: conc } = modelStats;
 
     // Build status object with available limits
     const statusObj: Record<string, string> = {};
@@ -105,7 +111,7 @@ const logServerStatus = (state: ServerState, port: number): void => {
     if (conc !== undefined) {
       statusObj.concurrent = `${conc.active}/${conc.limit} (${conc.available} available)`;
     }
-    if (Object.keys(statusObj).length === 0) {
+    if (Object.keys(statusObj).length === EMPTY_OBJECT_LENGTH) {
       statusObj.limits = 'none';
     }
 

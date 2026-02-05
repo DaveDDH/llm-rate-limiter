@@ -18,8 +18,9 @@
  */
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
-import { type ConfigPresetName } from '../resetInstance.js';
+import type { ConfigPresetName } from '../resetInstance.js';
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import { createEmptyTestData } from './testHelpers.js';
 
 const PROXY_URL = 'http://localhost:3000';
 const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
@@ -28,6 +29,9 @@ const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 // Each job type starts with ~0.33 ratio = floor((100K/10K) / 2 * 0.33) = ~1-2 slots per instance
 // Total: ~3 slots per job type (6-9 total across all types)
 const INITIAL_SLOTS_PER_TYPE = 3;
+const DOUBLE_SLOTS = 2;
+const SINGLE_JOB = 1;
+const ZERO_COUNT = 0;
 
 const JOB_DURATION_MS = 100;
 const LONGER_JOB_DURATION_MS = 2000; // Longer jobs to keep slots occupied
@@ -35,172 +39,164 @@ const WAIT_TIMEOUT_MS = 90000;
 const BEFORE_ALL_TIMEOUT_MS = 180000;
 const CONFIG_PRESET: ConfigPresetName = 'flexibleRatio';
 
-describe('Flexible Ratio Adjustment', () => {
-  describe('All Flexible Job Types Complete', () => {
-    /**
-     * Basic test: All flexible job types with equal initial ratios
-     * should be able to complete their allocated jobs.
-     */
-    let data: TestData;
+/**
+ * Count completed jobs by prefix
+ */
+const countCompletedByPrefix = (data: TestData, prefix: string): number =>
+  Object.values(data.jobs)
+    .filter((j) => j.jobId.startsWith(prefix))
+    .filter((j) => j.status === 'completed').length;
 
-    beforeAll(async () => {
-      // Send a few jobs of each type
-      const jobsA = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobA', {
-        prefix: 'flex-a',
-        durationMs: JOB_DURATION_MS,
-      });
+/**
+ * Count all failed jobs
+ */
+const countFailedJobs = (data: TestData): number =>
+  Object.values(data.jobs).filter((j) => j.status === 'failed').length;
 
-      const jobsB = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobB', {
-        prefix: 'flex-b',
-        durationMs: JOB_DURATION_MS,
-      });
-
-      const jobsC = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobC', {
-        prefix: 'flex-c',
-        durationMs: JOB_DURATION_MS,
-      });
-
-      data = await runSuite({
-        suiteName: 'flexible-ratio-basic',
-        proxyUrl: PROXY_URL,
-        instanceUrls: INSTANCE_URLS,
-        jobs: [...jobsA, ...jobsB, ...jobsC],
-        waitTimeoutMs: WAIT_TIMEOUT_MS,
-        proxyRatio: '1:1',
-        configPreset: CONFIG_PRESET,
-      });
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    it('should complete all flexJobA jobs', () => {
-      const jobs = Object.values(data.jobs).filter((j) => j.jobId.startsWith('flex-a'));
-      const completed = jobs.filter((j) => j.status === 'completed');
-      expect(completed.length).toBe(INITIAL_SLOTS_PER_TYPE);
-    });
-
-    it('should complete all flexJobB jobs', () => {
-      const jobs = Object.values(data.jobs).filter((j) => j.jobId.startsWith('flex-b'));
-      const completed = jobs.filter((j) => j.status === 'completed');
-      expect(completed.length).toBe(INITIAL_SLOTS_PER_TYPE);
-    });
-
-    it('should complete all flexJobC jobs', () => {
-      const jobs = Object.values(data.jobs).filter((j) => j.jobId.startsWith('flex-c'));
-      const completed = jobs.filter((j) => j.status === 'completed');
-      expect(completed.length).toBe(INITIAL_SLOTS_PER_TYPE);
-    });
-
-    it('should not have any failed jobs', () => {
-      const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
-      expect(failedJobs.length).toBe(0);
-    });
+/**
+ * Run the basic test suite with all job types
+ */
+const runBasicTest = async (): Promise<TestData> => {
+  const jobsA = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobA', {
+    prefix: 'flex-a',
+    durationMs: JOB_DURATION_MS,
   });
 
-  describe('Load Imbalance Handling', () => {
-    /**
-     * Scenario:
-     * 1. Send many jobs of flexJobA (high load)
-     * 2. Send no jobs of flexJobB and flexJobC (idle)
-     * 3. flexJobA should be able to handle more than its initial allocation
-     *    because flexJobB and flexJobC donate their unused capacity
-     */
-    let data: TestData;
-
-    beforeAll(async () => {
-      // Send more jobs of flexJobA than its initial allocation
-      // The local ratio adjustment should allow more capacity for A
-      const jobsA = generateJobsOfType(INITIAL_SLOTS_PER_TYPE * 2, 'flexJobA', {
-        prefix: 'imbalance-a',
-        durationMs: JOB_DURATION_MS,
-      });
-
-      // Send minimal jobs of B and C
-      const jobsB = generateJobsOfType(1, 'flexJobB', {
-        prefix: 'imbalance-b',
-        durationMs: JOB_DURATION_MS,
-      });
-
-      const jobsC = generateJobsOfType(1, 'flexJobC', {
-        prefix: 'imbalance-c',
-        durationMs: JOB_DURATION_MS,
-      });
-
-      data = await runSuite({
-        suiteName: 'flexible-ratio-imbalance',
-        proxyUrl: PROXY_URL,
-        instanceUrls: INSTANCE_URLS,
-        jobs: [...jobsA, ...jobsB, ...jobsC],
-        waitTimeoutMs: WAIT_TIMEOUT_MS,
-        proxyRatio: '1:1',
-        configPreset: CONFIG_PRESET,
-      });
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    it('should complete all flexJobA jobs', () => {
-      const jobs = Object.values(data.jobs).filter((j) => j.jobId.startsWith('imbalance-a'));
-      const completed = jobs.filter((j) => j.status === 'completed');
-      // All jobs should eventually complete as ratios adjust
-      expect(completed.length).toBe(INITIAL_SLOTS_PER_TYPE * 2);
-    });
-
-    it('should complete flexJobB and flexJobC jobs', () => {
-      const jobsB = Object.values(data.jobs).filter((j) => j.jobId.startsWith('imbalance-b'));
-      const jobsC = Object.values(data.jobs).filter((j) => j.jobId.startsWith('imbalance-c'));
-
-      expect(jobsB.filter((j) => j.status === 'completed').length).toBe(1);
-      expect(jobsC.filter((j) => j.status === 'completed').length).toBe(1);
-    });
-
-    it('should not have any failed jobs', () => {
-      const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
-      expect(failedJobs.length).toBe(0);
-    });
+  const jobsB = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobB', {
+    prefix: 'flex-b',
+    durationMs: JOB_DURATION_MS,
   });
 
-  describe('Ratio Adjustment Under Concurrent Load', () => {
-    /**
-     * Scenario:
-     * 1. Send long-running jobs of flexJobB to keep it busy
-     * 2. Send many short jobs of flexJobA
-     * 3. flexJobA should complete quickly as it gets more capacity from idle flexJobC
-     */
-    let data: TestData;
+  const jobsC = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobC', {
+    prefix: 'flex-c',
+    durationMs: JOB_DURATION_MS,
+  });
 
-    beforeAll(async () => {
-      // Send long-running jobs of B to occupy its slots
-      const jobsB = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobB', {
-        prefix: 'concurrent-b',
-        durationMs: LONGER_JOB_DURATION_MS,
-      });
+  return await runSuite({
+    suiteName: 'flexible-ratio-basic',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs: [...jobsA, ...jobsB, ...jobsC],
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: '1:1',
+    configPreset: CONFIG_PRESET,
+  });
+};
 
-      // Send many short jobs of A
-      const jobsA = generateJobsOfType(INITIAL_SLOTS_PER_TYPE * 2, 'flexJobA', {
-        prefix: 'concurrent-a',
-        durationMs: JOB_DURATION_MS,
-      });
+/**
+ * Run the imbalance test suite
+ */
+const runImbalanceTest = async (): Promise<TestData> => {
+  const jobsA = generateJobsOfType(INITIAL_SLOTS_PER_TYPE * DOUBLE_SLOTS, 'flexJobA', {
+    prefix: 'imbalance-a',
+    durationMs: JOB_DURATION_MS,
+  });
 
-      // No jobs for C (should donate capacity)
+  const jobsB = generateJobsOfType(SINGLE_JOB, 'flexJobB', {
+    prefix: 'imbalance-b',
+    durationMs: JOB_DURATION_MS,
+  });
 
-      data = await runSuite({
-        suiteName: 'flexible-ratio-concurrent',
-        proxyUrl: PROXY_URL,
-        instanceUrls: INSTANCE_URLS,
-        jobs: [...jobsB, ...jobsA],
-        waitTimeoutMs: WAIT_TIMEOUT_MS,
-        proxyRatio: '1:1',
-        configPreset: CONFIG_PRESET,
-        sendJobsInParallel: true,
-      });
-    }, BEFORE_ALL_TIMEOUT_MS);
+  const jobsC = generateJobsOfType(SINGLE_JOB, 'flexJobC', {
+    prefix: 'imbalance-c',
+    durationMs: JOB_DURATION_MS,
+  });
 
-    it('should complete all jobs', () => {
-      const completedJobs = Object.values(data.jobs).filter((j) => j.status === 'completed');
-      const totalJobs = INITIAL_SLOTS_PER_TYPE + INITIAL_SLOTS_PER_TYPE * 2;
-      expect(completedJobs.length).toBe(totalJobs);
-    });
+  return await runSuite({
+    suiteName: 'flexible-ratio-imbalance',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs: [...jobsA, ...jobsB, ...jobsC],
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: '1:1',
+    configPreset: CONFIG_PRESET,
+  });
+};
 
-    it('should not have any failed jobs', () => {
-      const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
-      expect(failedJobs.length).toBe(0);
-    });
+/**
+ * Run the concurrent load test suite
+ */
+const runConcurrentTest = async (): Promise<TestData> => {
+  const jobsB = generateJobsOfType(INITIAL_SLOTS_PER_TYPE, 'flexJobB', {
+    prefix: 'concurrent-b',
+    durationMs: LONGER_JOB_DURATION_MS,
+  });
+
+  const jobsA = generateJobsOfType(INITIAL_SLOTS_PER_TYPE * DOUBLE_SLOTS, 'flexJobA', {
+    prefix: 'concurrent-a',
+    durationMs: JOB_DURATION_MS,
+  });
+
+  return await runSuite({
+    suiteName: 'flexible-ratio-concurrent',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs: [...jobsB, ...jobsA],
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: '1:1',
+    configPreset: CONFIG_PRESET,
+    sendJobsInParallel: true,
+  });
+};
+
+// Test state holders - initialized with proper typed empty data
+let basicData: TestData = createEmptyTestData();
+let imbalanceData: TestData = createEmptyTestData();
+let concurrentData: TestData = createEmptyTestData();
+
+describe('Flexible Ratio Adjustment - All Job Types Complete', () => {
+  beforeAll(async () => {
+    basicData = await runBasicTest();
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should complete all flexJobA jobs', () => {
+    expect(countCompletedByPrefix(basicData, 'flex-a')).toBe(INITIAL_SLOTS_PER_TYPE);
+  });
+
+  it('should complete all flexJobB jobs', () => {
+    expect(countCompletedByPrefix(basicData, 'flex-b')).toBe(INITIAL_SLOTS_PER_TYPE);
+  });
+
+  it('should complete all flexJobC jobs', () => {
+    expect(countCompletedByPrefix(basicData, 'flex-c')).toBe(INITIAL_SLOTS_PER_TYPE);
+  });
+
+  it('should not have any failed jobs', () => {
+    expect(countFailedJobs(basicData)).toBe(ZERO_COUNT);
+  });
+});
+
+describe('Flexible Ratio Adjustment - Load Imbalance Handling', () => {
+  beforeAll(async () => {
+    imbalanceData = await runImbalanceTest();
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should complete all flexJobA jobs', () => {
+    expect(countCompletedByPrefix(imbalanceData, 'imbalance-a')).toBe(INITIAL_SLOTS_PER_TYPE * DOUBLE_SLOTS);
+  });
+
+  it('should complete flexJobB and flexJobC jobs', () => {
+    expect(countCompletedByPrefix(imbalanceData, 'imbalance-b')).toBe(SINGLE_JOB);
+    expect(countCompletedByPrefix(imbalanceData, 'imbalance-c')).toBe(SINGLE_JOB);
+  });
+
+  it('should not have any failed jobs', () => {
+    expect(countFailedJobs(imbalanceData)).toBe(ZERO_COUNT);
+  });
+});
+
+describe('Flexible Ratio Adjustment - Concurrent Load', () => {
+  beforeAll(async () => {
+    concurrentData = await runConcurrentTest();
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should complete all jobs', () => {
+    const completedJobs = Object.values(concurrentData.jobs).filter((j) => j.status === 'completed');
+    const totalJobs = INITIAL_SLOTS_PER_TYPE + INITIAL_SLOTS_PER_TYPE * DOUBLE_SLOTS;
+    expect(completedJobs.length).toBe(totalJobs);
+  });
+
+  it('should not have any failed jobs', () => {
+    expect(countFailedJobs(concurrentData)).toBe(ZERO_COUNT);
   });
 });

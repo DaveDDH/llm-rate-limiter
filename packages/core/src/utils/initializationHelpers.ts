@@ -72,14 +72,20 @@ export const createAvailabilityTracker = (
   return tracker;
 };
 
+/** Options for initializing model limiters */
+export interface InitializeModelLimitersOptions {
+  models: Record<string, ModelRateLimitConfig>;
+  label: string;
+  onLog: LogFn | undefined;
+  estimatedResources?: EstimatedResources;
+  onOverage?: OverageFn;
+}
+
 /** Initialize model limiters from config */
 export const initializeModelLimiters = (
-  models: Record<string, ModelRateLimitConfig>,
-  label: string,
-  onLog: LogFn | undefined,
-  estimatedResources?: EstimatedResources,
-  onOverage?: OverageFn
+  options: InitializeModelLimitersOptions
 ): Map<string, InternalLimiterInstance> => {
+  const { models, label, onLog, estimatedResources, onOverage } = options;
   const limiters = new Map<string, InternalLimiterInstance>();
   for (const [modelId, modelConfig] of Object.entries(models)) {
     const limiterConfig = buildModelLimiterConfig({
@@ -143,12 +149,11 @@ const calculateAverageTokensPerJob = (
  * Estimates how many jobs can run concurrently based on tokens per minute
  * and average tokens per job. Uses a conservative factor since jobs
  * don't complete instantly. */
-const calculateTpmBasedCapacity = (tokensPerMinute: number, avgTokensPerJob: number): number => {
-  // Estimate: TPM / tokens per job gives theoretical max concurrent jobs
-  // A job using avgTokensPerJob tokens can run TPM/avgTokensPerJob times per minute
-  // For concurrent capacity, we use this as an upper bound
-  return Math.floor(tokensPerMinute / avgTokensPerJob);
-};
+// Estimate: TPM / tokens per job gives theoretical max concurrent jobs
+// A job using avgTokensPerJob tokens can run TPM/avgTokensPerJob times per minute
+// For concurrent capacity, we use this as an upper bound
+const calculateTpmBasedCapacity = (tokensPerMinute: number, avgTokensPerJob: number): number =>
+  Math.floor(tokensPerMinute / avgTokensPerJob);
 
 /** Calculate total capacity for job types from models config.
  * Uses the sum of maxConcurrentRequests across all models.

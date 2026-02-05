@@ -1,9 +1,10 @@
 import type { ActiveJobInfo, LLMRateLimiterStats } from '@llm-rate-limiter/core';
-import { request } from 'node:http';
+import { setTimeout as setTimeoutPromise } from 'node:timers/promises';
 
 const DEFAULT_POLL_INTERVAL_MS = 100;
 const DEFAULT_TIMEOUT_MS = 30000;
 const HTTP_OK = 200;
+const ZERO = 0;
 
 /** State of a single instance */
 export interface InstanceState {
@@ -43,12 +44,122 @@ interface ActiveJobsResponse {
 }
 
 /**
+ * Sleep helper using native timers/promises
+ */
+const sleep = async (ms: number): Promise<void> => {
+  await setTimeoutPromise(ms);
+};
+
+/**
+ * Check if response is valid JSON response
+ */
+const isValidJsonResponse = (response: Response): boolean => response.status === HTTP_OK;
+
+/**
+ * Parse and validate JSON response
+ */
+const parseJsonResponse = async (response: Response): Promise<unknown> => {
+  const data: unknown = await response.json();
+  return data;
+};
+
+/**
+ * Fetch JSON from URL using native fetch for StatsResponse
+ */
+const fetchStatsJson = async (url: string): Promise<StatsResponse | null> => {
+  try {
+    const response = await fetch(url);
+    if (!isValidJsonResponse(response)) {
+      return null;
+    }
+    const data = await parseJsonResponse(response);
+    if (isStatsResponse(data)) {
+      return data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Fetch JSON from URL using native fetch for ActiveJobsResponse
+ */
+const fetchActiveJobsJson = async (url: string): Promise<ActiveJobsResponse | null> => {
+  try {
+    const response = await fetch(url);
+    if (!isValidJsonResponse(response)) {
+      return null;
+    }
+    const data = await parseJsonResponse(response);
+    if (isActiveJobsResponse(data)) {
+      return data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Type guard for StatsResponse
+ */
+const isStatsResponse = (value: unknown): value is StatsResponse =>
+  typeof value === 'object' && value !== null && 'instanceId' in value && 'stats' in value;
+
+/**
+ * Type guard for ActiveJobsResponse
+ */
+const isActiveJobsResponse = (value: unknown): value is ActiveJobsResponse =>
+  typeof value === 'object' && value !== null && 'instanceId' in value && 'activeJobs' in value;
+
+/**
+ * Fetch instance state from a single URL
+ */
+const fetchSingleInstanceState = async (baseUrl: string): Promise<InstanceState | null> => {
+  try {
+    const [statsResponse, activeJobsResponse] = await Promise.all([
+      fetchStatsJson(`${baseUrl}/api/debug/stats`),
+      fetchActiveJobsJson(`${baseUrl}/api/debug/active-jobs`),
+    ]);
+
+    if (statsResponse === null || activeJobsResponse === null) {
+      return null;
+    }
+
+    return {
+      instanceId: statsResponse.instanceId,
+      stats: statsResponse.stats,
+      activeJobs: activeJobsResponse.activeJobs,
+      lastUpdate: Date.now(),
+    };
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Calculate total available slots from model stats
+ */
+const calculateAvailableSlotsForInstance = (instance: InstanceState): number => {
+  let slots = ZERO;
+
+  for (const modelStats of Object.values(instance.stats.models)) {
+    if (modelStats.concurrency !== undefined) {
+      slots += modelStats.concurrency.available;
+    }
+  }
+
+  return slots;
+};
+
+/**
  * Aggregates state from multiple rate limiter instances.
  * Useful for E2E testing distributed rate limiting behavior.
  */
 export class StateAggregator {
   private readonly instanceUrls: string[];
-  private readonly states: Map<string, InstanceState> = new Map();
+  private readonly states = new Map<string, InstanceState>();
 
   constructor(instanceUrls: string[]) {
     this.instanceUrls = instanceUrls;
@@ -58,7 +169,8 @@ export class StateAggregator {
    * Fetch current state from all instances.
    */
   async fetchState(): Promise<InstanceState[]> {
-    const results = await Promise.all(this.instanceUrls.map((url) => this.fetchInstanceState(url)));
+    const fetchPromises = this.instanceUrls.map(async (url) => await fetchSingleInstanceState(url));
+    const results = await Promise.all(fetchPromises);
 
     // Update internal state cache
     for (const state of results) {
@@ -70,98 +182,76 @@ export class StateAggregator {
     return results.filter((s): s is InstanceState => s !== null);
   }
 
-  private async fetchInstanceState(baseUrl: string): Promise<InstanceState | null> {
-    try {
-      const [statsResponse, activeJobsResponse] = await Promise.all([
-        this.fetchJson<StatsResponse>(`${baseUrl}/api/debug/stats`),
-        this.fetchJson<ActiveJobsResponse>(`${baseUrl}/api/debug/active-jobs`),
-      ]);
-
-      if (statsResponse === null || activeJobsResponse === null) {
-        return null;
-      }
-
-      return {
-        instanceId: statsResponse.instanceId,
-        stats: statsResponse.stats,
-        activeJobs: activeJobsResponse.activeJobs,
-        lastUpdate: Date.now(),
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  private async fetchJson<T>(url: string): Promise<T | null> {
-    return new Promise((resolve) => {
-      const urlObj = new URL(url);
-
-      const req = request(
-        {
-          hostname: urlObj.hostname,
-          port: urlObj.port,
-          path: urlObj.pathname,
-          method: 'GET',
-        },
-        (res) => {
-          if (res.statusCode !== HTTP_OK) {
-            resolve(null);
-            return;
-          }
-
-          let body = '';
-          res.on('data', (chunk: Buffer) => {
-            body += chunk.toString();
-          });
-          res.on('end', () => {
-            try {
-              const parsed = JSON.parse(body) as T;
-              resolve(parsed);
-            } catch {
-              resolve(null);
-            }
-          });
-        }
-      );
-
-      req.on('error', () => {
-        resolve(null);
-      });
-
-      req.end();
-    });
-  }
-
   /**
    * Get aggregated state across all instances.
    */
   async getAggregatedState(): Promise<AggregatedState> {
-    const instances = await this.fetchState();
+    const instanceList = await this.fetchState();
 
-    let totalActiveJobs = 0;
-    let totalAvailableSlots = 0;
+    let totalActiveJobs = ZERO;
+    let totalAvailableSlots = ZERO;
 
-    for (const instance of instances) {
+    for (const instance of instanceList) {
       totalActiveJobs += instance.activeJobs.length;
-
-      // Sum available slots from all models
-      for (const modelStats of Object.values(instance.stats.models)) {
-        if (modelStats.concurrency !== undefined) {
-          totalAvailableSlots += modelStats.concurrency.available;
-        }
-      }
+      totalAvailableSlots += calculateAvailableSlotsForInstance(instance);
     }
 
     return {
-      instances,
+      instances: instanceList,
       totalActiveJobs,
       totalAvailableSlots,
     };
   }
 
   /**
+   * Check if condition is met
+   */
+  private async checkCondition(predicate: (states: InstanceState[]) => boolean): Promise<boolean> {
+    const states = await this.fetchState();
+    return predicate(states);
+  }
+
+  /**
+   * Poll for condition using recursive approach to avoid await-in-loop
+   */
+  private async pollRecursive(
+    predicate: (states: InstanceState[]) => boolean,
+    startTime: number,
+    timeoutMs: number,
+    pollIntervalMs: number
+  ): Promise<boolean> {
+    if (Date.now() - startTime >= timeoutMs) {
+      return false;
+    }
+
+    const conditionMet = await this.checkCondition(predicate);
+    if (conditionMet) {
+      return true;
+    }
+
+    await sleep(pollIntervalMs);
+    return await this.pollRecursive(predicate, startTime, timeoutMs, pollIntervalMs);
+  }
+
+  /**
+   * Poll for condition until satisfied or timeout
+   */
+  private async pollForCondition(
+    predicate: (states: InstanceState[]) => boolean,
+    timeoutMs: number,
+    pollIntervalMs: number
+  ): Promise<boolean> {
+    const conditionMet = await this.checkCondition(predicate);
+    if (conditionMet) {
+      return true;
+    }
+
+    await sleep(pollIntervalMs);
+    return await this.pollRecursive(predicate, Date.now(), timeoutMs, pollIntervalMs);
+  }
+
+  /**
    * Wait for a condition to be true across instances.
-   * Polls at regular intervals until the predicate returns true or timeout.
    */
   async waitFor(
     predicate: (states: InstanceState[]) => boolean,
@@ -169,19 +259,11 @@ export class StateAggregator {
   ): Promise<void> {
     const { timeoutMs = DEFAULT_TIMEOUT_MS, pollIntervalMs = DEFAULT_POLL_INTERVAL_MS } = options;
 
-    const startTime = Date.now();
+    const success = await this.pollForCondition(predicate, timeoutMs, pollIntervalMs);
 
-    while (Date.now() - startTime < timeoutMs) {
-      const states = await this.fetchState();
-
-      if (predicate(states)) {
-        return;
-      }
-
-      await this.sleep(pollIntervalMs);
+    if (!success) {
+      throw new Error(`waitFor timeout after ${timeoutMs}ms`);
     }
-
-    throw new Error(`waitFor timeout after ${timeoutMs}ms`);
   }
 
   /**
@@ -189,7 +271,7 @@ export class StateAggregator {
    */
   async waitForActiveJobCount(count: number, options?: { timeoutMs?: number }): Promise<void> {
     await this.waitFor((states) => {
-      const total = states.reduce((sum, s) => sum + s.activeJobs.length, 0);
+      const total = states.reduce((sum, s) => sum + s.activeJobs.length, ZERO);
       return total === count;
     }, options);
   }
@@ -198,14 +280,14 @@ export class StateAggregator {
    * Wait for no active jobs across all instances.
    */
   async waitForNoActiveJobs(options?: { timeoutMs?: number }): Promise<void> {
-    await this.waitForActiveJobCount(0, options);
+    await this.waitForActiveJobCount(ZERO, options);
   }
 
   /**
    * Get total active jobs from cached state.
    */
   getTotalActiveJobs(): number {
-    let total = 0;
+    let total = ZERO;
     for (const state of this.states.values()) {
       total += state.activeJobs.length;
     }
@@ -224,9 +306,5 @@ export class StateAggregator {
    */
   clearCache(): void {
     this.states.clear();
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

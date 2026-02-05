@@ -8,14 +8,12 @@ import type {
   AvailabilityChangeReason,
   LLMRateLimiterStats,
   OnAvailableSlotsChange,
-  Pools,
   RelativeAvailabilityAdjustment,
 } from '../multiModelTypes.js';
 import type { InternalLimiterStats } from '../types.js';
+import { applyMemoryConstraintAndClamping, calculatePerJobTypeMemorySlots } from './availabilityHelpers.js';
 
 const ZERO = 0;
-const ONE = 1;
-const DEFAULT_RATIO = 1;
 
 /** Estimated resources per job, used to calculate available slots */
 export interface EstimatedResources {
@@ -83,58 +81,6 @@ const determineReason = (prev: Availability, curr: Availability): AvailabilityCh
 /** Add slot candidate if value and divisor are valid */
 const addSlotCandidate = (slots: number[], value: number | null, divisor: number): void => {
   if (value !== null && divisor > ZERO) slots.push(Math.floor(value / divisor));
-};
-
-/** Sum total slots across all model pools from distributed allocation */
-const sumPoolSlots = (pools: Pools): number => {
-  let total = ZERO;
-  for (const pool of Object.values(pools)) {
-    total += pool.totalSlots;
-  }
-  return total;
-};
-
-/**
- * Apply memory constraint (scaling) and then per-model clamping to pools.
- * Flow:
- *   1. Sum pool slots (no clamping) to get poolTotal
- *   2. constrainedTotal = min(poolTotal, memorySlots)
- *   3. scaleFactor = constrainedTotal / poolTotal
- *   4. For each model: clamp(floor(totalSlots * scaleFactor), minCapacity, maxCapacity)
- *   5. Return sum of clamped values
- */
-const applyMemoryConstraintAndClamping = (
-  pools: Pools,
-  memorySlots: number,
-  bounds: ModelCapacityBounds | undefined
-): number => {
-  // Step 1: Sum pool slots without clamping
-  const poolTotal = sumPoolSlots(pools);
-  if (poolTotal === ZERO) {
-    // No pool slots - apply minCapacity for each model
-    let total = ZERO;
-    for (const modelId of Object.keys(pools)) {
-      const minCap = bounds?.[modelId]?.minCapacity ?? ZERO;
-      total += minCap;
-    }
-    return total;
-  }
-
-  // Step 2-3: Calculate scale factor from memory constraint
-  const constrainedTotal = Math.min(poolTotal, memorySlots);
-  const scaleFactor = constrainedTotal / poolTotal;
-
-  // Step 4-5: Scale each model's slots, then clamp, then sum
-  let total = ZERO;
-  for (const [modelId, pool] of Object.entries(pools)) {
-    const scaledSlots = Math.floor(pool.totalSlots * scaleFactor);
-    const modelBounds = bounds?.[modelId];
-    const minCap = modelBounds?.minCapacity ?? ZERO;
-    const maxCap = modelBounds?.maxCapacity ?? Number.POSITIVE_INFINITY;
-    const clamped = Math.max(minCap, Math.min(maxCap, scaledSlots));
-    total += clamped;
-  }
-  return total;
 };
 
 /** Calculate the number of slots (minimum jobs that can run) */
@@ -247,72 +193,13 @@ export class AvailabilityTracker {
     const { pools } = allocation;
 
     // Calculate memory slots per job type based on ratios and individual memory estimates
-    let memorySlots = Number.POSITIVE_INFINITY;
-    if (totalMemoryKB !== null && resourcesPerJob !== undefined) {
-      memorySlots = this.calculatePerJobTypeMemorySlots(resourcesPerJob, totalMemoryKB);
-    }
+    const memorySlots =
+      totalMemoryKB !== null && resourcesPerJob !== undefined
+        ? calculatePerJobTypeMemorySlots(resourcesPerJob, totalMemoryKB)
+        : Number.POSITIVE_INFINITY;
 
     // Apply memory constraint and per-model clamping to pools
     return applyMemoryConstraintAndClamping(pools, memorySlots, modelCapacityBounds);
-  }
-
-  /**
-   * Calculate total memory slots by summing per-job-type memory slots.
-   * Each job type gets: floor((totalMemory * ratio) / estimatedMemoryKB)
-   * Uses initial ratios from config for stable reporting.
-   */
-  private calculatePerJobTypeMemorySlots(
-    resourcesPerJob: ResourceEstimationsPerJob,
-    totalMemoryKB: number
-  ): number {
-    const jobTypes = Object.entries(resourcesPerJob);
-    if (jobTypes.length === ZERO) return Number.POSITIVE_INFINITY;
-
-    // Calculate ratios (initial values or equal distribution)
-    const ratios = this.calculateRatiosFromConfig(resourcesPerJob);
-
-    let totalSlots = ZERO;
-    let hasMemoryConstraint = false;
-
-    for (const [jobType, config] of jobTypes) {
-      const ratio = ratios.get(jobType) ?? ONE / jobTypes.length;
-      const memoryForJobType = totalMemoryKB * ratio;
-      const estimatedMemoryKB = config?.estimatedUsedMemoryKB ?? ZERO;
-
-      if (estimatedMemoryKB > ZERO) {
-        totalSlots += Math.floor(memoryForJobType / estimatedMemoryKB);
-        hasMemoryConstraint = true;
-      }
-    }
-
-    return hasMemoryConstraint ? totalSlots : Number.POSITIVE_INFINITY;
-  }
-
-  /** Calculate ratios from resourceEstimationsPerJob config (initial values or equal distribution) */
-  private calculateRatiosFromConfig(resourcesPerJob: ResourceEstimationsPerJob): Map<string, number> {
-    const jobTypeIds = Object.keys(resourcesPerJob);
-    const ratios = new Map<string, number>();
-
-    let specifiedTotal = ZERO;
-    const specifiedRatios = new Map<string, number>();
-
-    for (const id of jobTypeIds) {
-      const config = resourcesPerJob[id];
-      if (config?.ratio?.initialValue !== undefined) {
-        specifiedRatios.set(id, config.ratio.initialValue);
-        specifiedTotal += config.ratio.initialValue;
-      }
-    }
-
-    const remainingRatio = ONE - specifiedTotal;
-    const unspecifiedCount = jobTypeIds.length - specifiedRatios.size;
-    const evenShare = unspecifiedCount > ZERO ? remainingRatio / unspecifiedCount : ZERO;
-
-    for (const id of jobTypeIds) {
-      ratios.set(id, specifiedRatios.get(id) ?? evenShare);
-    }
-
-    return ratios;
   }
 
   /** Check for changes and emit callback if availability changed */

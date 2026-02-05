@@ -12,434 +12,264 @@
  * Note: Job type distribution is now handled locally, not by Redis.
  */
 import {
-  bootInstance,
-  cleanRedis,
-  fetchAllocation as fetchAllocationFromPort,
+  INSTANCE_A_URL,
+  INSTANCE_B_URL,
+  MAX_RPM_PER_INSTANCE,
+  MAX_TPM_PER_INSTANCE,
+  MIN_MEMORY_SLOTS,
+  TWENTY_FIVE_SLOTS,
+  TWO_INSTANCES,
+  ZERO_COUNT,
+  fetchAllocation,
+  fetchStats,
+  getPool,
+  getPoolSlots,
   killAllInstances,
-  waitForAllocationUpdate,
-} from '../instanceLifecycle.js';
-import { type ConfigPresetName, resetInstance } from '../resetInstance.js';
-import { sleep } from '../testUtils.js';
+  setupAndVerifySingleInstance,
+  setupAndVerifyThreeInstances,
+  setupAndVerifyTwoInstances,
+  setupInstances,
+  verifyInstanceCount,
+  verifyPoolExists,
+} from './slotCalculationHelpers.js';
 
-const INSTANCE_A_URL = 'http://localhost:3001';
-const INSTANCE_B_URL = 'http://localhost:3002';
-
-const ALLOCATION_PROPAGATION_MS = 2000;
 const BEFORE_ALL_TIMEOUT_MS = 60000;
+const AFTER_ALL_TIMEOUT_MS = 30000;
+const INSTANCE_SCALE_TIMEOUT = 120000;
 
-interface ModelPoolAllocation {
-  totalSlots: number;
-  tokensPerMinute: number;
-  requestsPerMinute: number;
-  tokensPerDay: number;
-  requestsPerDay: number;
-}
+// Ports for scaling tests
+const PORT_A = 4011;
+const PORT_B = 4012;
+const PORT_C = 4013;
 
-interface AllocationInfo {
-  instanceCount: number;
-  pools: Record<string, ModelPoolAllocation>;
-}
+describe('Slot Calculation - TPM Only Model', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-tpm');
+  }, BEFORE_ALL_TIMEOUT_MS);
 
-interface AllocationResponse {
-  instanceId: string;
-  timestamp: number;
-  allocation: AllocationInfo | null;
-}
-
-/**
- * Fetch allocation from an instance.
- */
-const fetchAllocation = async (baseUrl: string): Promise<AllocationResponse> => {
-  const response = await fetch(`${baseUrl}/api/debug/allocation`);
-  return response.json() as Promise<AllocationResponse>;
-};
-
-/**
- * Reset instances with a specific config preset.
- */
-const setupInstances = async (configPreset: ConfigPresetName): Promise<void> => {
-  await resetInstance(INSTANCE_A_URL, { cleanRedis: true, configPreset });
-  await resetInstance(INSTANCE_B_URL, { cleanRedis: false, configPreset });
-  await sleep(ALLOCATION_PROPAGATION_MS);
-};
-
-describe('Pool-Based Slot Calculation', () => {
-  describe('TPM-Only Model (slotCalc-tpm)', () => {
-    /**
-     * Config:
-     * model-alpha: TPM = 100,000
-     * Job types use estimatedTokens for local distribution, but Redis
-     * calculates pool slots based on average estimated tokens.
-     *
-     * With avg estimated tokens ~7,500 (average of 10K and 5K):
-     * Expected with 2 instances:
-     * pools['model-alpha'].totalSlots = floor((100K/7500) / 2) = floor(13.3 / 2) = 6
-     *
-     * Note: Exact value depends on how averaging is done in Lua
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-tpm');
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    it('should report 2 instances', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      expect(response.allocation).not.toBeNull();
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
-
-    it('should have pool allocation for model-alpha', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-alpha'];
-      expect(pool).toBeDefined();
-      expect(pool?.totalSlots).toBeGreaterThan(0);
-    });
-
-    it('should report tokensPerMinute in pool allocation', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const tpm = response.allocation?.pools?.['model-alpha']?.tokensPerMinute;
-      // 100K / 2 instances = 50,000 per instance (or less if usage tracked)
-      expect(tpm).toBeDefined();
-      expect(tpm).toBeGreaterThan(0);
-      expect(tpm).toBeLessThanOrEqual(50000);
-    });
-
-    it('should have consistent allocation across both instances', async () => {
-      const responseA = await fetchAllocation(INSTANCE_A_URL);
-      const responseB = await fetchAllocation(INSTANCE_B_URL);
-
-      const slotsA = responseA.allocation?.pools?.['model-alpha']?.totalSlots;
-      const slotsB = responseB.allocation?.pools?.['model-alpha']?.totalSlots;
-
-      expect(slotsA).toBe(slotsB);
-    });
+  it('should report 2 instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
   });
 
-  describe('RPM-Only Model (slotCalc-rpm)', () => {
-    /**
-     * Config:
-     * model-beta: RPM = 500
-     * Pool slots based on average estimated requests.
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-rpm');
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    it('should report 2 instances', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
-
-    it('should have pool allocation for model-beta', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-beta'];
-      expect(pool).toBeDefined();
-      expect(pool?.totalSlots).toBeGreaterThan(0);
-    });
-
-    it('should report requestsPerMinute in pool allocation', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const rpm = response.allocation?.pools?.['model-beta']?.requestsPerMinute;
-      // 500 / 2 instances = 250 per instance
-      expect(rpm).toBeDefined();
-      expect(rpm).toBeGreaterThan(0);
-      expect(rpm).toBeLessThanOrEqual(250);
-    });
+  it('should have pool allocation for model-alpha', async () => {
+    await verifyPoolExists(INSTANCE_A_URL, 'model-alpha');
   });
 
-  describe('Concurrent-Only Model (slotCalc-concurrent)', () => {
-    /**
-     * Config:
-     * model-gamma: maxConcurrentRequests = 100
-     *
-     * Expected with 2 instances:
-     * pools['model-gamma'].totalSlots = floor(100 / 2) = 50
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-concurrent');
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    it('should report 2 instances', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
-
-    it('should calculate correct pool slots for concurrent-based model', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const slots = response.allocation?.pools?.['model-gamma']?.totalSlots;
-      // floor(100 / 2) = 50
-      expect(slots).toBe(50);
-    });
+  it('should report tokensPerMinute in pool allocation', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'model-alpha');
+    const tpm = pool?.tokensPerMinute;
+    expect(tpm).toBeDefined();
+    expect(tpm).toBeGreaterThan(ZERO_COUNT);
+    expect(tpm).toBeLessThanOrEqual(MAX_TPM_PER_INSTANCE);
   });
 
-  describe('Mixed Limits - Limiting Factor (slotCalc-tpm-rpm)', () => {
-    /**
-     * Config:
-     * model-delta: TPM = 100,000, RPM = 50
-     *
-     * Pool slots use minimum of TPM-based and RPM-based calculations.
-     * RPM is likely the limiting factor here.
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-tpm-rpm');
-    }, BEFORE_ALL_TIMEOUT_MS);
+  it('should have consistent allocation across both instances', async () => {
+    const responseA = await fetchAllocation(INSTANCE_A_URL);
+    const responseB = await fetchAllocation(INSTANCE_B_URL);
 
-    it('should have pool allocation using limiting factor', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-delta'];
-      expect(pool).toBeDefined();
-      // RPM-based slots should be lower than TPM-based
-      expect(pool?.totalSlots).toBeGreaterThan(0);
-    });
+    const slotsA = getPoolSlots(responseA, 'model-alpha');
+    const slotsB = getPoolSlots(responseB, 'model-alpha');
 
-    it('should report both TPM and RPM in pool', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-delta'];
-      expect(pool?.tokensPerMinute).toBeDefined();
-      expect(pool?.requestsPerMinute).toBeDefined();
-    });
+    expect(slotsA).toBe(slotsB);
+  });
+});
+
+describe('Slot Calculation - RPM Only Model', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-rpm');
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should report 2 instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
   });
 
-  describe('Multiple Models with Different Limit Types (slotCalc-multi-model)', () => {
-    /**
-     * Config:
-     * model-tpm: TPM = 100,000
-     * model-concurrent: maxConcurrentRequests = 50
-     *
-     * Each model gets its own pool.
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-multi-model');
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    it('should have pool allocation for TPM model', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-tpm'];
-      expect(pool).toBeDefined();
-      expect(pool?.totalSlots).toBeGreaterThan(0);
-    });
-
-    it('should have pool allocation for concurrent model', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-concurrent'];
-      expect(pool).toBeDefined();
-      // floor(50 / 2) = 25
-      expect(pool?.totalSlots).toBe(25);
-    });
-
-    it('should have different pool slots for different models', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const tpmSlots = response.allocation?.pools?.['model-tpm']?.totalSlots;
-      const concurrentSlots = response.allocation?.pools?.['model-concurrent']?.totalSlots;
-
-      expect(tpmSlots).toBeDefined();
-      expect(concurrentSlots).toBeDefined();
-      // They may or may not be different depending on config
-    });
+  it('should have pool allocation for model-beta', async () => {
+    await verifyPoolExists(INSTANCE_A_URL, 'model-beta');
   });
 
-  describe('Instance Count Verification', () => {
-    /**
-     * Verify that instance count is correctly tracked.
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalculation');
-    }, BEFORE_ALL_TIMEOUT_MS);
+  it('should report requestsPerMinute in pool allocation', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'model-beta');
+    const rpm = pool?.requestsPerMinute;
+    expect(rpm).toBeDefined();
+    expect(rpm).toBeGreaterThan(ZERO_COUNT);
+    expect(rpm).toBeLessThanOrEqual(MAX_RPM_PER_INSTANCE);
+  });
+});
 
-    it('should report correct instance count on both instances', async () => {
-      const responseA = await fetchAllocation(INSTANCE_A_URL);
-      const responseB = await fetchAllocation(INSTANCE_B_URL);
+describe('Slot Calculation - Concurrent Only Model', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-concurrent');
+  }, BEFORE_ALL_TIMEOUT_MS);
 
-      expect(responseA.allocation?.instanceCount).toBe(2);
-      expect(responseB.allocation?.instanceCount).toBe(2);
-    });
-
-    it('should have pools data structure', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-
-      expect(response.allocation).not.toBeNull();
-      expect(response.allocation?.pools).toBeDefined();
-      expect(typeof response.allocation?.instanceCount).toBe('number');
-    });
+  it('should report 2 instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
   });
 
-  describe('TPD-Only Model (slotCalc-tpd)', () => {
-    /**
-     * Config:
-     * model-tpd: TPD = 1,000,000 (tokens per day)
-     * Pool slots based on TPD / avgEstimatedTokens / instanceCount
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-tpd');
-    }, BEFORE_ALL_TIMEOUT_MS);
+  it('should calculate correct pool slots for concurrent-based model', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const slots = getPoolSlots(response, 'model-gamma');
+    // floor(100 / 2) = 50
+    const FIFTY_SLOTS = 50;
+    expect(slots).toBe(FIFTY_SLOTS);
+  });
+});
 
-    it('should report 2 instances', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
+describe('Slot Calculation - Mixed Limits Limiting Factor', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-tpm-rpm');
+  }, BEFORE_ALL_TIMEOUT_MS);
 
-    it('should have pool allocation for TPD model', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-tpd'];
-      expect(pool).toBeDefined();
-      expect(pool?.totalSlots).toBeGreaterThan(0);
-      expect(pool?.tokensPerDay).toBeGreaterThan(0);
-    });
+  it('should have pool allocation using limiting factor', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'model-delta');
+    expect(pool).toBeDefined();
+    expect(pool?.totalSlots).toBeGreaterThan(ZERO_COUNT);
   });
 
-  describe('RPD-Only Model (slotCalc-rpd)', () => {
-    /**
-     * Config:
-     * model-rpd: RPD = 10,000 (requests per day)
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-rpd');
-    }, BEFORE_ALL_TIMEOUT_MS);
+  it('should report both TPM and RPM in pool', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'model-delta');
+    expect(pool?.tokensPerMinute).toBeDefined();
+    expect(pool?.requestsPerMinute).toBeDefined();
+  });
+});
 
-    it('should report 2 instances', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
+describe('Slot Calculation - Multiple Models Different Limit Types', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-multi-model');
+  }, BEFORE_ALL_TIMEOUT_MS);
 
-    it('should have pool allocation for RPD model', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['model-rpd'];
-      expect(pool).toBeDefined();
-      expect(pool?.totalSlots).toBeGreaterThan(0);
-      expect(pool?.requestsPerDay).toBeGreaterThan(0);
-    });
+  it('should have pool allocation for TPM model', async () => {
+    await verifyPoolExists(INSTANCE_A_URL, 'model-tpm');
   });
 
-  describe('Memory-Based Slot Calculation (slotCalc-memory)', () => {
-    /**
-     * Config:
-     * model: 10M TPM (very high, won't be limiting)
-     * heavyMemoryJob: 10MB per job, ratio 0.5
-     * lightMemoryJob: 1MB per job, ratio 0.5
-     *
-     * Memory is a LOCAL constraint: finalSlots = min(distributedSlots, memorySlots)
-     *
-     * With high TPM, distributed slots are very high (2500+), but memory
-     * becomes the limiting factor:
-     * - heavyMemoryJob: limited by memory (10MB per job)
-     * - lightMemoryJob: limited by memory (1MB per job, so more slots)
-     */
-    beforeAll(async () => {
-      await setupInstances('slotCalc-memory');
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    it('should report 2 instances', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
-
-    it('should have pool allocation for test-model', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['test-model'];
-      expect(pool).toBeDefined();
-      expect(pool?.totalSlots).toBeGreaterThan(0);
-    });
-
-    it('should have high distributed slots due to high TPM', async () => {
-      const response = await fetchAllocation(INSTANCE_A_URL);
-      const pool = response.allocation?.pools?.['test-model'];
-      // With 10M TPM and 1K estimated tokens, distributed slots should be high
-      // floor((10M / 1K) / 2) = 5000 slots per instance
-      expect(pool?.totalSlots).toBeGreaterThanOrEqual(1000);
-    });
-
-    it('should report memory stats in debug endpoint', async () => {
-      // Memory is a local constraint - verify stats endpoint shows memory info
-      const response = await fetch(`${INSTANCE_A_URL}/api/debug/stats`);
-      const stats = (await response.json()) as { stats: { memory?: { maxCapacityKB: number } } };
-      // Memory stats should be present when memory is configured
-      expect(stats.stats.memory).toBeDefined();
-      expect(stats.stats.memory?.maxCapacityKB).toBeGreaterThan(0);
-    });
+  it('should have pool allocation for concurrent model', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'model-concurrent');
+    expect(pool).toBeDefined();
+    // floor(50 / 2) = 25
+    expect(pool?.totalSlots).toBe(TWENTY_FIVE_SLOTS);
   });
 
-  describe('Pool Slots Scale with Instance Count', () => {
-    /**
-     * Test pool calculations with different instance counts (1, 2, 3).
-     * Uses programmatic boot/kill for precise control.
-     *
-     * Formula verification:
-     * With instanceScaling config (100K TPM, avgEstimatedTokens ~10K):
-     * - 1 instance: floor((100K/10K) / 1) = 10 slots
-     * - 2 instances: floor((100K/10K) / 2) = 5 slots each
-     * - 3 instances: floor((100K/10K) / 3) = 3 slots each
-     */
-    const PORT_A = 4011;
-    const PORT_B = 4012;
-    const PORT_C = 4013;
-    const INSTANCE_SCALE_TIMEOUT = 120000;
+  it('should have different pool slots for different models', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const tpmSlots = getPoolSlots(response, 'model-tpm');
+    const concurrentSlots = getPoolSlots(response, 'model-concurrent');
 
-    afterAll(async () => {
-      await killAllInstances();
-    }, 30000);
-
-    it(
-      'should calculate 10 pool slots with 1 instance',
-      async () => {
-        await killAllInstances();
-        await cleanRedis();
-        await bootInstance(PORT_A, 'instanceScaling');
-        await sleep(ALLOCATION_PROPAGATION_MS);
-
-        const response = await fetchAllocationFromPort(PORT_A);
-        expect(response.allocation?.instanceCount).toBe(1);
-        expect(response.allocation?.pools?.['scale-model']?.totalSlots).toBe(10);
-
-        await killAllInstances();
-      },
-      INSTANCE_SCALE_TIMEOUT
-    );
-
-    it(
-      'should calculate 5 pool slots each with 2 instances',
-      async () => {
-        await killAllInstances();
-        await cleanRedis();
-        await bootInstance(PORT_A, 'instanceScaling');
-        await sleep(ALLOCATION_PROPAGATION_MS);
-        await bootInstance(PORT_B, 'instanceScaling');
-        await waitForAllocationUpdate(PORT_A, (a) => a.instanceCount === 2);
-
-        const responseA = await fetchAllocationFromPort(PORT_A);
-        const responseB = await fetchAllocationFromPort(PORT_B);
-
-        expect(responseA.allocation?.instanceCount).toBe(2);
-        expect(responseA.allocation?.pools?.['scale-model']?.totalSlots).toBe(5);
-        expect(responseB.allocation?.pools?.['scale-model']?.totalSlots).toBe(5);
-
-        await killAllInstances();
-      },
-      INSTANCE_SCALE_TIMEOUT
-    );
-
-    it(
-      'should calculate 3 pool slots each with 3 instances',
-      async () => {
-        await killAllInstances();
-        await cleanRedis();
-        await bootInstance(PORT_A, 'instanceScaling');
-        await sleep(ALLOCATION_PROPAGATION_MS);
-        await bootInstance(PORT_B, 'instanceScaling');
-        await waitForAllocationUpdate(PORT_A, (a) => a.instanceCount === 2);
-        await bootInstance(PORT_C, 'instanceScaling');
-        await waitForAllocationUpdate(PORT_A, (a) => a.instanceCount === 3);
-
-        const responseA = await fetchAllocationFromPort(PORT_A);
-        const responseB = await fetchAllocationFromPort(PORT_B);
-        const responseC = await fetchAllocationFromPort(PORT_C);
-
-        expect(responseA.allocation?.instanceCount).toBe(3);
-        expect(responseA.allocation?.pools?.['scale-model']?.totalSlots).toBe(3);
-        expect(responseB.allocation?.pools?.['scale-model']?.totalSlots).toBe(3);
-        expect(responseC.allocation?.pools?.['scale-model']?.totalSlots).toBe(3);
-
-        await killAllInstances();
-      },
-      INSTANCE_SCALE_TIMEOUT
-    );
+    expect(tpmSlots).toBeDefined();
+    expect(concurrentSlots).toBeDefined();
   });
+});
+
+describe('Slot Calculation - Instance Count Verification', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalculation');
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should report correct instance count on both instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
+    await verifyInstanceCount(INSTANCE_B_URL, TWO_INSTANCES);
+  });
+
+  it('should have pools data structure', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+
+    expect(response.allocation).not.toBeNull();
+    expect(response.allocation?.pools).toBeDefined();
+    expect(typeof response.allocation?.instanceCount).toBe('number');
+  });
+});
+
+describe('Slot Calculation - TPD Only Model', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-tpd');
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should report 2 instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
+  });
+
+  it('should have pool allocation for TPD model', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'model-tpd');
+    expect(pool).toBeDefined();
+    expect(pool?.totalSlots).toBeGreaterThan(ZERO_COUNT);
+    expect(pool?.tokensPerDay).toBeGreaterThan(ZERO_COUNT);
+  });
+});
+
+describe('Slot Calculation - RPD Only Model', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-rpd');
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should report 2 instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
+  });
+
+  it('should have pool allocation for RPD model', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'model-rpd');
+    expect(pool).toBeDefined();
+    expect(pool?.totalSlots).toBeGreaterThan(ZERO_COUNT);
+    expect(pool?.requestsPerDay).toBeGreaterThan(ZERO_COUNT);
+  });
+});
+
+describe('Slot Calculation - Memory Based', () => {
+  beforeAll(async () => {
+    await setupInstances('slotCalc-memory');
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should report 2 instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
+  });
+
+  it('should have pool allocation for test-model', async () => {
+    await verifyPoolExists(INSTANCE_A_URL, 'test-model');
+  });
+
+  it('should have high distributed slots due to high TPM', async () => {
+    const response = await fetchAllocation(INSTANCE_A_URL);
+    const pool = getPool(response, 'test-model');
+    expect(pool?.totalSlots).toBeGreaterThanOrEqual(MIN_MEMORY_SLOTS);
+  });
+
+  it('should report memory stats in debug endpoint', async () => {
+    const stats = await fetchStats(INSTANCE_A_URL);
+    expect(stats.stats.memory).toBeDefined();
+    expect(stats.stats.memory?.maxCapacityKB).toBeGreaterThan(ZERO_COUNT);
+  });
+});
+
+describe('Slot Calculation - Pool Slots Scale with Instance Count', () => {
+  afterAll(async () => {
+    await killAllInstances();
+  }, AFTER_ALL_TIMEOUT_MS);
+
+  it(
+    'should calculate 10 pool slots with 1 instance',
+    async () => {
+      await setupAndVerifySingleInstance(PORT_A, 'instanceScaling');
+    },
+    INSTANCE_SCALE_TIMEOUT
+  );
+
+  it(
+    'should calculate 5 pool slots each with 2 instances',
+    async () => {
+      await setupAndVerifyTwoInstances(PORT_A, PORT_B, 'instanceScaling');
+    },
+    INSTANCE_SCALE_TIMEOUT
+  );
+
+  it(
+    'should calculate 3 pool slots each with 3 instances',
+    async () => {
+      await setupAndVerifyThreeInstances(PORT_A, PORT_B, PORT_C, 'instanceScaling');
+    },
+    INSTANCE_SCALE_TIMEOUT
+  );
 });

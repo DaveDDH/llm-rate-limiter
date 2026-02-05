@@ -58,12 +58,17 @@ class PerJobTypeMemoryManager implements MemoryManagerInstance {
     this.freeMemoryRatio = config.memory?.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
     this.totalMemoryKB = Math.floor(getAvailableMemoryKB() * this.freeMemoryRatio);
     this.onAvailabilityChange = onAvailabilityChange;
-    this.log = onLog !== undefined ? (msg, data) => onLog(`${label}| ${msg}`, data) : () => undefined;
+    this.log =
+      onLog === undefined
+        ? () => undefined
+        : (msg, data) => {
+            onLog(`${label}| ${msg}`, data);
+          };
     this.jobTypeStates = new Map();
 
     // Calculate initial ratios using the same logic as JobTypeManager
     const calculated = calculateInitialRatios(resourceEstimationsPerJob);
-    const jobTypeCount = Object.keys(resourceEstimationsPerJob).length;
+    const { length: jobTypeCount } = Object.keys(resourceEstimationsPerJob);
     const defaultRatio = jobTypeCount > ZERO ? ONE / jobTypeCount : ONE;
 
     // Create per-job-type semaphores

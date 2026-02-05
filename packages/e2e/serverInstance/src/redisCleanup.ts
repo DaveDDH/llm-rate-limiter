@@ -8,25 +8,49 @@ const KEY_PREFIXES = ['llm-rl:', 'llm-rate-limiter:'];
 
 const ZERO = 0;
 const BATCH_SIZE = 100;
+const INITIAL_CURSOR = '0';
+
+/** Result of a single scan iteration */
+interface ScanResult {
+  cursor: string;
+  keys: string[];
+}
+
+/** Perform a single scan iteration */
+const scanIteration = async (redis: Redis, pattern: string, cursor: string): Promise<ScanResult> => {
+  const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', BATCH_SIZE);
+  return { cursor: nextCursor, keys };
+};
+
+/** Recursively collect all keys matching a pattern using SCAN */
+const collectAllKeys = async (
+  redis: Redis,
+  pattern: string,
+  cursor: string,
+  accumulated: string[]
+): Promise<string[]> => {
+  const result = await scanIteration(redis, pattern, cursor);
+  const allKeys = [...accumulated, ...result.keys];
+
+  if (result.cursor === INITIAL_CURSOR) {
+    return allKeys;
+  }
+
+  return await collectAllKeys(redis, pattern, result.cursor, allKeys);
+};
 
 /**
  * Delete keys matching a pattern using SCAN.
  */
 const deleteKeysByPattern = async (redis: Redis, pattern: string): Promise<number> => {
-  let cursor = '0';
-  let totalDeleted = ZERO;
+  const keys = await collectAllKeys(redis, pattern, INITIAL_CURSOR, []);
 
-  do {
-    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', BATCH_SIZE);
-    cursor = nextCursor;
+  if (keys.length === ZERO) {
+    return ZERO;
+  }
 
-    if (keys.length > ZERO) {
-      await redis.del(...keys);
-      totalDeleted += keys.length;
-    }
-  } while (cursor !== '0');
-
-  return totalDeleted;
+  await redis.del(...keys);
+  return keys.length;
 };
 
 /**
@@ -34,16 +58,14 @@ const deleteKeysByPattern = async (redis: Redis, pattern: string): Promise<numbe
  */
 export const cleanupRedisKeys = async (redisUrl: string): Promise<number> => {
   const redis = new Redis(redisUrl);
-  let totalDeleted = ZERO;
 
   try {
-    for (const prefix of KEY_PREFIXES) {
-      const deleted = await deleteKeysByPattern(redis, `${prefix}*`);
-      totalDeleted += deleted;
-    }
+    const deletionPromises = KEY_PREFIXES.map(
+      async (prefix) => await deleteKeysByPattern(redis, `${prefix}*`)
+    );
+    const results = await Promise.all(deletionPromises);
+    return results.reduce((sum, count) => sum + count, ZERO);
   } finally {
     await redis.quit();
   }
-
-  return totalDeleted;
 };

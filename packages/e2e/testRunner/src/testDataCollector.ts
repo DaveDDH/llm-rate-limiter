@@ -4,10 +4,15 @@ import { request } from 'node:http';
 
 import type { InstanceState } from './stateAggregator.js';
 import { type RawTestData, transformTestData } from './testDataTransform.js';
+import type { RawEvent, RawEventData } from './testDataTransformTypes.js';
+import { sleep } from './testUtils.js';
 
 export type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
-const HTTP_OK = 200;
+const SLEEP_DURATION_MS = 100;
+const SSE_DATA_PREFIX = 'data: ';
+const SSE_DATA_PREFIX_LENGTH = 6;
+const JSON_INDENT_SPACES = 2;
 
 /** A single event captured from SSE */
 interface CapturedEvent {
@@ -42,22 +47,88 @@ export interface JobEvent {
 /** Event types that trigger snapshots */
 const SNAPSHOT_EVENT_TYPES = new Set(['job:queued', 'job:completed', 'job:failed']);
 
+/** Type guard for event data object */
+const isEventDataObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+/** Type guard for RawEventData */
+const isRawEventData = (value: unknown): value is RawEventData => {
+  if (!isEventDataObject(value)) {
+    return false;
+  }
+  const hasType = typeof value.type === 'string';
+  const hasInstanceId = typeof value.instanceId === 'string';
+  const hasTimestamp = typeof value.timestamp === 'number';
+  return hasType && hasInstanceId && hasTimestamp;
+};
+
+/** Convert captured event to raw event */
+const toRawEvent = (captured: CapturedEvent): RawEvent | null => {
+  if (!isRawEventData(captured.event)) {
+    return null;
+  }
+  return {
+    receivedAt: captured.receivedAt,
+    sourceUrl: captured.sourceUrl,
+    event: captured.event,
+  };
+};
+
+/** Convert captured events to raw events */
+const convertToRawEvents = (events: CapturedEvent[]): RawEvent[] => {
+  const rawEvents: RawEvent[] = [];
+  for (const captured of events) {
+    const raw = toRawEvent(captured);
+    if (raw !== null) {
+      rawEvents.push(raw);
+    }
+  }
+  return rawEvents;
+};
+
+/** Get string from object safely */
+const getStringField = (obj: Record<string, unknown>, key: string): string | undefined => {
+  const { [key]: value } = obj;
+  return typeof value === 'string' ? value : undefined;
+};
+
+/** Check if event type is a snapshot event */
+const isSnapshotEventType = (eventType: string): eventType is JobEvent['type'] =>
+  SNAPSHOT_EVENT_TYPES.has(eventType);
+
 /** Parse a job event from raw SSE data */
 const parseJobEvent = (eventData: unknown): JobEvent | null => {
-  if (typeof eventData !== 'object' || eventData === null) {
+  if (!isEventDataObject(eventData)) {
     return null;
   }
-  const data = eventData as Record<string, unknown>;
-  const eventType = data.type as string | undefined;
-  if (!eventType || !SNAPSHOT_EVENT_TYPES.has(eventType)) {
+
+  const eventType = getStringField(eventData, 'type');
+  if (eventType === undefined || eventType === '' || !isSnapshotEventType(eventType)) {
     return null;
   }
-  const payload = data.payload as Record<string, unknown> | undefined;
+
+  const instanceId = getStringField(eventData, 'instanceId');
+  if (instanceId === undefined) {
+    return null;
+  }
+
+  const { payload } = eventData;
+  if (!isEventDataObject(payload)) {
+    return null;
+  }
+
+  const jobId = getStringField(payload, 'jobId');
+  const jobType = getStringField(payload, 'jobType');
+
+  if (jobId === undefined || jobType === undefined) {
+    return null;
+  }
+
   return {
-    type: eventType as JobEvent['type'],
-    instanceId: data.instanceId as string,
-    jobId: payload?.jobId as string,
-    jobType: payload?.jobType as string,
+    type: eventType,
+    instanceId,
+    jobId,
+    jobType,
   };
 };
 
@@ -66,6 +137,66 @@ export interface TestDataCollectorOptions {
   /** Callback when a job event (queued/completed/failed) is received */
   onJobEvent?: (event: JobEvent) => void;
 }
+
+/** SSE chunk processor config */
+interface ChunkProcessorConfig {
+  chunk: Buffer;
+  buffer: string;
+  baseUrl: string;
+  events: CapturedEvent[];
+  onJobEvent?: (event: JobEvent) => void;
+}
+
+/**
+ * Notify job event callback if valid event
+ */
+const notifyJobEvent = (callback: ((event: JobEvent) => void) | undefined, eventData: unknown): void => {
+  if (callback === undefined) {
+    return;
+  }
+  const jobEvent = parseJobEvent(eventData);
+  if (jobEvent !== null) {
+    callback(jobEvent);
+  }
+};
+
+/**
+ * Process a single SSE line
+ */
+const processSSELine = (line: string, config: ChunkProcessorConfig): void => {
+  if (!line.startsWith(SSE_DATA_PREFIX)) {
+    return;
+  }
+
+  try {
+    const eventData: unknown = JSON.parse(line.slice(SSE_DATA_PREFIX_LENGTH));
+    config.events.push({
+      receivedAt: Date.now(),
+      sourceUrl: config.baseUrl,
+      event: eventData,
+    });
+
+    notifyJobEvent(config.onJobEvent, eventData);
+  } catch {
+    // Ignore parse errors
+  }
+};
+
+/**
+ * Process SSE data chunk and extract events
+ */
+const processSSEChunk = (config: ChunkProcessorConfig): string => {
+  const currentBuffer = config.buffer + config.chunk.toString();
+
+  const lines = currentBuffer.split('\n');
+  const remainingBuffer = lines.pop() ?? '';
+
+  for (const line of lines) {
+    processSSELine(line, config);
+  }
+
+  return remainingBuffer;
+};
 
 /**
  * Collects all data during an E2E test run.
@@ -76,13 +207,14 @@ export class TestDataCollector {
   private readonly snapshots: RawSnapshot[] = [];
   private readonly jobsSent: JobSent[] = [];
   private readonly startTime: number;
-  private readonly sseConnections: Map<string, { close: () => void }> = new Map();
+  private readonly sseConnections = new Map<string, { close: () => void }>();
   private readonly onJobEvent?: (event: JobEvent) => void;
 
   constructor(instanceUrls: string[], options: TestDataCollectorOptions = {}) {
     this.instanceUrls = instanceUrls;
     this.startTime = Date.now();
-    this.onJobEvent = options.onJobEvent;
+    const { onJobEvent } = options;
+    this.onJobEvent = onJobEvent;
   }
 
   /**
@@ -93,11 +225,12 @@ export class TestDataCollector {
       this.connectToSSE(url);
     }
     // Give connections time to establish
-    await this.sleep(100);
+    await sleep(SLEEP_DURATION_MS);
   }
 
   private connectToSSE(baseUrl: string): void {
     const urlObj = new URL(`${baseUrl}/api/debug/events`);
+    let buffer = '';
 
     const req = request(
       {
@@ -110,37 +243,14 @@ export class TestDataCollector {
         },
       },
       (res) => {
-        let buffer = '';
-
         res.on('data', (chunk: Buffer) => {
-          buffer += chunk.toString();
-
-          // Parse SSE events
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? ''; // Keep incomplete line in buffer
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const eventData = JSON.parse(line.slice(6));
-                this.events.push({
-                  receivedAt: Date.now(),
-                  sourceUrl: baseUrl,
-                  event: eventData,
-                });
-
-                // Notify callback if this is a job event
-                if (this.onJobEvent !== undefined) {
-                  const jobEvent = parseJobEvent(eventData);
-                  if (jobEvent !== null) {
-                    this.onJobEvent(jobEvent);
-                  }
-                }
-              } catch {
-                // Ignore parse errors
-              }
-            }
-          }
+          buffer = processSSEChunk({
+            chunk,
+            buffer,
+            baseUrl,
+            events: this.events,
+            onJobEvent: this.onJobEvent,
+          });
         });
       }
     );
@@ -201,7 +311,7 @@ export class TestDataCollector {
       startTime: this.startTime,
       endTime,
       instanceUrls: this.instanceUrls,
-      events: this.events as RawTestData['events'],
+      events: convertToRawEvents(this.events),
       snapshots: this.snapshots,
       jobsSent: this.jobsSent,
     };
@@ -214,11 +324,7 @@ export class TestDataCollector {
    */
   async saveToFile(filePath: string): Promise<void> {
     const data = this.getData();
-    const json = JSON.stringify(data, null, 2);
+    const json = JSON.stringify(data, null, JSON_INDENT_SPACES);
     await writeFile(filePath, json, 'utf-8');
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

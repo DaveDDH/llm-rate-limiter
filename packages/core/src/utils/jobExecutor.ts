@@ -19,6 +19,9 @@ import {
   calculateTotalCost,
 } from './jobExecutionHelpers.js';
 
+/** Default value for delegation usage counters when no usage was recorded */
+const DEFAULT_USAGE_COUNT = 0;
+
 /** Mutable state for job execution callbacks */
 export interface JobExecutionState {
   rejected: boolean;
@@ -87,9 +90,13 @@ const checkRejection = (state: JobExecutionState): void => {
     throw new Error('Job rejected without delegation');
   }
   if (state.shouldDelegate) {
-    throw new DelegationError(
-      state.rejectUsage ?? { requests: 0, inputTokens: 0, outputTokens: 0, cachedTokens: 0 }
-    );
+    const defaultUsage: DelegationUsage = {
+      requests: DEFAULT_USAGE_COUNT,
+      inputTokens: DEFAULT_USAGE_COUNT,
+      outputTokens: DEFAULT_USAGE_COUNT,
+      cachedTokens: DEFAULT_USAGE_COUNT,
+    };
+    throw new DelegationError(state.rejectUsage ?? defaultUsage);
   }
 };
 

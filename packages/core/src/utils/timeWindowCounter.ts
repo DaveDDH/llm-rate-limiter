@@ -36,7 +36,7 @@ export class TimeWindowCounter {
    * Used when distributed allocation changes (e.g., instances join/leave).
    */
   setLimit(newLimit: number): void {
-    console.log(`[DEBUG] ${this.name} setLimit called: oldLimit=${this.limit}, newLimit=${newLimit}`);
+    this.log(`setLimit called`, { oldLimit: this.limit, newLimit });
     if (newLimit !== this.limit) {
       this.log(`Limit changed`, { oldLimit: this.limit, newLimit });
       this.limit = newLimit;

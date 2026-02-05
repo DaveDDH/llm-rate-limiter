@@ -16,6 +16,8 @@ interface QueuedWaiter<T> {
 
 // Constants
 const ZERO = 0;
+const NOT_FOUND = -1;
+const SPLICE_COUNT = 1;
 
 /**
  * A FIFO queue for jobs waiting for capacity.
@@ -24,7 +26,7 @@ const ZERO = 0;
  * Generic type T represents the reservation context returned when capacity is acquired.
  */
 export class CapacityWaitQueue<T = unknown> {
-  private readonly queue: QueuedWaiter<T>[] = [];
+  private readonly queue: Array<QueuedWaiter<T>> = [];
   private readonly name: string;
 
   constructor(name = 'CapacityWaitQueue') {
@@ -75,7 +77,7 @@ export class CapacityWaitQueue<T = unknown> {
     // Add to queue (FIFO)
     this.queue.push(waiter);
 
-    return promise;
+    return await promise;
   }
 
   /**
@@ -88,11 +90,18 @@ export class CapacityWaitQueue<T = unknown> {
   }
 
   /**
+   * Get first waiter from queue (peek without removing).
+   */
+  private peekFirstWaiter(): QueuedWaiter<T> | undefined {
+    return this.queue[ZERO];
+  }
+
+  /**
    * Process the queue and serve waiters that can acquire capacity.
    */
   private processQueue(tryReserve: () => T | null): void {
     while (this.queue.length > ZERO) {
-      const firstWaiter = this.queue[ZERO];
+      const firstWaiter = this.peekFirstWaiter();
       if (firstWaiter === undefined || firstWaiter.resolved) {
         // Remove stale entry
         this.queue.shift();
@@ -101,13 +110,12 @@ export class CapacityWaitQueue<T = unknown> {
 
       // Try to reserve for this waiter
       const result = tryReserve();
-      if (result !== null) {
-        this.queue.shift();
-        firstWaiter.resolve(result); // Capacity acquired with context
-      } else {
+      if (result === null) {
         // No more capacity available, stop processing
         break;
       }
+      this.queue.shift();
+      firstWaiter.resolve(result); // Capacity acquired with context
     }
   }
 
@@ -116,8 +124,8 @@ export class CapacityWaitQueue<T = unknown> {
    */
   private removeWaiter(waiter: QueuedWaiter<T>): void {
     const index = this.queue.indexOf(waiter);
-    if (index !== -1) {
-      this.queue.splice(index, 1);
+    if (index !== NOT_FOUND) {
+      this.queue.splice(index, SPLICE_COUNT);
     }
   }
 
@@ -146,5 +154,10 @@ export class CapacityWaitQueue<T = unknown> {
         waiter.resolve(null);
       }
     }
+  }
+
+  /** Alias for clear() - cancels all waiting requests */
+  cancelAll(): void {
+    this.clear();
   }
 }

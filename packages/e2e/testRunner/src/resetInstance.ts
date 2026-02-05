@@ -1,9 +1,9 @@
 /**
  * Utility to reset a server instance via its debug endpoint.
  */
-import { request } from 'node:http';
 
 const HTTP_OK = 200;
+const ZERO_KEYS = 0;
 
 /** Valid config preset names */
 export type ConfigPresetName =
@@ -40,75 +40,82 @@ export interface ResetResult {
 }
 
 /**
- * Reset a server instance by calling POST /api/debug/reset.
- * @param baseUrl - The base URL of the server instance
- * @param options - Reset options (cleanRedis defaults to true)
+ * Build the request body for reset
  */
-export const resetInstance = async (baseUrl: string, options: ResetOptions = {}): Promise<ResetResult> => {
+const buildRequestBody = (options: ResetOptions): string => {
   const { cleanRedis = true, configPreset } = options;
   const requestBody: { cleanRedis: boolean; configPreset?: ConfigPresetName } = { cleanRedis };
   if (configPreset !== undefined) {
     requestBody.configPreset = configPreset;
   }
-  const body = JSON.stringify(requestBody);
+  return JSON.stringify(requestBody);
+};
 
-  return new Promise((resolve) => {
-    const urlObj = new URL(`${baseUrl}/api/debug/reset`);
+/**
+ * Create error result
+ */
+const createErrorResult = (error: string): ResetResult => ({
+  success: false,
+  keysDeleted: ZERO_KEYS,
+  newInstanceId: '',
+  error,
+});
 
-    const req = request(
-      {
-        hostname: urlObj.hostname,
-        port: urlObj.port,
-        path: urlObj.pathname,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-        },
-      },
-      (res) => {
-        let body = '';
-        res.on('data', (chunk: Buffer) => {
-          body += chunk.toString();
-        });
-        res.on('end', () => {
-          if (res.statusCode === HTTP_OK) {
-            try {
-              const data = JSON.parse(body) as ResetResult;
-              resolve({
-                success: true,
-                keysDeleted: data.keysDeleted,
-                newInstanceId: data.newInstanceId,
-              });
-            } catch {
-              resolve({
-                success: false,
-                keysDeleted: 0,
-                newInstanceId: '',
-                error: 'Failed to parse response',
-              });
-            }
-          } else {
-            resolve({
-              success: false,
-              keysDeleted: 0,
-              newInstanceId: '',
-              error: `HTTP ${res.statusCode}: ${body}`,
-            });
-          }
-        });
-      }
-    );
+/**
+ * Type guard for ResetResult
+ */
+const isResetResult = (value: unknown): value is ResetResult =>
+  typeof value === 'object' && value !== null && 'keysDeleted' in value && 'newInstanceId' in value;
 
-    req.on('error', (error) => {
-      resolve({
-        success: false,
-        keysDeleted: 0,
-        newInstanceId: '',
-        error: error.message,
-      });
+/**
+ * Parse response body safely
+ */
+const parseResponseSafely = (data: unknown): ResetResult | null => {
+  if (isResetResult(data)) {
+    return data;
+  }
+  return null;
+};
+
+/**
+ * Handle successful HTTP response
+ */
+const handleSuccessResponse = (data: unknown): ResetResult => {
+  const parsed = parseResponseSafely(data);
+  if (parsed === null) {
+    return createErrorResult('Failed to parse response');
+  }
+  return {
+    success: true,
+    keysDeleted: parsed.keysDeleted,
+    newInstanceId: parsed.newInstanceId,
+  };
+};
+
+/**
+ * Reset a server instance by calling POST /api/debug/reset.
+ * @param baseUrl - The base URL of the server instance
+ * @param options - Reset options (cleanRedis defaults to true)
+ */
+export const resetInstance = async (baseUrl: string, options: ResetOptions = {}): Promise<ResetResult> => {
+  const body = buildRequestBody(options);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/debug/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
     });
 
-    req.end(body);
-  });
+    if (response.status === HTTP_OK) {
+      const data: unknown = await response.json();
+      return handleSuccessResponse(data);
+    }
+
+    const errorText = await response.text();
+    return createErrorResult(`HTTP ${String(response.status)}: ${errorText}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return createErrorResult(errorMessage);
+  }
 };

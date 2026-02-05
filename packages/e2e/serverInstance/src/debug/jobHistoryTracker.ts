@@ -16,7 +16,7 @@ const ONE = 1;
  * Active jobs are tracked by the core rate limiter via getActiveJobs().
  */
 export class JobHistoryTracker {
-  private readonly history: Map<string, HistoricalJob> = new Map();
+  private readonly history = new Map<string, HistoricalJob>();
   private readonly maxJobs: number;
   private readonly retentionMs: number;
   private cleanupIntervalId: NodeJS.Timeout | null = null;
@@ -54,10 +54,10 @@ export class JobHistoryTracker {
     entries.sort((a, b) => a[ONE].completedAt - b[ONE].completedAt);
 
     const toRemove = entries.length - this.maxJobs;
-    for (let i = ZERO; i < toRemove; i++) {
-      const entry = entries[i];
-      if (entry !== undefined) {
-        this.history.delete(entry[ZERO]);
+    for (let i = ZERO; i < toRemove; i += ONE) {
+      const [jobId] = entries[i] ?? [];
+      if (jobId !== undefined) {
+        this.history.delete(jobId);
       }
     }
   }
@@ -115,9 +115,9 @@ export class JobHistoryTracker {
 
     for (const job of this.history.values()) {
       if (job.status === 'completed') {
-        completed++;
+        completed += ONE;
       } else {
-        failed++;
+        failed += ONE;
       }
     }
 

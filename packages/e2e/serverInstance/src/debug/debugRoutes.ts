@@ -1,7 +1,7 @@
 import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 
-import { type ConfigPresetName, isValidPresetName } from '../rateLimiterConfigs.js';
+import { isValidPresetName } from '../rateLimiterConfigs.js';
 import type { ResetOptions, ResetResult, ServerState } from '../serverState.js';
 import type { DebugEventEmitter } from './eventEmitter.js';
 import type { JobHistoryTracker } from './jobHistoryTracker.js';
@@ -16,6 +16,41 @@ export interface DebugRouteDeps {
   resetServer: (options?: ResetOptions) => Promise<ResetResult>;
 }
 
+/** Request body for reset endpoint */
+interface ResetRequestBody {
+  cleanRedis?: boolean;
+  configPreset?: string;
+}
+
+/** Check if property has valid cleanRedis value */
+const hasValidCleanRedisProperty = (obj: object): boolean => {
+  if (!('cleanRedis' in obj)) {
+    return true;
+  }
+  const { cleanRedis } = obj as { cleanRedis: unknown };
+  return cleanRedis === undefined || typeof cleanRedis === 'boolean';
+};
+
+/** Check if property has valid configPreset value */
+const hasValidConfigPresetProperty = (obj: object): boolean => {
+  if (!('configPreset' in obj)) {
+    return true;
+  }
+  const { configPreset } = obj as { configPreset: unknown };
+  return configPreset === undefined || typeof configPreset === 'string';
+};
+
+/** Type guard to check if value matches ResetRequestBody */
+const isResetRequestBody = (value: unknown): value is ResetRequestBody => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  if (typeof value !== 'object') {
+    return false;
+  }
+  return hasValidCleanRedisProperty(value) && hasValidConfigPresetProperty(value);
+};
+
 /** Get current state components (for convenience) */
 const getStateComponents = (
   state: ServerState
@@ -29,18 +64,10 @@ const getStateComponents = (
   jobHistoryTracker: state.jobHistoryTracker,
 });
 
-/**
- * Create debug routes for observability and testing.
- */
-export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
-  const { state, resetServer } = deps;
-  const router = createRouter();
-
-  /**
-   * GET /debug/stats
-   * Returns full rate limiter stats including models, job types, and memory.
-   */
-  router.get('/stats', (_req: Request, res: Response): void => {
+/** Handler for GET /debug/stats */
+const handleStats =
+  (state: ServerState) =>
+  (_req: Request, res: Response): void => {
     const { rateLimiter } = getStateComponents(state);
     const stats = rateLimiter.getStats();
     const instanceId = rateLimiter.getInstanceId();
@@ -50,13 +77,12 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
       timestamp: Date.now(),
       stats,
     });
-  });
+  };
 
-  /**
-   * GET /debug/active-jobs
-   * Returns all active jobs (waiting or processing) from the rate limiter.
-   */
-  router.get('/active-jobs', (_req: Request, res: Response): void => {
+/** Handler for GET /debug/active-jobs */
+const handleActiveJobs =
+  (state: ServerState) =>
+  (_req: Request, res: Response): void => {
     const { rateLimiter } = getStateComponents(state);
     const activeJobs = rateLimiter.getActiveJobs();
     const instanceId = rateLimiter.getInstanceId();
@@ -67,13 +93,12 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
       activeJobs,
       count: activeJobs.length,
     });
-  });
+  };
 
-  /**
-   * GET /debug/job-history
-   * Returns historical completed and failed jobs.
-   */
-  router.get('/job-history', (_req: Request, res: Response): void => {
+/** Handler for GET /debug/job-history */
+const handleJobHistory =
+  (state: ServerState) =>
+  (_req: Request, res: Response): void => {
     const { rateLimiter, jobHistoryTracker } = getStateComponents(state);
     const history = jobHistoryTracker.getHistory();
     const summary = jobHistoryTracker.getSummary();
@@ -85,32 +110,43 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
       history,
       summary,
     });
-  });
+  };
 
-  /**
-   * POST /debug/reset
-   * Reset the server: optionally clean Redis, create new rate limiter instance.
-   * Body: { cleanRedis?: boolean, configPreset?: ConfigPresetName } - defaults to true, keep current
-   */
-  router.post('/reset', (req: Request, res: Response): void => {
-    const body = req.body as { cleanRedis?: boolean; configPreset?: string } | undefined;
-    const options: ResetOptions = { cleanRedis: body?.cleanRedis ?? true };
+/** Parse reset options from request body */
+const parseResetOptions = (body: ResetRequestBody | undefined): ResetOptions | { error: string } => {
+  const { cleanRedis = true, configPreset } = body ?? {};
 
-    // Validate and set configPreset if provided
-    if (body?.configPreset !== undefined) {
-      if (isValidPresetName(body.configPreset)) {
-        options.configPreset = body.configPreset as ConfigPresetName;
-      } else {
-        res.status(HTTP_STATUS_BAD_REQUEST).json({
-          success: false,
-          error: `Invalid configPreset: ${body.configPreset}`,
-          timestamp: Date.now(),
-        });
-        return;
-      }
+  if (configPreset !== undefined) {
+    if (isValidPresetName(configPreset)) {
+      return { cleanRedis, configPreset };
+    }
+    return { error: `Invalid configPreset: ${configPreset}` };
+  }
+
+  return { cleanRedis };
+};
+
+/** Check if result is an error */
+const isParseError = (result: ResetOptions | { error: string }): result is { error: string } =>
+  'error' in result;
+
+/** Handler for POST /debug/reset */
+const handleReset =
+  (state: ServerState, resetServer: (options?: ResetOptions) => Promise<ResetResult>) =>
+  (req: Request, res: Response): void => {
+    const body = isResetRequestBody(req.body) ? req.body : undefined;
+    const parseResult = parseResetOptions(body);
+
+    if (isParseError(parseResult)) {
+      res.status(HTTP_STATUS_BAD_REQUEST).json({
+        success: false,
+        error: parseResult.error,
+        timestamp: Date.now(),
+      });
+      return;
     }
 
-    resetServer(options)
+    resetServer(parseResult)
       .then((result) => {
         res.status(HTTP_STATUS_OK).json({
           ...result,
@@ -125,13 +161,12 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
           timestamp: Date.now(),
         });
       });
-  });
+  };
 
-  /**
-   * GET /debug/allocation
-   * Returns the current allocation info including pools (per-model capacity).
-   */
-  router.get('/allocation', (_req: Request, res: Response): void => {
+/** Handler for GET /debug/allocation */
+const handleAllocation =
+  (state: ServerState) =>
+  (_req: Request, res: Response): void => {
     const { rateLimiter } = getStateComponents(state);
     const allocation = rateLimiter.getAllocation();
     const instanceId = rateLimiter.getInstanceId();
@@ -141,13 +176,12 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
       timestamp: Date.now(),
       allocation,
     });
-  });
+  };
 
-  /**
-   * GET /debug/events
-   * SSE endpoint for real-time event streaming.
-   */
-  router.get('/events', (req: Request, res: Response): void => {
+/** Handler for GET /debug/events (SSE endpoint) */
+const handleEvents =
+  (state: ServerState) =>
+  (req: Request, res: Response): void => {
     const { rateLimiter, eventEmitter } = getStateComponents(state);
 
     // Set SSE headers
@@ -175,7 +209,21 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
     req.on('close', () => {
       eventEmitter.removeClient(clientId);
     });
-  });
+  };
+
+/**
+ * Create debug routes for observability and testing.
+ */
+export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
+  const { state, resetServer } = deps;
+  const router = createRouter();
+
+  router.get('/stats', handleStats(state));
+  router.get('/active-jobs', handleActiveJobs(state));
+  router.get('/job-history', handleJobHistory(state));
+  router.post('/reset', handleReset(state, resetServer));
+  router.get('/allocation', handleAllocation(state));
+  router.get('/events', handleEvents(state));
 
   return router;
 };

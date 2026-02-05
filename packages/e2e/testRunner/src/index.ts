@@ -11,6 +11,42 @@ const NUM_JOBS = 10;
 const JOB_DURATION_MS = 100;
 const WAIT_TIMEOUT_MS = 30000;
 const EXIT_FAILURE = 1;
+const ZERO = 0;
+const INCREMENT = 1;
+
+/**
+ * Log event breakdown from timeline
+ */
+const logEventBreakdown = (timeline: Array<{ event: string }>): void => {
+  const eventTypes = new Map<string, number>();
+  for (const event of timeline) {
+    eventTypes.set(event.event, (eventTypes.get(event.event) ?? ZERO) + INCREMENT);
+  }
+  log('Event breakdown:');
+  for (const [type, count] of eventTypes) {
+    log(`  - ${type}: ${count}`);
+  }
+};
+
+/**
+ * Log stats by instance
+ */
+const logByInstance = (byInstance: Record<string, { completed: number; failed: number }>): void => {
+  log('By instance:');
+  for (const [instanceId, stats] of Object.entries(byInstance)) {
+    log(`  - ${instanceId}: ${stats.completed} completed, ${stats.failed} failed`);
+  }
+};
+
+/**
+ * Log stats by model
+ */
+const logByModel = (byModel: Record<string, { completed: number; failed: number }>): void => {
+  log('By model:');
+  for (const [modelId, stats] of Object.entries(byModel)) {
+    log(`  - ${modelId}: ${stats.completed} completed, ${stats.failed} failed`);
+  }
+};
 
 const runManualTest = async (): Promise<void> => {
   log('=== E2E Test Runner (Manual Mode) ===');
@@ -39,30 +75,12 @@ const runManualTest = async (): Promise<void> => {
   );
 
   if (data.summary.avgDurationMs !== null) {
-    log(`Avg job duration: ${data.summary.avgDurationMs.toFixed(1)}ms`);
+    log(`Avg job duration: ${data.summary.avgDurationMs.toFixed(INCREMENT)}ms`);
   }
 
-  // Log event breakdown from timeline
-  const eventTypes = new Map<string, number>();
-  for (const event of data.timeline) {
-    eventTypes.set(event.event, (eventTypes.get(event.event) ?? 0) + 1);
-  }
-  log('Event breakdown:');
-  for (const [type, count] of eventTypes) {
-    log(`  - ${type}: ${count}`);
-  }
-
-  // Log by instance
-  log('By instance:');
-  for (const [instanceId, stats] of Object.entries(data.summary.byInstance)) {
-    log(`  - ${instanceId}: ${stats.completed} completed, ${stats.failed} failed`);
-  }
-
-  // Log by model
-  log('By model:');
-  for (const [modelId, stats] of Object.entries(data.summary.byModel)) {
-    log(`  - ${modelId}: ${stats.completed} completed, ${stats.failed} failed`);
-  }
+  logEventBreakdown(data.timeline);
+  logByInstance(data.summary.byInstance);
+  logByModel(data.summary.byModel);
 
   log('');
   log('=== Test Complete ===');

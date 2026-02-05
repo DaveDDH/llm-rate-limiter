@@ -10,7 +10,9 @@
  *    - escalationOrder is optional for single model, required for multiple models
  */
 import type { ActiveJobInfo } from './activeJobTypes.js';
+import type { DistributedAvailability, OnAvailableSlotsChange } from './availabilityTypes.js';
 import type { DistributedBackendFactory } from './backendFactoryTypes.js';
+import type { AllocationInfo, BackendConfig } from './backendTypes.js';
 import type { JobTypeStats, RatioAdjustmentConfig, ResourceEstimationsPerJob } from './jobTypeTypes.js';
 import type {
   InternalJobResult,
@@ -343,211 +345,33 @@ export interface LLMRateLimiterStats {
 }
 
 // =============================================================================
-// Availability Change Callback Types
+// Availability Change Callback Types (re-exported from dedicated module)
 // =============================================================================
-
-/** Literal type for zero (used in RelativeAvailabilityAdjustment) */
-// eslint incorrectly flags this as magic number but it's a type literal definition
-type ZeroLiteral = (readonly [])['length'];
-
-/** Current availability across all limiters */
-export interface Availability {
-  /** Number of jobs that can be executed (minimum across all limiters) */
-  slots: number;
-  /** Available tokens per minute (remaining), null if not configured */
-  tokensPerMinute: number | null;
-  /** Available tokens per day (remaining), null if not configured */
-  tokensPerDay: number | null;
-  /** Available requests per minute (remaining), null if not configured */
-  requestsPerMinute: number | null;
-  /** Available requests per day (remaining), null if not configured */
-  requestsPerDay: number | null;
-  /** Available concurrent request slots, null if not configured */
-  concurrentRequests: number | null;
-  /** Available memory in KB, null if not configured */
-  memoryKB: number | null;
-}
-
-/** Reason for availability change (in priority order: first applicable wins) */
-export type AvailabilityChangeReason =
-  | 'adjustment' // Job used different resources than reserved
-  | 'tokensMinute' // TPM changed (reservation, refund, or window reset)
-  | 'tokensDay' // TPD changed
-  | 'requestsMinute' // RPM changed
-  | 'requestsDay' // RPD changed
-  | 'concurrentRequests' // Concurrency changed
-  | 'memory' // Memory changed
-  | 'distributed'; // Distributed backend availability update
-
-/** Relative adjustment values (actual - reserved). Only provided when reason is 'adjustment'. */
-export interface RelativeAvailabilityAdjustment {
-  /** Token difference (actual - reserved). Negative = fewer used than reserved */
-  tokensPerMinute: number;
-  /** Token difference (actual - reserved). Negative = fewer used than reserved */
-  tokensPerDay: number;
-  /** Request difference (actual - reserved). Negative = fewer used than reserved */
-  requestsPerMinute: number;
-  /** Request difference (actual - reserved). Negative = fewer used than reserved */
-  requestsPerDay: number;
-  /** Always 0 for adjustment (memory is not adjusted post-job) */
-  memoryKB: ZeroLiteral;
-  /** Always 0 for adjustment (concurrency is not adjusted post-job) */
-  concurrentRequests: ZeroLiteral;
-}
-
-/** Callback triggered when available slots change */
-export type OnAvailableSlotsChange = (
-  availability: Availability,
-  reason: AvailabilityChangeReason,
-  modelId: string,
-  adjustment?: RelativeAvailabilityAdjustment
-) => void;
+export type {
+  Availability,
+  AvailabilityChangeReason,
+  DistributedAvailability,
+  OnAvailableSlotsChange,
+  RelativeAvailabilityAdjustment,
+} from './availabilityTypes.js';
 
 // =============================================================================
-// Backend (Distributed Rate Limiting) Types
+// Backend (Distributed Rate Limiting) Types (re-exported from dedicated module)
 // =============================================================================
-
-/** Estimated resources for backend acquire (memory excluded - local only) */
-export interface BackendEstimatedResources {
-  requests: number;
-  tokens: number;
-}
-
-/** Actual resources used after job completion */
-export interface BackendActualResources {
-  requests: number;
-  tokens: number;
-}
-
-/** Per-model pool allocation (pool-based slot allocation) */
-export interface ModelPoolAllocation {
-  /** Total slots available for this model in this instance's pool */
-  totalSlots: number;
-  /** Per-instance tokens per minute limit for this model */
-  tokensPerMinute: number;
-  /** Per-instance requests per minute limit for this model */
-  requestsPerMinute: number;
-  /** Per-instance tokens per day limit for this model */
-  tokensPerDay: number;
-  /** Per-instance requests per day limit for this model */
-  requestsPerDay: number;
-}
-
-/** Pool allocation by model ID */
-export type Pools = Record<string, ModelPoolAllocation>;
-
-/**
- * Dynamic limits per model based on remaining global capacity after actual usage.
- * Calculated as: (globalLimit - globalActualUsage) / instanceCount
- */
-export interface DynamicLimits {
-  [modelId: string]: {
-    /** Remaining tokens per minute for this instance */
-    tokensPerMinute?: number;
-    /** Remaining requests per minute for this instance */
-    requestsPerMinute?: number;
-    /** Remaining tokens per day for this instance */
-    tokensPerDay?: number;
-    /** Remaining requests per day for this instance */
-    requestsPerDay?: number;
-  };
-}
-
-/** Allocation info for a specific instance from the distributed backend */
-export interface AllocationInfo {
-  /** Number of active instances sharing the rate limits */
-  instanceCount: number;
-  /**
-   * Pool allocation per model (pool-based slot allocation).
-   * Redis tracks capacity per-model only; local instances distribute across job types.
-   * Structure: { [modelId]: { totalSlots, tokensPerMinute, requestsPerMinute, ... } }
-   */
-  pools: Pools;
-  /**
-   * Dynamic limits per model based on remaining global capacity after actual usage.
-   * When present, instances should use these limits instead of dividing config by instanceCount.
-   */
-  dynamicLimits?: DynamicLimits;
-}
-
-/** Callback for allocation updates from distributed backend */
-export type AllocationCallback = (allocation: AllocationInfo) => void;
-/** Unsubscribe function returned by subscribe */
-export type Unsubscribe = () => void;
-
-/** Context passed to backend.acquire callback */
-export interface BackendAcquireContext {
-  /** The instance making the acquire request */
-  instanceId: string;
-  /** The model being acquired */
-  modelId: string;
-  /** Job identifier */
-  jobId: string;
-  /** Estimated resources for this job */
-  estimated: BackendEstimatedResources;
-}
-
-/** Context passed to backend.release callback */
-export interface BackendReleaseContext {
-  /** The instance making the release request */
-  instanceId: string;
-  /** The model being released */
-  modelId: string;
-  /** Job identifier */
-  jobId: string;
-  /** Estimated resources that were reserved */
-  estimated: BackendEstimatedResources;
-  /** Actual resources used (zero if job failed before execution) */
-  actual: BackendActualResources;
-  /** Window start timestamps for distributed usage tracking */
-  windowStarts?: {
-    /** TPM window start (ms since epoch) */
-    tpmWindowStart?: number;
-    /** RPM window start (ms since epoch) */
-    rpmWindowStart?: number;
-    /** TPD window start (ms since epoch) */
-    tpdWindowStart?: number;
-    /** RPD window start (ms since epoch) */
-    rpdWindowStart?: number;
-  };
-}
-
-/**
- * Backend configuration for distributed rate limiting with fair distribution.
- * Provides instance registration and allocation-based slot distribution.
- */
-export interface BackendConfig {
-  /**
-   * Register this instance with the backend.
-   * Called when the rate limiter starts.
-   * @returns Initial allocation for this instance
-   */
-  register: (instanceId: string) => Promise<AllocationInfo>;
-
-  /**
-   * Unregister this instance from the backend.
-   * Called when the rate limiter stops.
-   */
-  unregister: (instanceId: string) => Promise<void>;
-
-  /**
-   * Called before executing a job to acquire a slot from this instance's allocation.
-   * Return true to proceed, false to reject (no capacity in allocation).
-   */
-  acquire: (context: BackendAcquireContext) => Promise<boolean>;
-
-  /**
-   * Called after job completes to release capacity and trigger reallocation.
-   */
-  release: (context: BackendReleaseContext) => Promise<void>;
-
-  /**
-   * Subscribe to allocation updates for this instance.
-   * Callback is called immediately with current allocation, then on each update.
-   * @returns Unsubscribe function
-   */
-  subscribe: (instanceId: string, callback: AllocationCallback) => Unsubscribe;
-}
+export type {
+  AllocationCallback,
+  AllocationInfo,
+  BackendActualResources,
+  BackendAcquireContext,
+  BackendConfig,
+  BackendEstimatedResources,
+  BackendReleaseContext,
+  DynamicLimitConfig,
+  DynamicLimits,
+  ModelPoolAllocation,
+  Pools,
+  Unsubscribe,
+} from './backendTypes.js';
 
 // Re-export backend factory types from dedicated module
 export type {
@@ -556,20 +380,6 @@ export type {
   DistributedBackendFactory,
 } from './backendFactoryTypes.js';
 export { isDistributedBackendFactory } from './backendFactoryTypes.js';
-
-/** Availability from distributed backend (memory and concurrency are local-only) */
-export interface DistributedAvailability {
-  /** Number of jobs that can be executed */
-  slots: number;
-  /** Available tokens per minute (remaining), null if not tracked */
-  tokensPerMinute?: number | null;
-  /** Available tokens per day (remaining), null if not tracked */
-  tokensPerDay?: number | null;
-  /** Available requests per minute (remaining), null if not tracked */
-  requestsPerMinute?: number | null;
-  /** Available requests per day (remaining), null if not tracked */
-  requestsPerDay?: number | null;
-}
 
 // =============================================================================
 // Active Job Tracking Types (re-exported from dedicated module)

@@ -3,7 +3,7 @@
  */
 import { DebugEventEmitter, JobHistoryTracker } from './debug/index.js';
 import { logger } from './logger.js';
-import { type ConfigPresetName } from './rateLimiterConfigs.js';
+import type { ConfigPresetName } from './rateLimiterConfigs.js';
 import { type ServerRateLimiter, createRateLimiterInstance } from './rateLimiterSetup.js';
 import { cleanupRedisKeys } from './redisCleanup.js';
 
@@ -41,6 +41,23 @@ export interface ResetOptions {
   /** Configuration preset to use after reset (default: keep current) */
   configPreset?: ConfigPresetName;
 }
+
+/** Parameters for creating new state after reset */
+interface NewStateParams {
+  rateLimiter: ServerRateLimiter;
+  eventEmitter: DebugEventEmitter;
+  configPreset: ConfigPresetName;
+}
+
+/** Update server state with new components (atomic update to avoid race conditions) */
+const updateServerState = (state: ServerState, params: NewStateParams): void => {
+  // Use Object.assign to perform atomic property updates
+  Object.assign(state, {
+    rateLimiter: params.rateLimiter,
+    eventEmitter: params.eventEmitter,
+    currentConfigPreset: params.configPreset,
+  });
+};
 
 /**
  * Reset server state: optionally clean Redis, stop old rate limiter, create new one.
@@ -84,10 +101,12 @@ export const resetServerState = async (
   // Create new event emitter with new instance ID
   const newEventEmitter = new DebugEventEmitter(newRateLimiter.getInstanceId());
 
-  // Update state references
-  state.rateLimiter = newRateLimiter;
-  state.eventEmitter = newEventEmitter;
-  state.currentConfigPreset = presetToUse;
+  // Update state references atomically
+  updateServerState(state, {
+    rateLimiter: newRateLimiter,
+    eventEmitter: newEventEmitter,
+    configPreset: presetToUse,
+  });
 
   logger.info(`Server reset complete. New instance ID: ${newRateLimiter.getInstanceId()}`);
 

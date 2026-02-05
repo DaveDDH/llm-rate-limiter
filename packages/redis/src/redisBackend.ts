@@ -12,6 +12,7 @@ import type {
 import { Redis as RedisClient, type Redis as RedisType } from 'ioredis';
 import { once } from 'node:events';
 
+import { initConfigInRedis } from './configInitHelpers.js';
 import {
   DEFAULT_CLEANUP_INTERVAL_MS,
   DEFAULT_HEARTBEAT_INTERVAL_MS,
@@ -25,7 +26,6 @@ import {
   CLEANUP_SCRIPT,
   GET_STATS_SCRIPT,
   HEARTBEAT_SCRIPT,
-  INIT_CONFIG_SCRIPT,
   REGISTER_SCRIPT,
   RELEASE_SCRIPT,
   UNREGISTER_SCRIPT,
@@ -50,7 +50,7 @@ class RedisBackendImpl {
   private subscriberActive = false;
   private setupSubscriberPromise: Promise<void> | null = null;
   private stopPromise: Promise<void> | null = null;
-  private configInitPromise: Promise<void> | null = null;
+  private readonly configInitPromise: Promise<void> | null = null;
 
   constructor(redisConfig: RedisBackendInternalConfig) {
     this.ownClient = !isRedisClient(redisConfig.redis);
@@ -71,50 +71,11 @@ class RedisBackendImpl {
     this.setupSubscriberReconnection();
     this.startCleanupInterval();
     // Initialize config in Redis
-    this.configInitPromise = this.initConfig(
+    this.configInitPromise = initConfigInRedis(
+      this.redis,
+      this.keys,
       redisConfig.modelCapacities,
       redisConfig.resourceEstimationsPerJob
-    );
-  }
-
-  /** Initialize config in Redis (model capacities and job type resources) */
-  private async initConfig(
-    modelCapacities: RedisBackendInternalConfig['modelCapacities'],
-    resourceEstimationsPerJob: RedisBackendInternalConfig['resourceEstimationsPerJob']
-  ): Promise<void> {
-    if (modelCapacities === undefined || resourceEstimationsPerJob === undefined) return;
-    const { keys, redis } = this;
-    // Build job type resources with ratios
-    const jobTypeResources: Record<
-      string,
-      { estimatedUsedTokens: number; estimatedNumberOfRequests: number; ratio: number }
-    > = {};
-    const jobTypeIds = Object.keys(resourceEstimationsPerJob);
-    let specifiedTotal = 0;
-    const specifiedRatios = new Map<string, number>();
-    for (const id of jobTypeIds) {
-      const config = resourceEstimationsPerJob[id];
-      if (config?.ratio?.initialValue !== undefined) {
-        specifiedRatios.set(id, config.ratio.initialValue);
-        specifiedTotal += config.ratio.initialValue;
-      }
-    }
-    const remainingRatio = 1 - specifiedTotal;
-    const unspecifiedCount = jobTypeIds.length - specifiedRatios.size;
-    const evenShare = unspecifiedCount > 0 ? remainingRatio / unspecifiedCount : 0;
-    for (const id of jobTypeIds) {
-      const config = resourceEstimationsPerJob[id];
-      jobTypeResources[id] = {
-        estimatedUsedTokens: config?.estimatedUsedTokens ?? 1,
-        estimatedNumberOfRequests: config?.estimatedNumberOfRequests ?? 1,
-        ratio: specifiedRatios.get(id) ?? evenShare,
-      };
-    }
-    await evalScript(
-      redis,
-      INIT_CONFIG_SCRIPT,
-      [keys.modelCapacities, keys.jobTypeResources],
-      [JSON.stringify(modelCapacities), JSON.stringify(jobTypeResources)]
     );
   }
 

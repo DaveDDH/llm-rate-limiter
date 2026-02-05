@@ -8,7 +8,7 @@
  * - 2 instances share jobs evenly (proxy ratio 1:1)
  * - Each instance has 250,000 TPM = 25 jobs of 10,000 tokens
  * - Total capacity = 500,000 TPM = 50 jobs
- * - 51 jobs × 10,000 tokens = 510,000 tokens exceeds total capacity by 1 job
+ * - 51 jobs x 10,000 tokens = 510,000 tokens exceeds total capacity by 1 job
  *
  * Expected behavior:
  * - First 50 jobs complete quickly (within total rate limit)
@@ -18,14 +18,16 @@
 import type { JobRecord, TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import { createEmptyTestData } from './testHelpers.js';
 
 const PROXY_URL = 'http://localhost:3000';
 const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
-// Total capacity: 2 instances × 250,000 TPM = 500,000 TPM = 50 jobs of 10,000 tokens
+// Total capacity: 2 instances x 250,000 TPM = 500,000 TPM = 50 jobs of 10,000 tokens
 const TOTAL_CAPACITY = 50;
 // Send capacity + 1 to ensure exactly 1 job exceeds the limit
-const CAPACITY_PLUS_ONE = TOTAL_CAPACITY + 1;
+const ONE_EXTRA_JOB = 1;
+const CAPACITY_PLUS_ONE = TOTAL_CAPACITY + ONE_EXTRA_JOB;
 const JOB_DURATION_MS = 100;
 
 // Distribute jobs evenly across both instances (1:1 ratio)
@@ -39,48 +41,76 @@ const MIN_WAIT_FOR_RATE_LIMIT_RESET_MS = 1000;
 const WAIT_TIMEOUT_MS = 90000;
 const BEFORE_ALL_TIMEOUT_MS = 150000;
 
+// Index constants
+const FIRST_INDEX = 0;
+const QUICK_JOB_THRESHOLD_MS = 500;
+
+/**
+ * Test setup data structure
+ */
+interface TestSetupData {
+  data: TestData;
+  jobsSortedBySentTime: JobRecord[];
+}
+
+/**
+ * Setup test data by running the suite and sorting jobs
+ */
+const setupTestData = async (): Promise<TestSetupData> => {
+  // Each job takes 100ms to process
+  const jobs = generateJobsOfType(CAPACITY_PLUS_ONE, 'summary', {
+    prefix: 'capacity-plus-one-test',
+    durationMs: JOB_DURATION_MS,
+  });
+
+  const data = await runSuite({
+    suiteName: 'capacity-plus-one',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs,
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: PROXY_RATIO,
+  });
+
+  // Sort jobs by when they were sent (sentAt)
+  const jobsSortedBySentTime = Object.values(data.jobs).sort((a, b) => a.sentAt - b.sentAt);
+
+  return { data, jobsSortedBySentTime };
+};
+
+/**
+ * Create empty test setup data for initialization
+ */
+const createEmptyTestSetup = (): TestSetupData => ({
+  data: createEmptyTestData(),
+  jobsSortedBySentTime: [],
+});
+
 describe('Capacity Plus One', () => {
-  let data: TestData;
-  let jobsSortedBySentTime: JobRecord[];
+  let testSetup: TestSetupData = createEmptyTestSetup();
 
   beforeAll(async () => {
-    // Each job takes 100ms to process
-    const jobs = generateJobsOfType(CAPACITY_PLUS_ONE, 'summary', {
-      prefix: 'capacity-plus-one-test',
-      durationMs: JOB_DURATION_MS,
-    });
-
-    data = await runSuite({
-      suiteName: 'capacity-plus-one',
-      proxyUrl: PROXY_URL,
-      instanceUrls: INSTANCE_URLS,
-      jobs,
-      waitTimeoutMs: WAIT_TIMEOUT_MS,
-      proxyRatio: PROXY_RATIO,
-    });
-
-    // Sort jobs by when they were sent (sentAt)
-    jobsSortedBySentTime = Object.values(data.jobs).sort((a, b) => a.sentAt - b.sentAt);
+    testSetup = await setupTestData();
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should send all jobs', () => {
-    expect(Object.keys(data.jobs).length).toBe(CAPACITY_PLUS_ONE);
+    expect(Object.keys(testSetup.data.jobs).length).toBe(CAPACITY_PLUS_ONE);
   });
 
   it('should not reject any jobs', () => {
-    const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
-    expect(failedJobs.length).toBe(0);
+    const failedJobs = Object.values(testSetup.data.jobs).filter((j) => j.status === 'failed');
+    expect(failedJobs.length).toBe(FIRST_INDEX);
   });
 
   it('should eventually complete all jobs', () => {
-    const completedJobs = Object.values(data.jobs).filter((j) => j.status === 'completed');
+    const completedJobs = Object.values(testSetup.data.jobs).filter((j) => j.status === 'completed');
     expect(completedJobs.length).toBe(CAPACITY_PLUS_ONE);
   });
 
   it('should have first 50 jobs complete quickly', () => {
     // First 50 jobs should fit within the total rate limit (500,000 TPM across 2 instances)
-    const first50Jobs = jobsSortedBySentTime.slice(0, TOTAL_CAPACITY);
-    const quickJobs = first50Jobs.filter((j) => (j.queueDurationMs ?? 0) < 500);
+    const first50Jobs = testSetup.jobsSortedBySentTime.slice(FIRST_INDEX, TOTAL_CAPACITY);
+    const quickJobs = first50Jobs.filter((j) => (j.queueDurationMs ?? FIRST_INDEX) < QUICK_JOB_THRESHOLD_MS);
 
     // All first 50 jobs should complete quickly (no waiting for rate limit)
     expect(quickJobs.length).toBe(TOTAL_CAPACITY);
@@ -88,10 +118,10 @@ describe('Capacity Plus One', () => {
 
   it('should have the 51st job wait for rate limit window reset', () => {
     // The 51st job exceeds total capacity and must wait for the next minute window
-    const job51 = jobsSortedBySentTime[TOTAL_CAPACITY];
+    const [job51] = testSetup.jobsSortedBySentTime.slice(TOTAL_CAPACITY);
     expect(job51).toBeDefined();
 
-    const job51QueueDuration = job51?.queueDurationMs ?? 0;
+    const job51QueueDuration = job51?.queueDurationMs ?? FIRST_INDEX;
 
     // The job must have waited for the rate limit window to reset
     // This should be at least MIN_WAIT_FOR_RATE_LIMIT_RESET_MS (not instant like the first 50)
@@ -99,7 +129,7 @@ describe('Capacity Plus One', () => {
   });
 
   it('should complete all jobs through the full lifecycle', () => {
-    for (const job of Object.values(data.jobs)) {
+    for (const job of Object.values(testSetup.data.jobs)) {
       expect(job.events.some((e) => e.type === 'queued')).toBe(true);
       expect(job.events.some((e) => e.type === 'started')).toBe(true);
       expect(job.events.some((e) => e.type === 'completed')).toBe(true);

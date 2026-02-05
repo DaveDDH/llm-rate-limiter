@@ -19,6 +19,7 @@
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
 const PROXY_URL = 'http://localhost:3000';
 const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
@@ -27,6 +28,9 @@ const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 // Fill 2 minutes: 100 jobs
 // Job 101's maxWaitMS (~65s) expires before minute 2 (T=120)
 const CAPACITY_JOBS = 100;
+const ESCALATION_JOB_COUNT = 1;
+const TOTAL_JOBS = CAPACITY_JOBS + ESCALATION_JOB_COUNT;
+
 // Duration longer than maxWaitMS default (~65s) to ensure timeout before completion
 const JOB_DURATION_MS = 60000;
 
@@ -34,50 +38,62 @@ const WAIT_TIMEOUT_MS = 180000;
 // Extra 60s for waiting for minute boundary
 const BEFORE_ALL_TIMEOUT_MS = 300000;
 
+// Constants
+const DELAYED_JOB_DELAY_MS = 500;
+
+/**
+ * Create the escalation test job
+ */
+const createEscalationJob = (): { jobId: string; jobType: string; payload: Record<string, unknown> } => ({
+  jobId: `escalation-test-${Date.now()}`,
+  jobType: 'summary',
+  payload: { testData: 'Escalation test job', durationMs: JOB_DURATION_MS },
+});
+
+/**
+ * Run the model escalation test suite
+ */
+const runModelEscalationTest = async (): Promise<TestData> => {
+  const capacityJobs = generateJobsOfType(CAPACITY_JOBS, 'summary', {
+    prefix: 'escalation-capacity',
+    durationMs: JOB_DURATION_MS,
+  });
+
+  const escalationJob = createEscalationJob();
+
+  return await runSuite({
+    suiteName: 'model-escalation',
+    proxyUrl: PROXY_URL,
+    instanceUrls: INSTANCE_URLS,
+    jobs: capacityJobs,
+    delayedJobs: [escalationJob],
+    delayedJobsDelayMs: DELAYED_JOB_DELAY_MS,
+    waitTimeoutMs: WAIT_TIMEOUT_MS,
+    proxyRatio: '1:1',
+    waitForMinuteBoundary: true,
+    sendJobsInParallel: true,
+  });
+};
+
 describe('Model Escalation to Secondary', () => {
-  let data: TestData;
+  let data: TestData = createEmptyTestData();
 
   beforeAll(async () => {
-    // Create capacity-filling jobs with long duration
-    const capacityJobs = generateJobsOfType(CAPACITY_JOBS, 'summary', {
-      prefix: 'escalation-capacity',
-      durationMs: JOB_DURATION_MS,
-    });
-
-    // Create the job that will escalate (also long duration)
-    // This is sent as a delayed job to ensure it arrives AFTER capacity jobs are queued
-    const escalationJob = {
-      jobId: `escalation-test-${Date.now()}`,
-      jobType: 'summary',
-      payload: { testData: 'Escalation test job', durationMs: JOB_DURATION_MS },
-    };
-
-    data = await runSuite({
-      suiteName: 'model-escalation',
-      proxyUrl: PROXY_URL,
-      instanceUrls: INSTANCE_URLS,
-      jobs: capacityJobs,
-      delayedJobs: [escalationJob],
-      delayedJobsDelayMs: 500,
-      waitTimeoutMs: WAIT_TIMEOUT_MS,
-      proxyRatio: '1:1',
-      waitForMinuteBoundary: true,
-      sendJobsInParallel: true,
-    });
+    data = await runModelEscalationTest();
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should send all jobs', () => {
-    expect(Object.keys(data.jobs).length).toBe(CAPACITY_JOBS + 1);
+    expect(Object.keys(data.jobs).length).toBe(TOTAL_JOBS);
   });
 
   it('should not reject any jobs', () => {
     const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');
-    expect(failedJobs.length).toBe(0);
+    expect(failedJobs.length).toBe(ZERO_COUNT);
   });
 
   it('should complete all jobs', () => {
     const completedJobs = Object.values(data.jobs).filter((j) => j.status === 'completed');
-    expect(completedJobs.length).toBe(CAPACITY_JOBS + 1);
+    expect(completedJobs.length).toBe(TOTAL_JOBS);
   });
 
   it('should run all capacity jobs on the primary model', () => {

@@ -21,8 +21,6 @@
  *
  * Note: This test uses programmatic instance boot/kill for precise control.
  */
-import type { AllocationInfo } from '@llm-rate-limiter/core';
-
 import {
   bootInstance,
   cleanRedis,
@@ -43,236 +41,244 @@ const ALLOCATION_PROPAGATION_MS = 2000;
 const INSTANCE_CLEANUP_TIMEOUT_MS = 20000; // Time for heartbeat timeout + cleanup
 const BEFORE_ALL_TIMEOUT_MS = 60000;
 const AFTER_ALL_TIMEOUT_MS = 30000;
+const BEFORE_ALL_TIMEOUT_MULTIPLIER = 2;
+const BEFORE_ALL_TIMEOUT_TRIPLE = 3;
 
-describe('Instance Scaling with Pool-Based Allocation', () => {
-  // Clean up all instances after all tests
+// Instance and slot counts
+const SINGLE_INSTANCE = 1;
+const TWO_INSTANCES = 2;
+const THREE_INSTANCES = 3;
+const TEN_SLOTS = 10;
+const FIVE_SLOTS = 5;
+const THREE_SLOTS = 3;
+
+/**
+ * Get scale model slots from response
+ */
+const getScaleModelSlots = (response: Awaited<ReturnType<typeof fetchAllocation>>): number | undefined => {
+  const pools = response.allocation?.pools;
+  if (pools === undefined) {
+    return undefined;
+  }
+  return pools['scale-model']?.totalSlots;
+};
+
+/**
+ * Verify pool slots for an instance
+ */
+const verifyPoolSlots = async (port: number, expectedSlots: number): Promise<void> => {
+  const response = await fetchAllocation(port);
+  const slots = getScaleModelSlots(response);
+  expect(slots).toBe(expectedSlots);
+};
+
+/**
+ * Verify instance count for an allocation response
+ */
+const verifyInstanceCount = async (port: number, expectedCount: number): Promise<void> => {
+  const response = await fetchAllocation(port);
+  expect(response.allocation?.instanceCount).toBe(expectedCount);
+};
+
+/**
+ * Setup single instance test
+ */
+const setupSingleInstanceTest = async (): Promise<void> => {
+  await killAllInstances();
+  await cleanRedis();
+  await bootInstance(PORT_A, CONFIG_PRESET);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+};
+
+/**
+ * Setup two instance test with verification
+ */
+const setupTwoInstanceTest = async (): Promise<void> => {
+  await killAllInstances();
+  await cleanRedis();
+
+  // Start Instance A first
+  await bootInstance(PORT_A, CONFIG_PRESET);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+
+  // Verify A has full capacity initially
+  const initialAlloc = await fetchAllocation(PORT_A);
+  expect(initialAlloc.allocation?.instanceCount).toBe(SINGLE_INSTANCE);
+  expect(getScaleModelSlots(initialAlloc)).toBe(TEN_SLOTS);
+
+  // Now boot Instance B
+  await bootInstance(PORT_B, CONFIG_PRESET);
+
+  // Wait for A to receive the updated allocation
+  await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === TWO_INSTANCES);
+};
+
+/**
+ * Setup instance leave test
+ */
+const setupInstanceLeaveTest = async (): Promise<void> => {
+  await killAllInstances();
+  await cleanRedis();
+
+  // Start both instances
+  await bootInstance(PORT_A, CONFIG_PRESET);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+  await bootInstance(PORT_B, CONFIG_PRESET);
+  await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === TWO_INSTANCES);
+
+  // Verify both have 5 pool slots
+  const allocA = await fetchAllocation(PORT_A);
+  expect(getScaleModelSlots(allocA)).toBe(FIVE_SLOTS);
+
+  // Kill ONLY Instance B while A continues running
+  await killInstance(PORT_B);
+
+  // Wait for A to detect B's departure via heartbeat timeout + reallocation
+  await waitForAllocationUpdate(
+    PORT_A,
+    (alloc) => alloc.instanceCount === SINGLE_INSTANCE,
+    INSTANCE_CLEANUP_TIMEOUT_MS
+  );
+};
+
+/**
+ * Run the multiple join/leave cycle test
+ */
+const runJoinLeaveCycleTest = async (): Promise<void> => {
+  // Step 1: A starts alone with 10 pool slots
+  await bootInstance(PORT_A, CONFIG_PRESET);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+  await verifyPoolSlots(PORT_A, TEN_SLOTS);
+
+  // Step 2: B joins, both have 5 pool slots
+  await bootInstance(PORT_B, CONFIG_PRESET);
+  await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === TWO_INSTANCES);
+  await verifyPoolSlots(PORT_A, FIVE_SLOTS);
+  await verifyPoolSlots(PORT_B, FIVE_SLOTS);
+
+  // Step 3: C joins, all have 3 pool slots
+  await bootInstance(PORT_C, CONFIG_PRESET);
+  await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === THREE_INSTANCES);
+  await verifyPoolSlots(PORT_A, THREE_SLOTS);
+  await verifyPoolSlots(PORT_B, THREE_SLOTS);
+  await verifyPoolSlots(PORT_C, THREE_SLOTS);
+
+  // Step 4: C leaves, A and B each have 5 pool slots
+  await killInstance(PORT_C);
+  await waitForAllocationUpdate(
+    PORT_A,
+    (alloc) => alloc.instanceCount === TWO_INSTANCES,
+    INSTANCE_CLEANUP_TIMEOUT_MS
+  );
+  await verifyPoolSlots(PORT_A, FIVE_SLOTS);
+  await verifyPoolSlots(PORT_B, FIVE_SLOTS);
+
+  // Step 5: B leaves, A has 10 pool slots
+  await killInstance(PORT_B);
+  await waitForAllocationUpdate(
+    PORT_A,
+    (alloc) => alloc.instanceCount === SINGLE_INSTANCE,
+    INSTANCE_CLEANUP_TIMEOUT_MS
+  );
+  await verifyPoolSlots(PORT_A, TEN_SLOTS);
+};
+
+// Clean up all instances after all tests
+afterAll(async () => {
+  await killAllInstances();
+}, AFTER_ALL_TIMEOUT_MS);
+
+describe('Instance Scaling - Instance A Starts Alone', () => {
+  beforeAll(async () => {
+    await setupSingleInstanceTest();
+  }, BEFORE_ALL_TIMEOUT_MS);
+
   afterAll(async () => {
     await killAllInstances();
   }, AFTER_ALL_TIMEOUT_MS);
 
-  describe('Instance A Starts Alone', () => {
-    /**
-     * Scenario:
-     * 1. Clean Redis and boot Instance A alone
-     * 2. A should get full pool capacity (10 slots)
-     */
-    beforeAll(async () => {
-      await killAllInstances();
-      await cleanRedis();
-      await bootInstance(PORT_A, CONFIG_PRESET);
-      await sleep(ALLOCATION_PROPAGATION_MS);
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    afterAll(async () => {
-      await killAllInstances();
-    }, AFTER_ALL_TIMEOUT_MS);
-
-    it('should report 1 instance', async () => {
-      const response = await fetchAllocation(PORT_A);
-      expect(response.allocation?.instanceCount).toBe(1);
-    });
-
-    it('should have 10 pool slots as single instance', async () => {
-      const response = await fetchAllocation(PORT_A);
-      const slots = response.allocation?.pools?.['scale-model']?.totalSlots;
-      // floor((100K/10K) / 1) = 10
-      expect(slots).toBe(10);
-    });
+  it('should report 1 instance', async () => {
+    await verifyInstanceCount(PORT_A, SINGLE_INSTANCE);
   });
 
-  describe('Instance B Joins - Pool Slots Halve', () => {
-    /**
-     * Scenario:
-     * 1. Instance A starts alone (gets 10 pool slots)
-     * 2. Instance B joins
-     * 3. Both instances should have 5 pool slots each
-     */
-    beforeAll(async () => {
-      await killAllInstances();
-      await cleanRedis();
+  it('should have 10 pool slots as single instance', async () => {
+    await verifyPoolSlots(PORT_A, TEN_SLOTS);
+  });
+});
 
-      // Start Instance A first
-      await bootInstance(PORT_A, CONFIG_PRESET);
-      await sleep(ALLOCATION_PROPAGATION_MS);
+describe('Instance Scaling - Instance B Joins Pool Slots Halve', () => {
+  beforeAll(async () => {
+    await setupTwoInstanceTest();
+  }, BEFORE_ALL_TIMEOUT_MS);
 
-      // Verify A has full capacity initially
-      const initialAlloc = await fetchAllocation(PORT_A);
-      expect(initialAlloc.allocation?.instanceCount).toBe(1);
-      expect(initialAlloc.allocation?.pools?.['scale-model']?.totalSlots).toBe(10);
+  afterAll(async () => {
+    await killAllInstances();
+  }, AFTER_ALL_TIMEOUT_MS);
 
-      // Now boot Instance B
-      await bootInstance(PORT_B, CONFIG_PRESET);
-
-      // Wait for A to receive the updated allocation
-      await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === 2);
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    afterAll(async () => {
-      await killAllInstances();
-    }, AFTER_ALL_TIMEOUT_MS);
-
-    it('should report 2 instances on Instance A', async () => {
-      const response = await fetchAllocation(PORT_A);
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
-
-    it('should report 2 instances on Instance B', async () => {
-      const response = await fetchAllocation(PORT_B);
-      expect(response.allocation?.instanceCount).toBe(2);
-    });
-
-    it('should have 5 pool slots on Instance A after B joins', async () => {
-      const response = await fetchAllocation(PORT_A);
-      const slots = response.allocation?.pools?.['scale-model']?.totalSlots;
-      // floor((100K/10K) / 2) = 5
-      expect(slots).toBe(5);
-    });
-
-    it('should have 5 pool slots on Instance B', async () => {
-      const response = await fetchAllocation(PORT_B);
-      const slots = response.allocation?.pools?.['scale-model']?.totalSlots;
-      // floor((100K/10K) / 2) = 5
-      expect(slots).toBe(5);
-    });
-
-    it('should have consistent pool allocation on both instances', async () => {
-      const responseA = await fetchAllocation(PORT_A);
-      const responseB = await fetchAllocation(PORT_B);
-
-      expect(responseA.allocation?.instanceCount).toBe(responseB.allocation?.instanceCount);
-      expect(responseA.allocation?.pools?.['scale-model']?.totalSlots).toBe(
-        responseB.allocation?.pools?.['scale-model']?.totalSlots
-      );
-    });
+  it('should report 2 instances on Instance A', async () => {
+    await verifyInstanceCount(PORT_A, TWO_INSTANCES);
   });
 
-  describe('Instance B Leaves - Pool Slots Double', () => {
-    /**
-     * Scenario:
-     * 1. Instance A and B are running (5 pool slots each)
-     * 2. Instance B is killed (while A remains running)
-     * 3. Instance A should detect B's departure via heartbeat timeout
-     * 4. Instance A should get back full pool capacity (10 slots)
-     *
-     * This tests the realistic scenario where an instance dies while others
-     * continue running and need to detect the change via heartbeat timeout.
-     */
-    beforeAll(async () => {
-      await killAllInstances();
-      await cleanRedis();
-
-      // Start both instances
-      await bootInstance(PORT_A, CONFIG_PRESET);
-      await sleep(ALLOCATION_PROPAGATION_MS);
-      await bootInstance(PORT_B, CONFIG_PRESET);
-      await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === 2);
-
-      // Verify both have 5 pool slots
-      const allocA = await fetchAllocation(PORT_A);
-      expect(allocA.allocation?.pools?.['scale-model']?.totalSlots).toBe(5);
-
-      // Kill ONLY Instance B while A continues running
-      // This tests heartbeat timeout detection
-      await killInstance(PORT_B);
-
-      // Wait for A to detect B's departure via heartbeat timeout + reallocation
-      // This may take longer as it depends on heartbeat interval and cleanup
-      await waitForAllocationUpdate(
-        PORT_A,
-        (alloc) => alloc.instanceCount === 1,
-        INSTANCE_CLEANUP_TIMEOUT_MS
-      );
-    }, BEFORE_ALL_TIMEOUT_MS * 2);
-
-    afterAll(async () => {
-      await killAllInstances();
-    }, AFTER_ALL_TIMEOUT_MS);
-
-    it('should report 1 instance on Instance A after B leaves', async () => {
-      const response = await fetchAllocation(PORT_A);
-      expect(response.allocation?.instanceCount).toBe(1);
-    });
-
-    it('should have 10 pool slots on Instance A after B leaves', async () => {
-      const response = await fetchAllocation(PORT_A);
-      const slots = response.allocation?.pools?.['scale-model']?.totalSlots;
-      // floor((100K/10K) / 1) = 10
-      expect(slots).toBe(10);
-    });
-
-    it('should have A running continuously (not restarted)', async () => {
-      // This verifies A stayed running the whole time by checking it's still responsive
-      const response = await fetchAllocation(PORT_A);
-      expect(response.allocation).not.toBeNull();
-      expect(response.instanceId).toBeDefined();
-    });
+  it('should report 2 instances on Instance B', async () => {
+    await verifyInstanceCount(PORT_B, TWO_INSTANCES);
   });
 
-  describe('Multiple Instance Joins and Leaves', () => {
-    /**
-     * Scenario:
-     * 1. A starts alone (10 pool slots)
-     * 2. B joins (A and B each have 5 pool slots)
-     * 3. C joins (A, B, C each have 3 pool slots)
-     * 4. C leaves (A and B each have 5 pool slots)
-     * 5. B leaves (A has 10 pool slots)
-     */
-    const verifyPoolSlots = async (port: number, expectedSlots: number): Promise<void> => {
-      const response = await fetchAllocation(port);
-      const slots = response.allocation?.pools?.['scale-model']?.totalSlots;
-      expect(slots).toBe(expectedSlots);
-    };
-
-    beforeAll(async () => {
-      await killAllInstances();
-      await cleanRedis();
-    }, BEFORE_ALL_TIMEOUT_MS);
-
-    afterAll(async () => {
-      await killAllInstances();
-    }, AFTER_ALL_TIMEOUT_MS);
-
-    it(
-      'should redistribute pool slots through multiple join/leave cycles',
-      async () => {
-        // Step 1: A starts alone with 10 pool slots
-        await bootInstance(PORT_A, CONFIG_PRESET);
-        await sleep(ALLOCATION_PROPAGATION_MS);
-        await verifyPoolSlots(PORT_A, 10);
-
-        // Step 2: B joins, both have 5 pool slots
-        await bootInstance(PORT_B, CONFIG_PRESET);
-        await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === 2);
-        await verifyPoolSlots(PORT_A, 5);
-        await verifyPoolSlots(PORT_B, 5);
-
-        // Step 3: C joins, all have 3 pool slots
-        await bootInstance(PORT_C, CONFIG_PRESET);
-        await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === 3);
-        await verifyPoolSlots(PORT_A, 3);
-        await verifyPoolSlots(PORT_B, 3);
-        await verifyPoolSlots(PORT_C, 3);
-
-        // Step 4: C leaves, A and B each have 5 pool slots
-        await killInstance(PORT_C);
-        await waitForAllocationUpdate(
-          PORT_A,
-          (alloc) => alloc.instanceCount === 2,
-          INSTANCE_CLEANUP_TIMEOUT_MS
-        );
-        await verifyPoolSlots(PORT_A, 5);
-        await verifyPoolSlots(PORT_B, 5);
-
-        // Step 5: B leaves, A has 10 pool slots
-        await killInstance(PORT_B);
-        await waitForAllocationUpdate(
-          PORT_A,
-          (alloc) => alloc.instanceCount === 1,
-          INSTANCE_CLEANUP_TIMEOUT_MS
-        );
-        await verifyPoolSlots(PORT_A, 10);
-      },
-      BEFORE_ALL_TIMEOUT_MS * 3
-    );
+  it('should have 5 pool slots on Instance A after B joins', async () => {
+    await verifyPoolSlots(PORT_A, FIVE_SLOTS);
   });
+
+  it('should have 5 pool slots on Instance B', async () => {
+    await verifyPoolSlots(PORT_B, FIVE_SLOTS);
+  });
+
+  it('should have consistent pool allocation on both instances', async () => {
+    const responseA = await fetchAllocation(PORT_A);
+    const responseB = await fetchAllocation(PORT_B);
+
+    expect(responseA.allocation?.instanceCount).toBe(responseB.allocation?.instanceCount);
+    expect(getScaleModelSlots(responseA)).toBe(getScaleModelSlots(responseB));
+  });
+});
+
+describe('Instance Scaling - Instance B Leaves Pool Slots Double', () => {
+  beforeAll(async () => {
+    await setupInstanceLeaveTest();
+  }, BEFORE_ALL_TIMEOUT_MS * BEFORE_ALL_TIMEOUT_MULTIPLIER);
+
+  afterAll(async () => {
+    await killAllInstances();
+  }, AFTER_ALL_TIMEOUT_MS);
+
+  it('should report 1 instance on Instance A after B leaves', async () => {
+    await verifyInstanceCount(PORT_A, SINGLE_INSTANCE);
+  });
+
+  it('should have 10 pool slots on Instance A after B leaves', async () => {
+    await verifyPoolSlots(PORT_A, TEN_SLOTS);
+  });
+
+  it('should have A running continuously (not restarted)', async () => {
+    const response = await fetchAllocation(PORT_A);
+    expect(response.allocation).not.toBeNull();
+    expect(response.instanceId).toBeDefined();
+  });
+});
+
+describe('Instance Scaling - Multiple Join Leave Cycles', () => {
+  beforeAll(async () => {
+    await killAllInstances();
+    await cleanRedis();
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await killAllInstances();
+  }, AFTER_ALL_TIMEOUT_MS);
+
+  it(
+    'should redistribute pool slots through multiple join/leave cycles',
+    async () => {
+      await runJoinLeaveCycleTest();
+    },
+    BEFORE_ALL_TIMEOUT_MS * BEFORE_ALL_TIMEOUT_TRIPLE
+  );
 });

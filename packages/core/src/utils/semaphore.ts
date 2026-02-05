@@ -167,4 +167,19 @@ export class Semaphore {
       queueLength: this.queue.length,
     });
   }
+
+  /** Set maximum permits (alias for resize) */
+  setMax(newMax: number): void {
+    this.resize(newMax);
+  }
+
+  /** Check if there are any available permits */
+  hasCapacity(): boolean {
+    return this.permits >= ONE_PERMIT && this.queue.length === ZERO_PERMITS;
+  }
+
+  /** Check if there are enough permits for the specified amount */
+  hasCapacityFor(amount: number): boolean {
+    return this.permits >= amount && this.queue.length === ZERO_PERMITS;
+  }
 }

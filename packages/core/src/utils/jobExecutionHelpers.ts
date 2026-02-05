@@ -259,8 +259,7 @@ const tryModelAtIndex = async (
  * Only escalates to the next model after waiting on the current one.
  * @returns The selected model ID, or null if all models exhausted
  */
-export const selectModelWithWait = async (params: SelectModelWithWaitParams): Promise<SelectModelResult> => {
-  // Try each model in order, waiting on each before moving to the next
-  // This ensures we wait for capacity on preferred models before escalating
-  return await tryModelAtIndex(params, ZERO, ZERO);
-};
+// Try each model in order, waiting on each before moving to the next
+// This ensures we wait for capacity on preferred models before escalating
+export const selectModelWithWait = async (params: SelectModelWithWaitParams): Promise<SelectModelResult> =>
+  await tryModelAtIndex(params, ZERO, ZERO);

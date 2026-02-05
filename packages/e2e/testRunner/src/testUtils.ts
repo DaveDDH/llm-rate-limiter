@@ -1,7 +1,8 @@
-import { request } from 'node:http';
+import { setTimeout as setTimeoutPromise } from 'node:timers/promises';
 
 const HTTP_ACCEPTED = 202;
 const ZERO = 0;
+const INCREMENT = 1;
 
 /** Job request to send to the server */
 export interface JobRequest {
@@ -26,61 +27,52 @@ export interface DebugEvent {
 }
 
 /**
- * Send a job to a server instance.
+ * Send a job to a server instance using fetch API.
  */
 export const sendJob = async (baseUrl: string, job: JobRequest): Promise<JobResponse> => {
-  return new Promise((resolve) => {
-    const data = JSON.stringify(job);
-    const urlObj = new URL(`${baseUrl}/api/queue-job`);
-
-    const req = request(
-      {
-        hostname: urlObj.hostname,
-        port: urlObj.port,
-        path: urlObj.pathname,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(data),
-        },
-      },
-      (res) => {
-        let body = '';
-        res.on('data', (chunk: Buffer) => {
-          body += chunk.toString();
-        });
-        res.on('end', () => {
-          if (res.statusCode === HTTP_ACCEPTED) {
-            resolve({ success: true, jobId: job.jobId });
-          } else {
-            resolve({
-              success: false,
-              jobId: job.jobId,
-              error: `HTTP ${res.statusCode}: ${body}`,
-            });
-          }
-        });
-      }
-    );
-
-    req.on('error', (error) => {
-      resolve({
-        success: false,
-        jobId: job.jobId,
-        error: error.message,
-      });
+  try {
+    const response = await fetch(`${baseUrl}/api/queue-job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(job),
     });
 
-    req.write(data);
-    req.end();
-  });
+    if (response.status === HTTP_ACCEPTED) {
+      return { success: true, jobId: job.jobId };
+    }
+
+    const body = await response.text();
+    return {
+      success: false,
+      jobId: job.jobId,
+      error: `HTTP ${String(response.status)}: ${body}`,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      success: false,
+      jobId: job.jobId,
+      error: errorMessage,
+    };
+  }
+};
+
+/** Send a single job asynchronously */
+const sendSingleJob = async (baseUrl: string, job: JobRequest): Promise<JobResponse> => {
+  const result = await sendJob(baseUrl, job);
+  return result;
 };
 
 /**
  * Send multiple jobs in parallel.
  */
 export const sendJobs = async (baseUrl: string, jobs: JobRequest[]): Promise<JobResponse[]> => {
-  return Promise.all(jobs.map((job) => sendJob(baseUrl, job)));
+  const sendPromises = jobs.map(async (job) => {
+    const result = await sendSingleJob(baseUrl, job);
+    return result;
+  });
+  const results = await Promise.all(sendPromises);
+  return results;
 };
 
 /**
@@ -100,7 +92,7 @@ export const createJob = (jobType: string, index: number): JobRequest => ({
  */
 export const createJobs = (jobType: string, count: number): JobRequest[] => {
   const jobs: JobRequest[] = [];
-  for (let i = ZERO; i < count; i++) {
+  for (let i = ZERO; i < count; i += INCREMENT) {
     jobs.push(createJob(jobType, i));
   }
   return jobs;
@@ -123,10 +115,10 @@ export const logError = (message: string): void => {
 };
 
 /**
- * Sleep for a specified duration.
+ * Sleep for a specified duration using native timers/promises.
  */
-export const sleep = (ms: number): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = async (ms: number): Promise<void> => {
+  await setTimeoutPromise(ms);
 };
 
 /**
@@ -135,7 +127,7 @@ export const sleep = (ms: number): Promise<void> => {
 export const summarizeResults = (
   results: JobResponse[]
 ): { successful: number; failed: number; total: number } => {
-  const successful = results.filter((r) => r.success).length;
-  const failed = results.filter((r) => !r.success).length;
-  return { successful, failed, total: results.length };
+  const successfulResults = results.filter((r) => r.success);
+  const failedResults = results.filter((r) => !r.success);
+  return { successful: successfulResults.length, failed: failedResults.length, total: results.length };
 };
