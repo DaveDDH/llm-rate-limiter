@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flowforge",
-  description: "LLM State machine builder",
+  title: "Visualizer",
+  description: "Distributed job queue visualizer",
 };
 
 export default function RootLayout({

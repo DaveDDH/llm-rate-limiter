@@ -1,5 +1,5 @@
-import { GraphBuilder } from "./components/GraphBuilder";
+import { Visualizer } from './components/Visualizer';
 
 export default function Page() {
-  return <GraphBuilder />;
+  return <Visualizer />;
 }
