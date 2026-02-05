@@ -1,6 +1,6 @@
-# E2E Tests for Distributed Slots
+# E2E Tests
 
-This document describes the end-to-end test suites for verifying the pool-based slot allocation system in the distributed rate limiter.
+This document describes the end-to-end test suites for verifying the system in the distributed rate limiter.
 
 ## Overview
 
