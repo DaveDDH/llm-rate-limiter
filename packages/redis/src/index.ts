@@ -18,7 +18,7 @@
  *       pricing: { input: 0.03, output: 0.06, cached: 0.015 },
  *     },
  *   },
- *   resourcesPerJob: {
+ *   resourceEstimationsPerJob: {
  *     'summarize': { estimatedUsedTokens: 5000, ratio: { initialValue: 0.6 } },
  *     'translate': { estimatedUsedTokens: 2000, ratio: { initialValue: 0.4 } },
  *   },

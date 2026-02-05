@@ -329,11 +329,9 @@ job: async ({ modelId }, reject) => {
 const limiter = createLLMRateLimiter({
   models: { /* ... */ },
   memory: {
-    totalAvailableMemoryKB: 512 * 1024,
+    freeMemoryRatio: 0.8,             // Use 80% of available memory
     recalculationIntervalMs: 5000,
   },
-  minCapacity: 5,
-  maxCapacity: 100,
 });
 ```
 
@@ -346,11 +344,11 @@ const limiter = createLLMRateLimiter({
     // reason: 'tokensMinute' | 'tokensDay' | 'requestsMinute' | 
     //         'requestsDay' | 'concurrentRequests' | 'memory' | 'distributed'
   },
-  onOverage: (overage) => {
-    console.warn(`Exceeded estimate by ${overage.tokens} tokens`);
+  onOverage: (event) => {
+    console.warn(`${event.resourceType} overage: ${event.overage} (estimated ${event.estimated}, actual ${event.actual})`);
   },
-  onLog: (level, message, data) => {
-    // 'debug' | 'info' | 'warn' | 'error'
+  onLog: (message, data) => {
+    console.log(message, data);
   },
 });
 ```
