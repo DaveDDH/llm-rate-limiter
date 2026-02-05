@@ -9,6 +9,7 @@ import type {
   InternalLimiterInstance,
   InternalLimiterStats,
   LogFn,
+  OverageFn,
 } from '../types.js';
 import { AvailabilityTracker, type ModelCapacityBounds } from './availabilityTracker.js';
 import { calculateMaxEstimatedResource } from './jobExecutionHelpers.js';
@@ -76,7 +77,8 @@ export const initializeModelLimiters = (
   models: Record<string, ModelRateLimitConfig>,
   label: string,
   onLog: LogFn | undefined,
-  estimatedResources?: EstimatedResources
+  estimatedResources?: EstimatedResources,
+  onOverage?: OverageFn
 ): Map<string, InternalLimiterInstance> => {
   const limiters = new Map<string, InternalLimiterInstance>();
   for (const [modelId, modelConfig] of Object.entries(models)) {
@@ -85,6 +87,7 @@ export const initializeModelLimiters = (
       modelConfig: modelConfig as InternalLimiterConfig,
       parentLabel: label,
       onLog,
+      onOverage,
       estimatedResources,
     });
     limiters.set(modelId, createInternalLimiter(limiterConfig));

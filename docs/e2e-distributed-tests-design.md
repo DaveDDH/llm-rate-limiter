@@ -6,10 +6,13 @@ This document describes the end-to-end test suites for verifying the pool-based 
 
 The distributed slots feature implements a **pool-based** slot allocation system:
 
-- **Redis** calculates per-model pools: `pools[model].totalSlots = floor(modelCapacity / estimatedResourcePerJob / instanceCount)`
+- **Redis** calculates per-model pools using **averaged estimates** across all job types:
+  `pools[model].totalSlots = floor(modelCapacity / avgEstimatedResource / instanceCount)`
 - **Local instances** distribute pool slots across job types using ratios
 
 This separation allows dynamic ratio adjustments without Redis round-trips.
+
+**Important:** Redis uses the **average** of all job type estimates (not per-job-type calculation). This simplifies Redis logic while local instances handle the per-job-type distribution via ratios.
 
 ## Architecture
 
@@ -66,6 +69,7 @@ Tests use different configuration presets defined in `packages/e2e/serverInstanc
 | `slotCalc-multi-model`   | model-tpm: TPM, model-concurrent: concurrent | 2 (jobTypeA, jobTypeB) | Different limit types per model  |
 | `slotCalc-ratios`        | TPM (100K)                  | 3 (0.5, 0.3, 0.2 ratios)     | Various ratio combinations       |
 | `slotCalc-uneven-ratios` | TPM (100K)                  | 4 (0.7, 0.1, 0.1, 0.1 ratios)| Uneven ratio distribution        |
+| `slotCalc-memory`        | TPM (10M, very high)        | 2 (heavyMemoryJob: 10MB, lightMemoryJob: 1MB) | Memory as local constraint |
 
 ---
 
@@ -87,20 +91,27 @@ Tests use different configuration presets defined in `packages/e2e/serverInstanc
 
 **Pool Calculation Formula:**
 
+Redis calculates pool slots using **averaged estimates** across all job types:
+
 ```
-For TPM-limited models:
-  pools[model].totalSlots = floor((TPM / estimatedTokens) / instanceCount)
-  pools[model].tokensPerMinute = TPM / instanceCount
+Step 1: Calculate average estimates across all job types
+  avgEstimatedTokens = sum(jobType.estimatedTokens) / jobTypeCount
+  avgEstimatedRequests = sum(jobType.estimatedRequests) / jobTypeCount
 
-For RPM-limited models:
-  pools[model].totalSlots = floor((RPM / estimatedRequests) / instanceCount)
-  pools[model].requestsPerMinute = RPM / instanceCount
+Step 2: Calculate per-limit-type slots using averages
+  For TPM-limited models:
+    pools[model].totalSlots = floor((TPM / avgEstimatedTokens) / instanceCount)
+    pools[model].tokensPerMinute = TPM / instanceCount
 
-For concurrent-limited models:
-  pools[model].totalSlots = floor(maxConcurrent / instanceCount)
+  For RPM-limited models:
+    pools[model].totalSlots = floor((RPM / avgEstimatedRequests) / instanceCount)
+    pools[model].requestsPerMinute = RPM / instanceCount
 
-For mixed limits:
-  pools[model].totalSlots = min(tpm_slots, rpm_slots, concurrent_slots, ...)
+  For concurrent-limited models:
+    pools[model].totalSlots = floor(maxConcurrent / instanceCount)
+
+  For mixed limits:
+    pools[model].totalSlots = min(tpm_slots, rpm_slots, concurrent_slots, ...)
 ```
 
 **Note:** Job type ratios are NOT part of Redis pool calculation. Ratios are applied locally by each instance's JobTypeManager.
@@ -114,12 +125,14 @@ jobTypeA: estimatedTokens = 10,000, ratio = 0.6
 jobTypeB: estimatedTokens = 5,000, ratio = 0.4
 ```
 
+**Note:** Pool slots use averaged estimates: `avgTokens = (10,000 + 5,000) / 2 = 7,500`
+
 | What We Check | Formula | Expected (2 instances) |
 |---------------|---------|------------------------|
-| `allocation.pools['model-alpha'].totalSlots` | `floor((100K / 10K) / 2)` | 5 |
+| `allocation.pools['model-alpha'].totalSlots` | `floor((100K / 7,500) / 2)` | 6 |
 | `allocation.pools['model-alpha'].tokensPerMinute` | `100K / 2` | 50,000 |
-| Local jobTypeA slots | `floor(5 * 0.6)` | 3 (managed locally) |
-| Local jobTypeB slots | `floor(5 * 0.4)` | 2 (managed locally) |
+| Local jobTypeA slots | `floor(6 * 0.6)` | 3 (managed locally) |
+| Local jobTypeB slots | `floor(6 * 0.4)` | 2 (managed locally) |
 
 #### Test Case 2: RPM-Only Model (`slotCalc-rpm`)
 
@@ -187,6 +200,38 @@ Run each config with 1, 2, and 3 instances to verify instance division:
 | 3 instances | Third per instance |
 
 **Key Verification:** The allocation endpoint returns mathematically correct pool slot values for ALL combinations of limit types and instance counts. Job type distribution is verified separately as a local concern.
+
+#### Test Case 7: Memory-Based Slot Calculation (`slotCalc-memory`)
+
+**Config:**
+```
+test-model: TPM = 10,000,000 (very high, won't be limiting)
+heavyMemoryJob: estimatedTokens = 1,000, estimatedMemoryKB = 10,240 (10MB), ratio = 0.5
+lightMemoryJob: estimatedTokens = 1,000, estimatedMemoryKB = 1,024 (1MB), ratio = 0.5
+```
+
+**Key Concept:** Memory is a **LOCAL** constraint. Redis calculates distributed slots based on TPM (very high), but each instance limits final slots based on available memory.
+
+```
+Distributed slots (from Redis, very high due to high TPM):
+  pools['test-model'].totalSlots = floor((10M / 1K) / 2) = 5000 per instance
+
+Local memory constraint (assuming 100MB instance memory):
+  heavyMemoryJob memory = 100MB × 0.5 = 50MB → floor(50MB / 10MB) = 5 slots
+  lightMemoryJob memory = 100MB × 0.5 = 50MB → floor(50MB / 1MB) = 50 slots
+
+Final slots (min of distributed and local):
+  heavyMemoryJob = min(5000, 5) = 5 slots   ← Memory limited
+  lightMemoryJob = min(5000, 50) = 50 slots ← Memory limited
+```
+
+| What We Check | Expected Result |
+|---------------|-----------------|
+| `allocation.pools['test-model'].totalSlots` | Very high (5000+) |
+| Memory stats present | `stats.memory.maxCapacityKB > 0` |
+| Heavy job capacity | Limited by memory, not distributed slots |
+
+**Key Verification:** Memory acts as a local constraint that can further limit slots beyond the distributed allocation. This is tested via the stats endpoint showing memory configuration.
 
 ---
 

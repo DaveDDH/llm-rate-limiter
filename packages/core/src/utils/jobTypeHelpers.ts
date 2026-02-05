@@ -27,6 +27,7 @@ export const mergeRatioConfig = (config?: RatioAdjustmentConfig): Required<Ratio
   minRatio: withDefault(config, 'minRatio'),
   adjustmentIntervalMs: withDefault(config, 'adjustmentIntervalMs'),
   releasesPerAdjustment: withDefault(config, 'releasesPerAdjustment'),
+  minJobTypeCapacity: withDefault(config, 'minJobTypeCapacity'),
 });
 
 /** Create initial states from config and calculated ratios */
@@ -153,10 +154,14 @@ export const normalizeRatios = (states: Map<string, JobTypeState>): void => {
   }
 };
 
-/** Recalculate allocated slots based on current ratios, enforcing minCapacity of 1 */
-export const recalculateAllocatedSlots = (states: Map<string, JobTypeState>, totalCapacity: number): void => {
+/** Recalculate allocated slots based on current ratios, enforcing minCapacity per job type */
+export const recalculateAllocatedSlots = (
+  states: Map<string, JobTypeState>,
+  totalCapacity: number,
+  minCapacity: number = ONE
+): void => {
   for (const state of states.values()) {
-    // Enforce minCapacity of 1 to prevent job types from being completely blocked
-    state.allocatedSlots = Math.max(ONE, Math.floor(totalCapacity * state.currentRatio));
+    // Enforce minCapacity to prevent job types from being completely blocked
+    state.allocatedSlots = Math.max(minCapacity, Math.floor(totalCapacity * state.currentRatio));
   }
 };

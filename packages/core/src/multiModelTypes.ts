@@ -12,7 +12,7 @@
 import type { ActiveJobInfo } from './activeJobTypes.js';
 import type { DistributedBackendFactory } from './backendFactoryTypes.js';
 import type { JobTypeStats, RatioAdjustmentConfig, ResourceEstimationsPerJob } from './jobTypeTypes.js';
-import type { InternalJobResult, InternalLimiterStats, LogFn, MemoryLimitConfig } from './types.js';
+import type { InternalJobResult, InternalLimiterStats, LogFn, MemoryLimitConfig, OverageFn } from './types.js';
 
 // =============================================================================
 // Model Configuration Types
@@ -122,6 +122,11 @@ export interface LLMRateLimiterConfigBase<
    * Configuration for dynamic ratio adjustment algorithm.
    */
   ratioAdjustmentConfig?: RatioAdjustmentConfig;
+  /**
+   * Callback invoked when actual resource usage exceeds estimated usage.
+   * Useful for tracking estimation accuracy and tuning estimates over time.
+   */
+  onOverage?: OverageFn;
 }
 
 // =============================================================================
@@ -161,6 +166,8 @@ export interface LLMRateLimiterConfig {
   resourceEstimationsPerJob: ResourceEstimationsPerJob;
   /** Configuration for dynamic ratio adjustment algorithm */
   ratioAdjustmentConfig?: RatioAdjustmentConfig;
+  /** Callback invoked when actual resource usage exceeds estimated usage */
+  onOverage?: OverageFn;
 }
 
 // =============================================================================

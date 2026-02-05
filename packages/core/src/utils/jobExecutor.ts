@@ -12,15 +12,15 @@ import type {
   UsageEntry,
 } from '../multiModelTypes.js';
 import type { InternalJobResult, InternalLimiterInstance, ReservationContext } from '../types.js';
-import { DelegationError, buildJobArgs, calculateTotalCost } from './jobExecutionHelpers.js';
+import { DelegationError, type DelegationUsage, buildJobArgs, calculateTotalCost } from './jobExecutionHelpers.js';
 
 /** Mutable state for job execution callbacks */
 export interface JobExecutionState {
   rejected: boolean;
   shouldDelegate: boolean;
   rejectedWithoutDelegation: boolean;
-  /** Usage recorded at rejection time */
-  rejectUsage: { requests: number; tokens: number } | null;
+  /** Usage recorded at rejection time - preserves token breakdown for cost tracking */
+  rejectUsage: DelegationUsage | null;
 }
 
 /** Create initial job execution state */
@@ -62,10 +62,12 @@ const createRejectHandler = (
     mutableState.rejected = true;
     const usageEntry: UsageEntry = { modelId, ...usage };
     addUsageWithCost(ctx, modelId, usageEntry);
-    // Store usage for DelegationError - use provided requestCount or default to 1
+    // Store usage for DelegationError - preserves token breakdown for accurate cost tracking
     mutableState.rejectUsage = {
-      requests: usage.requestCount ?? 1,
-      tokens: usage.inputTokens + usage.outputTokens + usage.cachedTokens,
+      requests: usage.requestCount,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cachedTokens: usage.cachedTokens,
     };
     mutableState.shouldDelegate = opts?.delegate !== false;
     if (!mutableState.shouldDelegate) {
@@ -80,7 +82,9 @@ const checkRejection = (state: JobExecutionState): void => {
     throw new Error('Job rejected without delegation');
   }
   if (state.shouldDelegate) {
-    throw new DelegationError(state.rejectUsage ?? { requests: 0, tokens: 0 });
+    throw new DelegationError(
+      state.rejectUsage ?? { requests: 0, inputTokens: 0, outputTokens: 0, cachedTokens: 0 }
+    );
   }
 };
 

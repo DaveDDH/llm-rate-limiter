@@ -86,7 +86,13 @@ class LLMRateLimiter implements LLMRateLimiterInstance<string> {
     this.instanceId = generateInstanceId();
     ({ backend: this.backendOrFactory } = config);
     const estimated = calculateEstimatedResources(this.resourceEstimationsPerJob);
-    this.modelLimiters = initializeModelLimiters(config.models, this.label, config.onLog, estimated);
+    this.modelLimiters = initializeModelLimiters(
+      config.models,
+      this.label,
+      config.onLog,
+      estimated,
+      config.onOverage
+    );
     this.memoryManager = createMemoryManager({
       config,
       resourceEstimationsPerJob: this.resourceEstimationsPerJob,

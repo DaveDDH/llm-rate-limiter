@@ -23,6 +23,8 @@ const DEFAULT_MIN_RATIO = 0.01;
 const DEFAULT_ADJUSTMENT_INTERVAL_MS = 5000;
 /** Default number of releases between adjustments */
 const DEFAULT_RELEASES_PER_ADJUSTMENT = 10;
+/** Default minimum job type capacity (slots per job type) */
+const DEFAULT_MIN_JOB_TYPE_CAPACITY = 1;
 
 // =============================================================================
 // Job Type Configuration Types
@@ -223,6 +225,14 @@ export interface RatioAdjustmentConfig {
    * @default 10
    */
   releasesPerAdjustment?: number;
+
+  /**
+   * Minimum number of slots per job type.
+   * Ensures every job type has at least this many slots to prevent starvation.
+   * Set to 0 to allow job types to have no slots when ratios are very low.
+   * @default 1
+   */
+  minJobTypeCapacity?: number;
 }
 
 /**
@@ -235,6 +245,7 @@ export const DEFAULT_RATIO_ADJUSTMENT_CONFIG: Required<RatioAdjustmentConfig> = 
   minRatio: DEFAULT_MIN_RATIO,
   adjustmentIntervalMs: DEFAULT_ADJUSTMENT_INTERVAL_MS,
   releasesPerAdjustment: DEFAULT_RELEASES_PER_ADJUSTMENT,
+  minJobTypeCapacity: DEFAULT_MIN_JOB_TYPE_CAPACITY,
 };
 
 // =============================================================================

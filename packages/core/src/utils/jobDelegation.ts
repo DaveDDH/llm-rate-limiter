@@ -93,8 +93,12 @@ const handleError = async <T, Args extends ArgsWithoutModelId = ArgsWithoutModel
 
   // Extract actual usage from DelegationError, or use zero for other errors
   // When reject(usage) is called, DelegationError carries the actual usage
+  // Backend needs total tokens for rate limiting (breakdown is preserved for cost tracking elsewhere)
   const actualUsage = isDelegationError(error)
-    ? error.usage
+    ? {
+        requests: error.usage.requests,
+        tokens: error.usage.inputTokens + error.usage.outputTokens + error.usage.cachedTokens,
+      }
     : { requests: ZERO, tokens: ZERO };
 
   releaseBackend(dctx.backendCtx(modelId, ctx.jobId, ctx.jobType), actualUsage, reservationContext.windowStarts);

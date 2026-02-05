@@ -638,13 +638,14 @@ class LLMRateLimiter implements InternalLimiterInstance {
     } catch (error) {
       // If this is a DelegationError with usage (from reject()), record the actual usage
       // This ensures reject(usage) triggers the same adjustment flow as successful completion
+      // Token breakdown is preserved for accurate cost tracking
       if (isDelegationError(error)) {
         const delegationResult: InternalJobResult = {
           requestCount: error.usage.requests,
           usage: {
-            input: error.usage.tokens,
-            output: 0,
-            cached: 0,
+            input: error.usage.inputTokens,
+            output: error.usage.outputTokens,
+            cached: error.usage.cachedTokens,
           },
         };
         this.recordActualUsage(delegationResult, context.windowStarts);

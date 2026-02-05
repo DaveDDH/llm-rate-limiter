@@ -11,18 +11,28 @@ const SECONDS_PER_MINUTE = 60;
 const MS_PER_SECOND = 1000;
 const DEFAULT_BUFFER_SECONDS = 5;
 
-/** Actual usage at time of rejection */
+/** Actual usage at time of rejection - preserves token breakdown for accurate cost tracking */
 export interface DelegationUsage {
   requests: number;
-  tokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
 }
+
+/** Default zero usage for delegation */
+const ZERO_DELEGATION_USAGE: DelegationUsage = {
+  requests: ZERO,
+  inputTokens: ZERO,
+  outputTokens: ZERO,
+  cachedTokens: ZERO,
+};
 
 /** Internal marker class for delegation with usage tracking */
 export class DelegationError extends Error {
   public readonly isDelegation = true;
   public readonly usage: DelegationUsage;
 
-  constructor(usage: DelegationUsage = { requests: 0, tokens: 0 }) {
+  constructor(usage: DelegationUsage = ZERO_DELEGATION_USAGE) {
     super('Delegation requested');
     this.usage = usage;
   }
@@ -129,7 +139,7 @@ export const waitForJobTypeCapacity = async (
  * This is optimized for TPM/RPM limits which reset at minute boundaries.
  * @returns milliseconds until next minute + 5 second buffer (range: 5000-65000ms)
  */
-export const calculateDefaultMaxWaitMS = (): number => {
+export const getDefaultMaxWaitMS = (): number => {
   const now = new Date();
   const secondsToNextMinute = SECONDS_PER_MINUTE - now.getSeconds();
   return (secondsToNextMinute + DEFAULT_BUFFER_SECONDS) * MS_PER_SECOND;
@@ -148,19 +158,19 @@ export const getMaxWaitMS = (
   modelId: string
 ): number => {
   if (resourceEstimationsPerJob === undefined) {
-    return calculateDefaultMaxWaitMS();
+    return getDefaultMaxWaitMS();
   }
   const { [jobType]: jobTypeConfig } = resourceEstimationsPerJob;
   if (jobTypeConfig === undefined) {
-    return calculateDefaultMaxWaitMS();
+    return getDefaultMaxWaitMS();
   }
   const maxWaitMSConfig: MaxWaitMSConfig | undefined = jobTypeConfig.maxWaitMS;
   if (maxWaitMSConfig === undefined) {
-    return calculateDefaultMaxWaitMS();
+    return getDefaultMaxWaitMS();
   }
   const { [modelId]: modelMaxWaitMS } = maxWaitMSConfig;
   if (modelMaxWaitMS === undefined) {
-    return calculateDefaultMaxWaitMS();
+    return getDefaultMaxWaitMS();
   }
   return modelMaxWaitMS;
 };

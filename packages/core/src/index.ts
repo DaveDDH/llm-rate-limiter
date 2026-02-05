@@ -67,4 +67,4 @@ export type {
 export { isDistributedBackendFactory } from './multiModelTypes.js';
 
 // Helper functions
-export { calculateDefaultMaxWaitMS } from './utils/jobExecutionHelpers.js';
+export { getDefaultMaxWaitMS } from './utils/jobExecutionHelpers.js';

@@ -212,7 +212,7 @@ class JobTypeManagerImpl implements JobTypeManager {
 
   setTotalCapacity(totalSlots: number): void {
     this.totalCapacity = Math.max(ZERO, totalSlots);
-    recalculateAllocatedSlots(this.states, this.totalCapacity);
+    recalculateAllocatedSlots(this.states, this.totalCapacity, this.config.minJobTypeCapacity);
     this.log('Total capacity updated', { totalSlots: this.totalCapacity });
     this.notifyRatioChange();
   }
@@ -253,7 +253,7 @@ class JobTypeManagerImpl implements JobTypeManager {
 
     applyRatioTransfers(this.states, donorContributions, receivers, availableToTransfer);
     normalizeRatios(this.states);
-    recalculateAllocatedSlots(this.states, this.totalCapacity);
+    recalculateAllocatedSlots(this.states, this.totalCapacity, this.config.minJobTypeCapacity);
     this.lastAdjustmentTime = Date.now();
     this.logAdjustment(donors, receivers);
     this.notifyRatioChange();

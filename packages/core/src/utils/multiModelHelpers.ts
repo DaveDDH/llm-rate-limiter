@@ -1,7 +1,7 @@
 /** Helper functions for LLM Rate Limiter. */
 import type { ResourceEstimationsPerJob } from '../jobTypeTypes.js';
 import type { LLMRateLimiterConfig, ModelsConfig } from '../multiModelTypes.js';
-import type { InternalLimiterConfig } from '../types.js';
+import type { InternalLimiterConfig, OverageFn } from '../types.js';
 
 const ZERO = 0;
 const ONE = 1;
@@ -50,11 +50,12 @@ export interface BuildModelLimiterConfigInput {
   modelConfig: InternalLimiterConfig;
   parentLabel: string;
   onLog?: (message: string, data?: Record<string, unknown>) => void;
+  onOverage?: OverageFn;
   estimatedResources?: EstimatedResourcesInput;
 }
 
 export const buildModelLimiterConfig = (input: BuildModelLimiterConfigInput): InternalLimiterConfig => {
-  const { modelId, modelConfig, parentLabel, onLog, estimatedResources } = input;
+  const { modelId, modelConfig, parentLabel, onLog, onOverage, estimatedResources } = input;
   return {
     requestsPerMinute: modelConfig.requestsPerMinute,
     requestsPerDay: modelConfig.requestsPerDay,
@@ -63,6 +64,7 @@ export const buildModelLimiterConfig = (input: BuildModelLimiterConfigInput): In
     maxConcurrentRequests: modelConfig.maxConcurrentRequests,
     label: `${parentLabel}/${modelId}`,
     onLog,
+    onOverage,
     estimatedNumberOfRequests: estimatedResources?.estimatedNumberOfRequests,
     estimatedUsedTokens: estimatedResources?.estimatedUsedTokens,
     estimatedUsedMemoryKB: estimatedResources?.estimatedUsedMemoryKB,
