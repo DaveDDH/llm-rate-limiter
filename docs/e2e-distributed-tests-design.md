@@ -503,27 +503,169 @@ interface JobTypeState {
 
 ### Prerequisites
 
-1. Start Redis:
-   ```bash
-   docker run -d -p 6379:6379 redis
-   ```
+A Redis instance must be running on `localhost:6379` before executing the tests.
 
-2. Start the proxy:
+### Option A: Manual Infrastructure Setup
+
+Start the proxy and instances manually, then run tests:
+
+1. Start the proxy:
    ```bash
    npm run e2e:proxy
    ```
 
-3. Start server instances:
+2. Start server instances:
    ```bash
    npm run e2e:instance1  # Port 3001
    npm run e2e:instance2  # Port 3002
    ```
 
+3. Run tests (they assume infrastructure is already running):
+   ```bash
+   npm run e2e:test
+   ```
+
+### Option B: Programmatic Infrastructure Setup (Within Tests)
+
+Tests can boot instances and proxy programmatically using lifecycle helpers. This is useful for:
+- Tests that need to control instance count dynamically
+- CI/CD environments where you want self-contained tests
+- Testing instance join/leave scenarios
+
+#### Available Functions
+
+```typescript
+import { bootInstance, killInstance, killAllInstances, cleanRedis } from '../instanceLifecycle.js';
+import { bootProxy, killProxy } from '../proxyLifecycle.js';
+```
+
+| Function | Description |
+|----------|-------------|
+| `bootInstance(port, configPreset)` | Boot a server instance on the specified port with a config preset |
+| `killInstance(port)` | Kill a specific instance by port |
+| `killAllInstances()` | Kill all managed instances |
+| `bootProxy(targetPorts, port?)` | Boot the proxy, routing to the specified target ports |
+| `killProxy()` | Kill the proxy |
+| `cleanRedis()` | Delete all rate limiter keys from Redis |
+
+#### Example: Infrastructure Boot Test
+
+```typescript
+import { bootInstance, cleanRedis, killAllInstances } from '../instanceLifecycle.js';
+import { bootProxy, killProxy } from '../proxyLifecycle.js';
+import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+
+const PROXY_PORT = 3000;
+const INSTANCE_PORT_1 = 3001;
+const INSTANCE_PORT_2 = 3002;
+
+/** Boot all infrastructure components */
+const bootInfrastructure = async (): Promise<void> => {
+  await cleanRedis();
+  await bootInstance(INSTANCE_PORT_1, 'default');
+  await bootInstance(INSTANCE_PORT_2, 'default');
+  await bootProxy([INSTANCE_PORT_1, INSTANCE_PORT_2], PROXY_PORT);
+};
+
+/** Tear down all infrastructure components */
+const teardownInfrastructure = async (): Promise<void> => {
+  try { await killProxy(); } catch { /* may not have started */ }
+  try { await killAllInstances(); } catch { /* may not have started */ }
+};
+
+describe('My Test', () => {
+  beforeAll(async () => {
+    await bootInfrastructure();
+    // ... run test setup
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownInfrastructure();
+  }, 30000);
+
+  it('should work', () => {
+    // ... assertions
+  });
+});
+```
+
+#### Example: Dynamic Instance Scaling Test
+
+```typescript
+import { bootInstance, killInstance, cleanRedis, fetchAllocation } from '../instanceLifecycle.js';
+
+describe('Instance Scaling', () => {
+  beforeAll(async () => {
+    await cleanRedis();
+  });
+
+  afterAll(async () => {
+    await killAllInstances();
+  });
+
+  it('should halve slots when second instance joins', async () => {
+    // Start with one instance
+    await bootInstance(3001, 'instanceScaling');
+    let allocation = await fetchAllocation(3001);
+    expect(allocation.allocation?.instanceCount).toBe(1);
+    const initialSlots = allocation.allocation?.pools['scale-model']?.totalSlots;
+
+    // Add second instance
+    await bootInstance(3002, 'instanceScaling');
+    allocation = await fetchAllocation(3001);
+    expect(allocation.allocation?.instanceCount).toBe(2);
+    expect(allocation.allocation?.pools['scale-model']?.totalSlots).toBe(Math.floor(initialSlots / 2));
+
+    // Remove second instance
+    await killInstance(3002);
+    // Wait for Redis to detect instance timeout...
+  });
+});
+```
+
+#### Config Presets
+
+When calling `bootInstance(port, configPreset)`, use one of these presets:
+
+| Preset | Use Case |
+|--------|----------|
+| `'default'` | Production-like config with 3 models and 5 job types |
+| `'slotCalculation'` | Simple config for verifying slot math |
+| `'fixedRatio'` | Testing fixed vs flexible job type behavior |
+| `'flexibleRatio'` | Testing dynamic ratio adjustment |
+| `'instanceScaling'` | Testing instance join/leave scenarios |
+| `'slotCalc-tpm'` | TPM-only model for slot calculation tests |
+| `'slotCalc-rpm'` | RPM-only model for slot calculation tests |
+| `'slotCalc-concurrent'` | Concurrency-only model for slot calculation tests |
+
+See `packages/e2e/serverInstance/src/rateLimiterConfigs/` for all available presets.
+
 ### Execute Tests
 
-Run all distributed slots tests:
+#### Running Tests That Require Manual Infrastructure
+
+Most tests assume infrastructure is already running. Start proxy and instances first:
+
 ```bash
-npm run test -- --testPathPattern="packages/e2e/testRunner/src/__tests__/(slotCalculation|fixedRatioIsolation|slotsEvolveWithLoad|instanceScaling|flexibleRatioAdjustment|localRatioOnly)"
+npm run e2e:setup
+```
+
+Then run the tests:
+
+```bash
+# Run all e2e tests
+npm run e2e:test
+
+# Run a specific test
+npm run e2e:test -- --testPathPatterns=exactCapacity.test
+```
+
+#### Running Self-Contained Tests (Programmatic Infrastructure)
+
+Tests that use programmatic infrastructure boot (like `infrastructureBoot.test.ts`) don't require manual setup - they boot and kill instances themselves. Just ensure Redis is running on `localhost:6379`:
+
+```bash
+npm run e2e:test -- --testPathPatterns=infrastructureBoot.test
 ```
 
 ### Recommended Execution Order
