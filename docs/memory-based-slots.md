@@ -189,47 +189,6 @@ Example with `model-alpha: { minCapacity: 2, maxCapacity: 8 }` and memory constr
 | jobTypeB | 6 | 3 | 3 (within bounds) |
 | jobTypeC | 20 | 10 | 8 (max applied) |
 
-## E2E Testing Memory Constraints
-
-To test memory-based slot calculation:
-
-### 1. Start Instances with Constrained Memory
-
-```bash
-NODE_OPTIONS='--max-old-space-size=128' npm run e2e:instance1
-```
-
-### 2. Configure Job Types with Memory Estimates
-
-```typescript
-const memoryTestConfig = {
-  models: {
-    'test-model': {
-      tokensPerMinute: 10000000, // High TPM (won't be limiting)
-      pricing: { input: 1, cached: 0.1, output: 2 },
-    },
-  },
-  resourceEstimations: {
-    heavyJob: {
-      estimatedUsedTokens: 1000,
-      estimatedUsedMemoryKB: 10240, // 10MB per job
-      ratio: { initialValue: 0.5 },
-    },
-    lightJob: {
-      estimatedUsedTokens: 1000,
-      estimatedUsedMemoryKB: 1024, // 1MB per job
-      ratio: { initialValue: 0.5 },
-    },
-  },
-};
-```
-
-### 3. Verify Memory is the Limiting Factor
-
-Query the allocation endpoint and verify that:
-- Heavy jobs have fewer slots (limited by memory)
-- Light jobs have more slots (limited by TPM, not memory)
-
 ## Summary
 
 | Aspect | Distributed (TPM/RPM/etc.) | Local (Memory) |
