@@ -1,10 +1,15 @@
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import {
+  AFTER_ALL_TIMEOUT_MS,
+  INSTANCE_URLS,
+  PROXY_URL,
+  bootInfrastructure,
+  teardownInfrastructure,
+} from './infrastructureHelpers.js';
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
-const PROXY_URL = 'http://localhost:3000';
-const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 const NUM_JOBS = 20;
 const JOB_DURATION_MS = 100;
 const WAIT_TIMEOUT_MS = 60000;
@@ -33,8 +38,13 @@ describe('Rate Limit Queuing', () => {
   let data: TestData = createEmptyTestData();
 
   beforeAll(async () => {
+    await bootInfrastructure();
     data = await runRateLimitQueuingTest();
   }, BEFORE_ALL_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await teardownInfrastructure();
+  }, AFTER_ALL_TIMEOUT_MS);
 
   it('should not reject any jobs immediately', () => {
     const failedJobs = Object.values(data.jobs).filter((j) => j.status === 'failed');

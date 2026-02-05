@@ -18,10 +18,14 @@
 import type { JobRecord, TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import {
+  AFTER_ALL_TIMEOUT_MS,
+  INSTANCE_URLS,
+  PROXY_URL,
+  bootInfrastructure,
+  teardownInfrastructure,
+} from './infrastructureHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
-
-const PROXY_URL = 'http://localhost:3000';
-const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
 // Total capacity: 2 instances x 250,000 TPM = 500,000 TPM = 50 jobs of 10,000 tokens
 const TOTAL_CAPACITY = 50;
@@ -90,8 +94,13 @@ describe('Capacity Plus One', () => {
   let testSetup: TestSetupData = createEmptyTestSetup();
 
   beforeAll(async () => {
+    await bootInfrastructure();
     testSetup = await setupTestData();
   }, BEFORE_ALL_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await teardownInfrastructure();
+  }, AFTER_ALL_TIMEOUT_MS);
 
   it('should send all jobs', () => {
     expect(Object.keys(testSetup.data.jobs).length).toBe(CAPACITY_PLUS_ONE);

@@ -20,10 +20,14 @@ import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import type { ConfigPresetName } from '../resetInstance.js';
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import {
+  AFTER_ALL_TIMEOUT_MS,
+  INSTANCE_URLS,
+  PROXY_URL,
+  bootInfrastructure,
+  teardownInfrastructure,
+} from './infrastructureHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
-
-const PROXY_URL = 'http://localhost:3000';
-const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
 // With flexibleRatio config and 2 instances:
 // Each job type starts with ~0.33 ratio = floor((100K/10K) / 2 * 0.33) = ~1-2 slots per instance
@@ -143,6 +147,15 @@ const runConcurrentTest = async (): Promise<TestData> => {
 let basicData: TestData = createEmptyTestData();
 let imbalanceData: TestData = createEmptyTestData();
 let concurrentData: TestData = createEmptyTestData();
+
+// Boot infrastructure once for all tests in this file
+beforeAll(async () => {
+  await bootInfrastructure(CONFIG_PRESET);
+}, BEFORE_ALL_TIMEOUT_MS);
+
+afterAll(async () => {
+  await teardownInfrastructure();
+}, AFTER_ALL_TIMEOUT_MS);
 
 describe('Flexible Ratio Adjustment - All Job Types Complete', () => {
   beforeAll(async () => {

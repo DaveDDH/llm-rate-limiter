@@ -505,34 +505,22 @@ interface JobTypeState {
 
 A Redis instance must be running on `localhost:6379` before executing the tests.
 
-### Option A: Manual Infrastructure Setup
+### Self-Contained Tests
 
-Start the proxy and instances manually, then run tests:
+All e2e tests are self-contained: they boot their own instances and proxy programmatically, requiring only Redis to be running beforehand. Each test:
+1. Cleans Redis before starting
+2. Boots fresh server instances with the appropriate config preset
+3. Boots the proxy (if needed)
+4. Runs the test scenarios
+5. Tears down all infrastructure after completion
 
-1. Start the proxy:
-   ```bash
-   npm run e2e:proxy
-   ```
+This design ensures:
+- Tests are isolated and don't interfere with each other
+- Tests can be run in any order
+- CI/CD environments can run tests without manual setup
+- Tests can control instance count dynamically for scaling scenarios
 
-2. Start server instances:
-   ```bash
-   npm run e2e:instance1  # Port 3001
-   npm run e2e:instance2  # Port 3002
-   ```
-
-3. Run tests (they assume infrastructure is already running):
-   ```bash
-   npm run e2e:test
-   ```
-
-### Option B: Programmatic Infrastructure Setup (Within Tests)
-
-Tests can boot instances and proxy programmatically using lifecycle helpers. This is useful for:
-- Tests that need to control instance count dynamically
-- CI/CD environments where you want self-contained tests
-- Testing instance join/leave scenarios
-
-#### Available Functions
+### Infrastructure Lifecycle Functions
 
 ```typescript
 import { bootInstance, killInstance, killAllInstances, cleanRedis } from '../instanceLifecycle.js';
@@ -642,15 +630,7 @@ See `packages/e2e/serverInstance/src/rateLimiterConfigs/` for all available pres
 
 ### Execute Tests
 
-#### Running Tests That Require Manual Infrastructure
-
-Most tests assume infrastructure is already running. Start proxy and instances first:
-
-```bash
-npm run e2e:setup
-```
-
-Then run the tests:
+Ensure Redis is running on `localhost:6379`, then run the tests:
 
 ```bash
 # Run all e2e tests
@@ -658,14 +638,10 @@ npm run e2e:test
 
 # Run a specific test
 npm run e2e:test -- --testPathPatterns=exactCapacity.test
-```
 
-#### Running Self-Contained Tests (Programmatic Infrastructure)
-
-Tests that use programmatic infrastructure boot (like `infrastructureBoot.test.ts`) don't require manual setup - they boot and kill instances themselves. Just ensure Redis is running on `localhost:6379`:
-
-```bash
-npm run e2e:test -- --testPathPatterns=infrastructureBoot.test
+# Run tests by category
+npm run e2e:test -- --testPathPatterns=slotCalculation.test
+npm run e2e:test -- --testPathPatterns=instanceScaling.test
 ```
 
 ### Recommended Execution Order

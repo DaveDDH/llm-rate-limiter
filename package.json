@@ -19,15 +19,9 @@
     "test": "npm run test --workspaces --if-present",
     "test:core": "npm run test -w @llm-rate-limiter/core",
     "test:redis": "npm run test -w @llm-rate-limiter/redis",
-    "test:redis-e2e": "npm run test:e2e -w @llm-rate-limiter/redis",
-    "e2e:proxy": "npm run dev -w @llm-rate-limiter/e2e-proxy",
-    "e2e:proxy:single": "TARGET_PORTS=3001 npm run dev -w @llm-rate-limiter/e2e-proxy",
-    "e2e:instance1": "PORT=3001 npm run dev -w @llm-rate-limiter/e2e-server-instance",
-    "e2e:instance2": "PORT=3002 npm run dev -w @llm-rate-limiter/e2e-server-instance",
-    "e2e:setup": "npm run e2e:instance1 & npm run e2e:instance2 & npm run e2e:proxy",
-    "e2e:setup:single": "npm run e2e:instance1 & npm run e2e:proxy:single",
-    "e2e:test": "npm run test -w @llm-rate-limiter/e2e-test-runner",
-    "e2e:test:escalation": "npm run test -w @llm-rate-limiter/e2e-test-runner -- --testPathPatterns=modelEscalationToThird.test"
+    "test:e2e": "npm run test -w @llm-rate-limiter/e2e-test-runner",
+    "test:e2e:single": "npm run test -w @llm-rate-limiter/e2e-test-runner --",
+    "test:e2e:check": "npm run test:e2e:single -- --testPathPatterns=infrastructureBoot.test"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",

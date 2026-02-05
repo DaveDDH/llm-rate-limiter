@@ -29,6 +29,7 @@ import {
   STANDARD_JOBS,
   TOTAL_MIXED_JOBS,
   ZERO_COUNT,
+  bootInfrastructure,
   fetchAllocation,
   getFlexModelPool,
   resetBothInstances,
@@ -36,15 +37,26 @@ import {
   runAllocationVerifyHeavyLoad,
   runIndependentInstanceTest,
   runMixedLoadTest,
+  teardownInfrastructure,
 } from './localRatioOnlyHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
 
 const BEFORE_ALL_TIMEOUT_MS = 240000;
+const AFTER_ALL_TIMEOUT_MS = 30000;
 
 // Test state holders
 let independentTestDataA: TestData = createEmptyTestData();
 let independentTestDataB: TestData = createEmptyTestData();
 let mixedLoadData: TestData = createEmptyTestData();
+
+// Boot infrastructure once for all tests in this file
+beforeAll(async () => {
+  await bootInfrastructure();
+}, BEFORE_ALL_TIMEOUT_MS);
+
+afterAll(async () => {
+  await teardownInfrastructure();
+}, AFTER_ALL_TIMEOUT_MS);
 
 describe('Local Ratio Only - Independent Instance Ratio Management', () => {
   beforeAll(async () => {

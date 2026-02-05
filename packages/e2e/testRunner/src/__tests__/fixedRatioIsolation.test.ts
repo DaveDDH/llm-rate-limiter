@@ -24,10 +24,14 @@ import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import type { ConfigPresetName } from '../resetInstance.js';
 import { type GeneratedJob, generateJobsOfType, runSuite } from '../suiteRunner.js';
+import {
+  AFTER_ALL_TIMEOUT_MS,
+  INSTANCE_URLS,
+  PROXY_URL,
+  bootInfrastructure,
+  teardownInfrastructure,
+} from './infrastructureHelpers.js';
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
-
-const PROXY_URL = 'http://localhost:3000';
-const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
 // With fixedRatio config and 2 instances:
 // fixedJobType: floor((100K/10K) / 2 * 0.4) = 2 per instance = 4 total
@@ -185,6 +189,15 @@ const runBorrowTest = async (): Promise<TestData> => {
 let basicCapacityData: TestData = createEmptyTestData();
 let overloadTestData: TestData = createEmptyTestData();
 let borrowTestData: TestData = createEmptyTestData();
+
+// Boot infrastructure once for all tests in this file
+beforeAll(async () => {
+  await bootInfrastructure(CONFIG_PRESET);
+}, BEFORE_ALL_TIMEOUT_MS);
+
+afterAll(async () => {
+  await teardownInfrastructure();
+}, AFTER_ALL_TIMEOUT_MS);
 
 describe('Fixed Ratio Isolation - All Job Types Complete at Capacity', () => {
   beforeAll(async () => {

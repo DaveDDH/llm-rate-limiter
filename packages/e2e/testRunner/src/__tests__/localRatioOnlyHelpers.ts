@@ -3,10 +3,10 @@
  */
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
+import { bootInstance, cleanRedis, killAllInstances, waitForAllocationUpdate } from '../instanceLifecycle.js';
+import { bootProxy, killProxy } from '../proxyLifecycle.js';
 import type { ConfigPresetName } from '../resetInstance.js';
-import { resetInstance } from '../resetInstance.js';
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
-import { sleep } from '../testUtils.js';
 
 export interface ModelPoolAllocation {
   totalSlots: number;
@@ -25,9 +25,12 @@ export interface AllocationResponse {
   } | null;
 }
 
-export const PROXY_URL = 'http://localhost:3000';
-export const INSTANCE_A_URL = 'http://localhost:3001';
-export const INSTANCE_B_URL = 'http://localhost:3002';
+export const PROXY_PORT = 3000;
+export const INSTANCE_PORT_A = 3001;
+export const INSTANCE_PORT_B = 3002;
+export const PROXY_URL = `http://localhost:${PROXY_PORT}`;
+export const INSTANCE_A_URL = `http://localhost:${INSTANCE_PORT_A}`;
+export const INSTANCE_B_URL = `http://localhost:${INSTANCE_PORT_B}`;
 export const INSTANCE_URLS = [INSTANCE_A_URL, INSTANCE_B_URL];
 
 export const JOB_DURATION_MS = 100;
@@ -67,6 +70,39 @@ export const fetchAllocation = async (baseUrl: string): Promise<AllocationRespon
 };
 
 /**
+ * Boot all infrastructure: clean Redis, start instances, start proxy.
+ */
+export const bootInfrastructure = async (): Promise<void> => {
+  await killAllInstances();
+  try {
+    await killProxy();
+  } catch {
+    // Proxy may not be running
+  }
+  await cleanRedis();
+  await bootInstance(INSTANCE_PORT_A, CONFIG_PRESET);
+  await bootInstance(INSTANCE_PORT_B, CONFIG_PRESET);
+  await waitForAllocationUpdate(INSTANCE_PORT_A, (a) => a.instanceCount === INSTANCE_COUNT);
+  await bootProxy([INSTANCE_PORT_A, INSTANCE_PORT_B], PROXY_PORT);
+};
+
+/**
+ * Tear down all infrastructure: kill proxy, kill instances.
+ */
+export const teardownInfrastructure = async (): Promise<void> => {
+  try {
+    await killProxy();
+  } catch {
+    // Proxy may not have started
+  }
+  try {
+    await killAllInstances();
+  } catch {
+    // Instances may not have started
+  }
+};
+
+/**
  * Reset proxy to default state
  */
 export const resetProxy = async (): Promise<void> => {
@@ -85,22 +121,16 @@ export const setProxyRatio = async (ratio: string): Promise<void> => {
 };
 
 /**
- * Reset both instances with config preset
+ * Reset both instances: kill, clean Redis, boot fresh.
  */
-export const resetBothInstances = async (cleanRedisOnFirst: boolean): Promise<void> => {
-  const resultA = await resetInstance(INSTANCE_A_URL, {
-    cleanRedis: cleanRedisOnFirst,
-    configPreset: CONFIG_PRESET,
-  });
-  expect(resultA.success).toBe(true);
-
-  const resultB = await resetInstance(INSTANCE_B_URL, {
-    cleanRedis: false,
-    configPreset: CONFIG_PRESET,
-  });
-  expect(resultB.success).toBe(true);
-
-  await sleep(ALLOCATION_PROPAGATION_MS);
+export const resetBothInstances = async (cleanRedisFlag: boolean): Promise<void> => {
+  await killAllInstances();
+  if (cleanRedisFlag) {
+    await cleanRedis();
+  }
+  await bootInstance(INSTANCE_PORT_A, CONFIG_PRESET);
+  await bootInstance(INSTANCE_PORT_B, CONFIG_PRESET);
+  await waitForAllocationUpdate(INSTANCE_PORT_A, (a) => a.instanceCount === INSTANCE_COUNT);
 };
 
 /**

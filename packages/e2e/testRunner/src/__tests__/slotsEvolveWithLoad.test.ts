@@ -20,10 +20,14 @@ import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import type { ConfigPresetName } from '../resetInstance.js';
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import {
+  AFTER_ALL_TIMEOUT_MS,
+  INSTANCE_URLS,
+  PROXY_URL,
+  bootInfrastructure,
+  teardownInfrastructure,
+} from './infrastructureHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
-
-const PROXY_URL = 'http://localhost:3000';
-const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
 // With slotCalculation config and 2 instances:
 // jobTypeA: floor((100K/10K) / 2 * 0.6) = 3 slots per instance = 6 total
@@ -157,6 +161,15 @@ const runInterleavedTest = async (): Promise<TestData> => {
 let sequentialData: TestData = createEmptyTestData();
 let concurrentData: TestData = createEmptyTestData();
 let interleavedData: TestData = createEmptyTestData();
+
+// Boot infrastructure once for all tests in this file
+beforeAll(async () => {
+  await bootInfrastructure(CONFIG_PRESET);
+}, BEFORE_ALL_TIMEOUT_MS);
+
+afterAll(async () => {
+  await teardownInfrastructure();
+}, AFTER_ALL_TIMEOUT_MS);
 
 describe('Slots Evolve - Sequential Acquire and Release', () => {
   beforeAll(async () => {

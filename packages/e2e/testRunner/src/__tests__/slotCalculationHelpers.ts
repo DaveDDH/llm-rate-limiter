@@ -9,7 +9,6 @@ import {
   waitForAllocationUpdate,
 } from '../instanceLifecycle.js';
 import type { ConfigPresetName } from '../resetInstance.js';
-import { resetInstance } from '../resetInstance.js';
 import { sleep } from '../testUtils.js';
 
 const ALLOCATION_PROPAGATION_MS = 2000;
@@ -28,8 +27,10 @@ export const MAX_TPM_PER_INSTANCE = 50000;
 export const MAX_RPM_PER_INSTANCE = 250;
 export const MIN_MEMORY_SLOTS = 1000;
 
-export const INSTANCE_A_URL = 'http://localhost:3001';
-export const INSTANCE_B_URL = 'http://localhost:3002';
+export const INSTANCE_PORT_A = 3001;
+export const INSTANCE_PORT_B = 3002;
+export const INSTANCE_A_URL = `http://localhost:${INSTANCE_PORT_A}`;
+export const INSTANCE_B_URL = `http://localhost:${INSTANCE_PORT_B}`;
 
 export interface ModelPoolAllocation {
   totalSlots: number;
@@ -113,12 +114,15 @@ export const fetchAllocation = async (baseUrl: string): Promise<AllocationRespon
 };
 
 /**
- * Reset instances with a specific config preset.
+ * Boot instances with a specific config preset.
+ * Kills any existing instances, cleans Redis, then boots fresh instances.
  */
 export const setupInstances = async (configPreset: ConfigPresetName): Promise<void> => {
-  await resetInstance(INSTANCE_A_URL, { cleanRedis: true, configPreset });
-  await resetInstance(INSTANCE_B_URL, { cleanRedis: false, configPreset });
-  await sleep(ALLOCATION_PROPAGATION_MS);
+  await killAllInstances();
+  await cleanRedis();
+  await bootInstance(INSTANCE_PORT_A, configPreset);
+  await bootInstance(INSTANCE_PORT_B, configPreset);
+  await waitForAllocationUpdate(INSTANCE_PORT_A, (a) => a.instanceCount === TWO_INSTANCES);
 };
 
 /**

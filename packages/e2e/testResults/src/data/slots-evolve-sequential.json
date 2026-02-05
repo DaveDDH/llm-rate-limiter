@@ -1,0 +1,2019 @@
+{
+  "metadata": {
+    "startTime": 1770304345539,
+    "endTime": 1770304385822,
+    "durationMs": 40283,
+    "instances": {
+      "http://localhost:3002": "inst-1770304345035-qz8215ftm",
+      "http://localhost:3001": "inst-1770304345027-064m2kclk"
+    }
+  },
+  "jobs": {
+    "evolve-batch1-1770304345017-0": {
+      "jobId": "evolve-batch1-1770304345017-0",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345649,
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345663
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345666,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345768,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 3,
+      "processingDurationMs": 102,
+      "totalDurationMs": 105
+    },
+    "evolve-batch1-1770304345017-1": {
+      "jobId": "evolve-batch1-1770304345017-1",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345666,
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345668
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345669,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345769,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 100,
+      "totalDurationMs": 101
+    },
+    "evolve-batch1-1770304345017-2": {
+      "jobId": "evolve-batch1-1770304345017-2",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345668,
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345669
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345669,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345770,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 0,
+      "processingDurationMs": 101,
+      "totalDurationMs": 101
+    },
+    "evolve-batch1-1770304345017-3": {
+      "jobId": "evolve-batch1-1770304345017-3",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345670,
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345670
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345671,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345772,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 101,
+      "totalDurationMs": 102
+    },
+    "evolve-batch1-1770304345017-4": {
+      "jobId": "evolve-batch1-1770304345017-4",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345671,
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345671
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345672,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345772,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 100,
+      "totalDurationMs": 101
+    },
+    "evolve-batch1-1770304345017-5": {
+      "jobId": "evolve-batch1-1770304345017-5",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345672,
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345672
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345673,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345773,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 100,
+      "totalDurationMs": 101
+    },
+    "evolve-batch2-1770304345017-0": {
+      "jobId": "evolve-batch2-1770304345017-0",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345673,
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345673
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345674,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345774,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 100,
+      "totalDurationMs": 101
+    },
+    "evolve-batch2-1770304345017-1": {
+      "jobId": "evolve-batch2-1770304345017-1",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345674,
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345674
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345674,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345775,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 0,
+      "processingDurationMs": 101,
+      "totalDurationMs": 101
+    },
+    "evolve-batch2-1770304345017-2": {
+      "jobId": "evolve-batch2-1770304345017-2",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345675,
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345675
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345676,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345777,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 101,
+      "totalDurationMs": 102
+    },
+    "evolve-batch2-1770304345017-3": {
+      "jobId": "evolve-batch2-1770304345017-3",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345675,
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345676
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304345677,
+          "modelId": "model-alpha"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304345777,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-alpha",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 100,
+      "totalDurationMs": 101
+    },
+    "evolve-batch2-1770304345017-4": {
+      "jobId": "evolve-batch2-1770304345017-4",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345676,
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345677
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304385678,
+          "modelId": "model-beta"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304385779,
+          "cost": 0.0065
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-beta",
+      "totalCost": 0.0065,
+      "queueDurationMs": 40001,
+      "processingDurationMs": 101,
+      "totalDurationMs": 40102
+    },
+    "evolve-batch2-1770304345017-5": {
+      "jobId": "evolve-batch2-1770304345017-5",
+      "jobType": "jobTypeA",
+      "sentAt": 1770304345677,
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770304345678
+        },
+        {
+          "type": "started",
+          "timestamp": 1770304385678,
+          "modelId": "model-beta"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770304385779,
+          "cost": 0.0065
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "model-beta",
+      "totalCost": 0.0065,
+      "queueDurationMs": 40000,
+      "processingDurationMs": 101,
+      "totalDurationMs": 40101
+    }
+  },
+  "timeline": [
+    {
+      "t": 1770304345540,
+      "event": "connected",
+      "instanceId": "inst-1770304345035-qz8215ftm"
+    },
+    {
+      "t": 1770304345540,
+      "event": "connected",
+      "instanceId": "inst-1770304345027-064m2kclk"
+    },
+    {
+      "t": 1770304345663,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-0",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345666,
+      "event": "job:started",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-0",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345668,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-1",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345669,
+      "event": "job:started",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-1",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345669,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-2",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345669,
+      "event": "job:started",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-2",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345670,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-3",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345671,
+      "event": "job:started",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-3",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345671,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-4",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345672,
+      "event": "job:started",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-4",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345672,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-5",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345673,
+      "event": "job:started",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-5",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345673,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-0",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345674,
+      "event": "job:started",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-0",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345674,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-1",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345674,
+      "event": "job:started",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-1",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345675,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-2",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345676,
+      "event": "job:started",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-2",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345676,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-3",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345677,
+      "event": "job:started",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-3",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha"
+    },
+    {
+      "t": 1770304345677,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-4",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345678,
+      "event": "job:queued",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-5",
+      "jobType": "jobTypeA"
+    },
+    {
+      "t": 1770304345768,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-0",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 105
+      }
+    },
+    {
+      "t": 1770304345769,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-1",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770304345770,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-2",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770304345772,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-3",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770304345772,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch1-1770304345017-4",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770304345773,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch1-1770304345017-5",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770304345774,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-0",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770304345775,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-1",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770304345777,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-3",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770304345777,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-2",
+      "jobType": "jobTypeA",
+      "modelId": "model-alpha",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770304385678,
+      "event": "job:started",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-4",
+      "jobType": "jobTypeA",
+      "modelId": "model-beta"
+    },
+    {
+      "t": 1770304385678,
+      "event": "job:started",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-5",
+      "jobType": "jobTypeA",
+      "modelId": "model-beta"
+    },
+    {
+      "t": 1770304385779,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345027-064m2kclk",
+      "jobId": "evolve-batch2-1770304345017-4",
+      "jobType": "jobTypeA",
+      "modelId": "model-beta",
+      "data": {
+        "cost": 0.0065,
+        "durationMs": 40102
+      }
+    },
+    {
+      "t": 1770304385779,
+      "event": "job:completed",
+      "instanceId": "inst-1770304345035-qz8215ftm",
+      "jobId": "evolve-batch2-1770304345017-5",
+      "jobType": "jobTypeA",
+      "modelId": "model-beta",
+      "data": {
+        "cost": 0.0065,
+        "durationMs": 40101
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "timestamp": 1770304345649,
+      "trigger": "initial",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {},
+          "jobTypes": {}
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {},
+          "jobTypes": {}
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345666,
+      "trigger": "job:queued:evolve-batch1-1770304345017-0",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {},
+          "jobTypes": {}
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345669,
+      "trigger": "job:queued:evolve-batch1-1770304345017-1",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345670,
+      "trigger": "job:queued:evolve-batch1-1770304345017-2",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345671,
+      "trigger": "job:queued:evolve-batch1-1770304345017-3",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345672,
+      "trigger": "job:queued:evolve-batch1-1770304345017-4",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345673,
+      "trigger": "job:queued:evolve-batch1-1770304345017-5",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345674,
+      "trigger": "job:queued:evolve-batch2-1770304345017-0",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 40000,
+              "tpmRemaining": 10000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 4,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345675,
+      "trigger": "job:queued:evolve-batch2-1770304345017-1",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 40000,
+              "tpmRemaining": 10000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 4,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 40000,
+              "tpmRemaining": 10000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 4,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345676,
+      "trigger": "job:queued:evolve-batch2-1770304345017-2",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 5,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 40000,
+              "tpmRemaining": 10000
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 4,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345677,
+      "trigger": "job:queued:evolve-batch2-1770304345017-3",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 5,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 5,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345678,
+      "trigger": "job:queued:evolve-batch2-1770304345017-4",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 6,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 6,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 5,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345678,
+      "trigger": "job:queued:evolve-batch2-1770304345017-5",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 6,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-0",
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 6,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 6,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 6,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345769,
+      "trigger": "job:completed:evolve-batch1-1770304345017-0",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-2",
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 5,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 6,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-1",
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 6,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345771,
+      "trigger": "job:completed:evolve-batch1-1770304345017-1",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-4",
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 4,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-3",
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 5,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345773,
+      "trigger": "job:completed:evolve-batch1-1770304345017-3",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "evolve-batch1-1770304345017-5",
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 4,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345774,
+      "trigger": "job:completed:evolve-batch1-1770304345017-2",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 5,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345774,
+      "trigger": "job:completed:evolve-batch1-1770304345017-5",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345775,
+      "trigger": "job:completed:evolve-batch1-1770304345017-4",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-0",
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-1",
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 3,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345776,
+      "trigger": "job:completed:evolve-batch2-1770304345017-0",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345776,
+      "trigger": "job:completed:evolve-batch2-1770304345017-1",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-2",
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-3",
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 2,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345778,
+      "trigger": "job:completed:evolve-batch2-1770304345017-3",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345779,
+      "trigger": "job:completed:evolve-batch2-1770304345017-2",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304345880,
+      "trigger": "after-sending-jobs",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-4"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "evolve-batch2-1770304345017-5"
+          ],
+          "models": {
+            "model-alpha": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 50000,
+              "tpmRemaining": 0
+            }
+          },
+          "jobTypes": {
+            "jobTypeA": {
+              "ratio": 0.6,
+              "inFlight": 1,
+              "slots": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770304385781,
+      "trigger": "job:completed:evolve-batch2-1770304345017-4",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "model-beta": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 35000
+            }
+          },
+          "jobTypes": {}
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "model-beta": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {}
+        }
+      }
+    },
+    {
+      "timestamp": 1770304385781,
+      "trigger": "job:completed:evolve-batch2-1770304345017-5",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "model-beta": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {}
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "model-beta": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {}
+        }
+      }
+    },
+    {
+      "timestamp": 1770304385820,
+      "trigger": "final",
+      "instances": {
+        "inst-1770304345027-064m2kclk": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "model-beta": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {}
+        },
+        "inst-1770304345035-qz8215ftm": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "model-beta": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 30000
+            }
+          },
+          "jobTypes": {}
+        }
+      }
+    }
+  ],
+  "summary": {
+    "totalJobs": 12,
+    "completed": 12,
+    "failed": 0,
+    "avgDurationMs": 6768.25,
+    "byInstance": {
+      "inst-1770304345027-064m2kclk": {
+        "completed": 6,
+        "failed": 0,
+        "total": 6
+      },
+      "inst-1770304345035-qz8215ftm": {
+        "completed": 6,
+        "failed": 0,
+        "total": 6
+      }
+    },
+    "byJobType": {
+      "jobTypeA": {
+        "completed": 12,
+        "failed": 0,
+        "total": 12
+      }
+    },
+    "byModel": {
+      "model-alpha": {
+        "completed": 10,
+        "failed": 0,
+        "total": 10
+      },
+      "model-beta": {
+        "completed": 2,
+        "failed": 0,
+        "total": 2
+      }
+    }
+  }
+}

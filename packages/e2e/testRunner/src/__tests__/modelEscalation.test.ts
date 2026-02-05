@@ -19,10 +19,14 @@
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import {
+  AFTER_ALL_TIMEOUT_MS,
+  INSTANCE_URLS,
+  PROXY_URL,
+  bootInfrastructure,
+  teardownInfrastructure,
+} from './infrastructureHelpers.js';
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
-
-const PROXY_URL = 'http://localhost:3000';
-const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
 // Total capacity: 500,000 TPM / 10,000 tokens = 50 jobs per minute
 // Fill 2 minutes: 100 jobs
@@ -79,8 +83,13 @@ describe('Model Escalation to Secondary', () => {
   let data: TestData = createEmptyTestData();
 
   beforeAll(async () => {
+    await bootInfrastructure();
     data = await runModelEscalationTest();
   }, BEFORE_ALL_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await teardownInfrastructure();
+  }, AFTER_ALL_TIMEOUT_MS);
 
   it('should send all jobs', () => {
     expect(Object.keys(data.jobs).length).toBe(TOTAL_JOBS);

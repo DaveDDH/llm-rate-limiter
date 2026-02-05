@@ -18,10 +18,14 @@
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
+import {
+  AFTER_ALL_TIMEOUT_MS,
+  INSTANCE_URLS,
+  PROXY_URL,
+  bootInfrastructure,
+  teardownInfrastructure,
+} from './infrastructureHelpers.js';
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
-
-const PROXY_URL = 'http://localhost:3000';
-const INSTANCE_URLS = ['http://localhost:3001', 'http://localhost:3002'];
 
 // Capacity to fill 2 minutes worth of each model
 // openai: 50/min x 2 = 100, xai: 400/min x 2 = 800
@@ -92,8 +96,13 @@ describe('Model Escalation to Third Model', () => {
   let data: TestData = createEmptyTestData();
 
   beforeAll(async () => {
+    await bootInfrastructure();
     data = await runModelEscalationThirdTest();
   }, BEFORE_ALL_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await teardownInfrastructure();
+  }, AFTER_ALL_TIMEOUT_MS);
 
   it('should send all jobs', () => {
     const expectedTotal = OPENAI_CAPACITY + XAI_CAPACITY + ESCALATION_JOB_COUNT;
