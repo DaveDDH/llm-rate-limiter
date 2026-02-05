@@ -185,3 +185,96 @@ export const slotCalcMemoryConfig: RateLimiterPreset = {
     },
   },
 };
+
+// Daily limits constants
+const SLOT_CALC_TPD_EPSILON = 1000000;
+const SLOT_CALC_RPD_EPSILON = 10000;
+
+/** Combined TPD + RPD config (Daily limits test) */
+export const slotCalcTpdRpdConfig: RateLimiterPreset = {
+  models: {
+    'model-epsilon': {
+      tokensPerDay: SLOT_CALC_TPD_EPSILON,
+      requestsPerDay: SLOT_CALC_RPD_EPSILON,
+      pricing: {
+        input: PRICING_INPUT_STANDARD,
+        cached: PRICING_CACHED_STANDARD,
+        output: PRICING_OUTPUT_STANDARD,
+      },
+    },
+  },
+  escalationOrder: ['model-epsilon'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: SLOT_CALC_TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_SIXTY_PERCENT },
+    },
+    jobTypeB: {
+      estimatedUsedTokens: SLOT_CALC_TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_FORTY_PERCENT },
+    },
+  },
+};
+
+// Zero slots config constants
+const SLOT_CALC_ZERO_TPM = 15000;
+
+/** Zero Slots After Floor Division config (4 instances, low TPM) */
+export const slotCalcZeroSlotsConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': {
+      tokensPerMinute: SLOT_CALC_ZERO_TPM,
+      pricing: {
+        input: PRICING_INPUT_STANDARD,
+        cached: PRICING_CACHED_STANDARD,
+        output: PRICING_OUTPUT_STANDARD,
+      },
+    },
+  },
+  escalationOrder: ['model-alpha'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: SLOT_CALC_TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_SIXTY_PERCENT },
+    },
+    jobTypeB: {
+      estimatedUsedTokens: SLOT_CALC_TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_FORTY_PERCENT },
+    },
+  },
+};
+
+// RPM limiting constants
+const SLOT_CALC_RPM_LIMITING_RPM = 6;
+
+/** RPM as Limiting Factor Over TPM config */
+export const slotCalcRpmLimitingConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': {
+      tokensPerMinute: SLOT_CALC_TPM_100K,
+      requestsPerMinute: SLOT_CALC_RPM_LIMITING_RPM,
+      pricing: {
+        input: PRICING_INPUT_STANDARD,
+        cached: PRICING_CACHED_STANDARD,
+        output: PRICING_OUTPUT_STANDARD,
+      },
+    },
+  },
+  escalationOrder: ['model-alpha'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: SLOT_CALC_TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_SIXTY_PERCENT },
+    },
+    jobTypeB: {
+      estimatedUsedTokens: SLOT_CALC_TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_FORTY_PERCENT },
+    },
+  },
+};

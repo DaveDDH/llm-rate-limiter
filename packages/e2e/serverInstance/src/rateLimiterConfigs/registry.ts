@@ -13,8 +13,11 @@ import {
   slotCalcMemoryConfig,
   slotCalcRatiosConfig,
   slotCalcRpdConfig,
+  slotCalcRpmLimitingConfig,
   slotCalcTpdConfig,
+  slotCalcTpdRpdConfig,
   slotCalcUnevenRatiosConfig,
+  slotCalcZeroSlotsConfig,
 } from './slotCalcRatioConfigs.js';
 import {
   fixedRatioConfig,
@@ -41,6 +44,9 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'slotCalc-ratios': slotCalcRatiosConfig,
   'slotCalc-uneven-ratios': slotCalcUnevenRatiosConfig,
   'slotCalc-memory': slotCalcMemoryConfig,
+  'slotCalc-tpd-rpd': slotCalcTpdRpdConfig,
+  'slotCalc-zero-slots': slotCalcZeroSlotsConfig,
+  'slotCalc-rpm-limiting': slotCalcRpmLimitingConfig,
 };
 
 /** Get a configuration preset by name */

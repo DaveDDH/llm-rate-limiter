@@ -17,8 +17,10 @@ const ALLOCATION_PROPAGATION_MS = 2000;
 export const SINGLE_INSTANCE = 1;
 export const TWO_INSTANCES = 2;
 export const THREE_INSTANCES = 3;
+export const FOUR_INSTANCES = 4;
 export const ZERO_COUNT = 0;
 export const TEN_SLOTS = 10;
+export const SIX_SLOTS = 6;
 export const FIVE_SLOTS = 5;
 export const THREE_SLOTS = 3;
 export const FIFTY_SLOTS = 50;
@@ -26,6 +28,43 @@ export const TWENTY_FIVE_SLOTS = 25;
 export const MAX_TPM_PER_INSTANCE = 50000;
 export const MAX_RPM_PER_INSTANCE = 250;
 export const MIN_MEMORY_SLOTS = 1000;
+
+// Test case 1.2: TPM-Only (Averaged Estimates)
+// Model: TPM = 100,000, jobTypeA: 10K tokens, jobTypeB: 5K tokens
+// avgTokens = (10K + 5K) / 2 = 7,500
+// floor((100K / 7,500) / 2) = floor(6.67) = 6
+export const TPM_AVERAGED_SLOTS = 6;
+export const TPM_PER_INSTANCE_SPLIT = 50000;
+
+// Test case 1.3: RPM-Only
+// Model: RPM = 500, 2 instances
+// avgRequests = (1 + 5) / 2 = 3 (from slotCalc-rpm config)
+// floor((500 / 3) / 2) = floor(83.33) = 83
+export const RPM_SLOTS_TWO_INSTANCES = 83;
+export const RPM_PER_INSTANCE_SPLIT = 250;
+
+// Test case 1.5: Mixed Limits
+// TPM = 100K, RPM = 50, tokens = 10K, requests = 1, 2 instances
+// TPM slots: floor((100K / 10K) / 2) = 5
+// RPM slots: floor((50 / 1) / 2) = 25
+// Limiting factor = min(5, 25) = 5
+export const MIXED_LIMITS_SLOTS = 5;
+
+// Test case 1.6: Daily Limits
+// TPD = 1,000,000, RPD = 10,000, tokens = 10K, requests = 1, 2 instances
+// TPD slots: floor((1M / 10K) / 2) = 50
+// RPD slots: floor((10K / 1) / 2) = 5000
+// Limiting = 50
+export const DAILY_LIMITS_SLOTS = 50;
+export const TPD_PER_INSTANCE = 500000;
+export const RPD_PER_INSTANCE = 5000;
+
+// Test case 1.10: RPM as Limiting Factor
+// TPM = 100K, RPM = 6, tokens = 10K, requests = 1, 2 instances
+// TPM slots: floor((100K / 10K) / 2) = 5
+// RPM slots: floor((6 / 1) / 2) = 3
+// Limiting factor = min(5, 3) = 3 (RPM is limiting)
+export const RPM_LIMITING_SLOTS = 3;
 
 export const INSTANCE_PORT_A = 3001;
 export const INSTANCE_PORT_B = 3002;
@@ -232,6 +271,74 @@ export const setupAndVerifyThreeInstances = async (
   expect(getPoolSlots(responseA, 'scale-model')).toBe(THREE_SLOTS);
   expect(getPoolSlots(responseB, 'scale-model')).toBe(THREE_SLOTS);
   expect(getPoolSlots(responseC, 'scale-model')).toBe(THREE_SLOTS);
+
+  await killAllInstances();
+};
+
+// Port indices for tuple access
+const PORT_INDEX_FIRST = 0;
+const PORT_INDEX_SECOND = 1;
+const PORT_INDEX_THIRD = 2;
+const PORT_INDEX_FOURTH = 3;
+
+/**
+ * Boot second instance and wait for allocation update
+ */
+const bootSecondInstance = async (
+  ports: [number, number, number, number],
+  configPreset: ConfigPresetName
+): Promise<void> => {
+  await bootInstance(ports[PORT_INDEX_SECOND], configPreset);
+  await waitForAllocationUpdate(ports[PORT_INDEX_FIRST], (a) => a.instanceCount === TWO_INSTANCES);
+};
+
+/**
+ * Boot third instance and wait for allocation update
+ */
+const bootThirdInstance = async (
+  ports: [number, number, number, number],
+  configPreset: ConfigPresetName
+): Promise<void> => {
+  await bootInstance(ports[PORT_INDEX_THIRD], configPreset);
+  await waitForAllocationUpdate(ports[PORT_INDEX_FIRST], (a) => a.instanceCount === THREE_INSTANCES);
+};
+
+/**
+ * Boot fourth instance and wait for allocation update
+ */
+const bootFourthInstance = async (
+  ports: [number, number, number, number],
+  configPreset: ConfigPresetName
+): Promise<void> => {
+  await bootInstance(ports[PORT_INDEX_FOURTH], configPreset);
+  await waitForAllocationUpdate(ports[PORT_INDEX_FIRST], (a) => a.instanceCount === FOUR_INSTANCES);
+};
+
+/**
+ * Setup and verify pool slots with scaling - four instances
+ */
+export const setupAndVerifyFourInstances = async (
+  ports: [number, number, number, number],
+  configPreset: ConfigPresetName,
+  modelId: string,
+  expectedSlots: number
+): Promise<void> => {
+  await killAllInstances();
+  await cleanRedis();
+
+  // Boot first instance
+  await bootInstance(ports[PORT_INDEX_FIRST], configPreset);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+
+  // Boot remaining instances sequentially
+  await bootSecondInstance(ports, configPreset);
+  await bootThirdInstance(ports, configPreset);
+  await bootFourthInstance(ports, configPreset);
+
+  const response = await fetchAllocationFromPort(ports[PORT_INDEX_FIRST]);
+
+  expect(response.allocation?.instanceCount).toBe(FOUR_INSTANCES);
+  expect(getPoolSlots(response, modelId)).toBe(expectedSlots);
 
   await killAllInstances();
 };

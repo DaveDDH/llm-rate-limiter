@@ -1,11 +1,7 @@
 /**
  * Data transformation utilities for converting TestData to chart format.
  */
-import type {
-  CompactInstanceState,
-  StateSnapshot,
-  TestData,
-} from '@llm-rate-limiter/e2e-test-results';
+import type { CompactInstanceState, StateSnapshot, TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { getMetricColor } from './chartConfig';
 import type { ChartDataPoint, MetricCategory, MetricConfig } from './types';
@@ -26,10 +22,7 @@ function shortenInstanceId(instanceId: string): string {
 }
 
 /** Extract metrics from a single instance state */
-function extractInstanceMetrics(
-  state: CompactInstanceState,
-  shortId: string
-): Record<string, number> {
+function extractInstanceMetrics(state: CompactInstanceState, shortId: string): Record<string, number> {
   const metrics: Record<string, number> = {};
   metrics[`${shortId}_activeJobs`] = state.activeJobs;
 
@@ -73,15 +66,11 @@ function snapshotToDataPoint(
 }
 
 /** Transform TestData snapshots to chart-friendly format */
-export function transformSnapshotsToChartData(
-  testData: TestData
-): ChartDataPoint[] {
+export function transformSnapshotsToChartData(testData: TestData): ChartDataPoint[] {
   const { startTime } = testData.metadata;
   const instanceIdMap = buildInstanceIdMap(testData);
 
-  return testData.snapshots.map((snapshot) =>
-    snapshotToDataPoint(snapshot, startTime, instanceIdMap)
-  );
+  return testData.snapshots.map((snapshot) => snapshotToDataPoint(snapshot, startTime, instanceIdMap));
 }
 
 /** Build a map of instance IDs to short display names */
@@ -113,41 +102,24 @@ function extractJobMetrics(
   currentIndex: number
 ): number {
   let index = currentIndex;
-  metrics.push(
-    buildMetricConfig(`${shortId}_activeJobs`, index, 'jobs', `${shortId} Active Jobs`)
-  );
+  metrics.push(buildMetricConfig(`${shortId}_activeJobs`, index, 'jobs', `${shortId} Active Jobs`));
   index += 1;
 
   for (const modelId of Object.keys(state.models)) {
     const modelKey = modelId.replace(MODEL_KEY_REGEXP, '_');
     metrics.push(
-      buildMetricConfig(
-        `${shortId}_${modelKey}_rpm`,
-        index,
-        'rateLimit',
-        `${shortId} ${modelId} RPM`
-      )
+      buildMetricConfig(`${shortId}_${modelKey}_rpm`, index, 'rateLimit', `${shortId} ${modelId} RPM`)
     );
     index += 1;
   }
 
   for (const jobType of Object.keys(state.jobTypes)) {
     metrics.push(
-      buildMetricConfig(
-        `${shortId}_${jobType}_inFlight`,
-        index,
-        'jobs',
-        `${shortId} ${jobType} In-Flight`
-      )
+      buildMetricConfig(`${shortId}_${jobType}_inFlight`, index, 'jobs', `${shortId} ${jobType} In-Flight`)
     );
     index += 1;
     metrics.push(
-      buildMetricConfig(
-        `${shortId}_${jobType}_slots`,
-        index,
-        'capacity',
-        `${shortId} ${jobType} Slots`
-      )
+      buildMetricConfig(`${shortId}_${jobType}_slots`, index, 'capacity', `${shortId} ${jobType} Slots`)
     );
     index += 1;
   }

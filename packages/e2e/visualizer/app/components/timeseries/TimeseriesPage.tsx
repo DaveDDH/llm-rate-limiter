@@ -5,12 +5,10 @@ import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DatasetSelector } from './DatasetSelector';
-import { MetricSelector } from './MetricSelector';
 import { TimeseriesChart } from './TimeseriesChart';
 import {
   transformSnapshotsToChartData,
   getAvailableMetrics,
-  DEFAULT_METRICS,
   type ChartDataPoint,
   type MetricConfig,
 } from '@/lib/timeseries';
@@ -59,7 +57,6 @@ export function TimeseriesPage() {
   const [testData, setTestData] = useState<TestData | null>(null);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [metrics, setMetrics] = useState<MetricConfig[]>([]);
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_METRICS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,9 +69,7 @@ export function TimeseriesPage() {
 
       setTestData(data);
       setChartData(transformSnapshotsToChartData(data));
-      const availableMetrics = getAvailableMetrics(data);
-      setMetrics(availableMetrics);
-      initializeSelectedMetrics(availableMetrics, setSelectedMetrics);
+      setMetrics(getAvailableMetrics(data));
       setLoading(false);
     }
 
@@ -85,6 +80,8 @@ export function TimeseriesPage() {
     };
   }, [selectedDataset]);
 
+  const allMetricKeys = metrics.map((m) => m.key);
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <Card>
@@ -92,61 +89,16 @@ export function TimeseriesPage() {
           <CardTitle>E2E Test Results Visualization</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ControlsSection
-            selectedDataset={selectedDataset}
-            onDatasetChange={setSelectedDataset}
-            metrics={metrics}
-            selectedMetrics={selectedMetrics}
-            onMetricsChange={setSelectedMetrics}
-          />
+          <DatasetSelector value={selectedDataset} onValueChange={setSelectedDataset} />
           <ChartSection
             loading={loading}
             chartData={chartData}
-            selectedMetrics={selectedMetrics}
+            selectedMetrics={allMetricKeys}
             metricConfigs={metrics}
           />
           {testData && <SummarySection testData={testData} />}
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-function initializeSelectedMetrics(
-  availableMetrics: MetricConfig[],
-  setSelectedMetrics: (metrics: string[]) => void
-) {
-  const activeJobsMetric = availableMetrics.find((m) => m.key.endsWith('_activeJobs'));
-  if (activeJobsMetric) {
-    setSelectedMetrics([activeJobsMetric.key]);
-  } else if (availableMetrics.length > 0) {
-    setSelectedMetrics([availableMetrics[0].key]);
-  }
-}
-
-interface ControlsSectionProps {
-  selectedDataset: string;
-  onDatasetChange: (dataset: string) => void;
-  metrics: MetricConfig[];
-  selectedMetrics: string[];
-  onMetricsChange: (metrics: string[]) => void;
-}
-
-function ControlsSection({
-  selectedDataset,
-  onDatasetChange,
-  metrics,
-  selectedMetrics,
-  onMetricsChange,
-}: ControlsSectionProps) {
-  return (
-    <div className="space-y-4">
-      <DatasetSelector value={selectedDataset} onValueChange={onDatasetChange} />
-      <MetricSelector
-        metrics={metrics}
-        selected={selectedMetrics}
-        onSelectionChange={onMetricsChange}
-      />
     </div>
   );
 }

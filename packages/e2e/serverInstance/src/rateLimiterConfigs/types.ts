@@ -38,4 +38,7 @@ export type ConfigPresetName =
   | 'slotCalc-multi-model'
   | 'slotCalc-ratios'
   | 'slotCalc-uneven-ratios'
-  | 'slotCalc-memory';
+  | 'slotCalc-memory'
+  | 'slotCalc-tpd-rpd'
+  | 'slotCalc-zero-slots'
+  | 'slotCalc-rpm-limiting';

@@ -27,6 +27,9 @@ export {
   slotCalcRpdConfig,
   slotCalcUnevenRatiosConfig,
   slotCalcMemoryConfig,
+  slotCalcTpdRpdConfig,
+  slotCalcZeroSlotsConfig,
+  slotCalcRpmLimitingConfig,
 } from './slotCalcRatioConfigs.js';
 
 // Re-export registry and helpers from registry file
