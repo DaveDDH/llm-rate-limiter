@@ -1,4 +1,4 @@
-import type { ActiveJobInfo, LLMRateLimiterStats } from '@llm-rate-limiter/core';
+import type { ActiveJobInfo, AllocationInfo, LLMRateLimiterStats } from '@llm-rate-limiter/core';
 import { setTimeout as setTimeoutPromise } from 'node:timers/promises';
 
 const DEFAULT_POLL_INTERVAL_MS = 100;
@@ -16,6 +16,8 @@ export interface InstanceState {
   activeJobs: ActiveJobInfo[];
   /** Timestamp of last update */
   lastUpdate: number;
+  /** Distributed allocation info (per-model pools) */
+  allocation: AllocationInfo | null;
 }
 
 /** Aggregated state across all instances */
@@ -33,6 +35,7 @@ interface StatsResponse {
   instanceId: string;
   timestamp: number;
   stats: LLMRateLimiterStats;
+  allocation?: AllocationInfo | null;
 }
 
 /** Response from /api/debug/active-jobs endpoint */
@@ -131,7 +134,8 @@ const fetchSingleInstanceState = async (baseUrl: string): Promise<InstanceState 
       instanceId: statsResponse.instanceId,
       stats: statsResponse.stats,
       activeJobs: activeJobsResponse.activeJobs,
-      lastUpdate: Date.now(),
+      lastUpdate: statsResponse.timestamp,
+      allocation: statsResponse.allocation ?? null,
     };
   } catch {
     return null;

@@ -109,14 +109,14 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       <div
         ref={containerRef}
         className="relative"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="space-y-4">
+        <div className="space-y-0">
           {instances.map((instance) => (
             <InstanceSection
               key={instance.instanceId}
@@ -163,9 +163,6 @@ export function FocusInfo({ focusData, isHovering }: FocusInfoProps) {
     <div className="flex items-center gap-4 text-sm">
       <span className={isHovering ? 'text-foreground font-medium' : 'text-muted-foreground'}>
         Time: {focusData.time.toFixed(2)}s
-      </span>
-      <span className="text-muted-foreground truncate max-w-md" title={focusData.trigger}>
-        {focusData.trigger}
       </span>
     </div>
   );

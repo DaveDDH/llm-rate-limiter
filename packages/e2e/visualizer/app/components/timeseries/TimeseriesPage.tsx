@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { TestData } from '@llm-rate-limiter/e2e-test-results';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DatasetSelector } from './DatasetSelector';
-import { CapacityContext, FocusInfo } from './CapacityContext';
-import {
-  transformToCapacityData,
-  getInstanceConfigs,
-} from '@/lib/timeseries/capacityTransform';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getInstanceConfigs, transformToCapacityData } from '@/lib/timeseries/capacityTransform';
 import type { CapacityDataPoint, InstanceConfig } from '@/lib/timeseries/capacityTypes';
+import type { TestData } from '@llm-rate-limiter/e2e-test-results';
+import { useEffect, useState } from 'react';
+
+import { CapacityContext, FocusInfo } from './CapacityContext';
+import { DatasetSelector } from './DatasetSelector';
 
 async function loadDatasetJson(datasetId: string): Promise<TestData | null> {
   switch (datasetId) {
@@ -81,24 +79,23 @@ export function TimeseriesPage() {
   }, [selectedDataset]);
 
   return (
-    <div className="w-full m-0 p-3">
-      <Card className='shadow-none ring-0'>
+    <div className="w-full m-0 px-3">
+      <Card className="shadow-none ring-0">
         <CardHeader>
-          <CardTitle>E2E Test Results - Capacity Visualization</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <CardTitle className="flex gap-4 items-center justify-between">
+            <span>E2E Test Results - Capacity Visualization</span>
             <DatasetSelector value={selectedDataset} onValueChange={setSelectedDataset} />
-            <FocusInfo
-              focusData={focusIndex !== null ? chartData[focusIndex] : null}
-              isHovering={focusIndex !== null}
-            />
-          </div>
-
-          {loading ? (
-            <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-              Loading...
+            <div className="w-[200px] flex items-center justify-between">
+              <FocusInfo
+                focusData={focusIndex !== null ? chartData[focusIndex] : null}
+                isHovering={focusIndex !== null}
+              />
             </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-0">
+          {loading ? (
+            <div className="h-[400px] flex items-center justify-center text-muted-foreground">Loading...</div>
           ) : (
             <CapacityContext data={chartData} instances={instances} onFocusChange={setFocusIndex} />
           )}
@@ -119,15 +116,13 @@ function SummarySection({ testData }: SummarySectionProps) {
   const durationSec = (metadata.durationMs / 1000).toFixed(1);
 
   return (
-    <div className="flex flex-wrap gap-2 pt-4 border-t">
+    <div className="w-full justify-center flex flex-wrap gap-2 pt-4 border-t">
       <Badge variant="outline">Duration: {durationSec}s</Badge>
       <Badge variant="outline">Total Jobs: {summary.totalJobs}</Badge>
       <Badge variant="outline">Completed: {summary.completed}</Badge>
       <Badge variant="outline">Failed: {summary.failed}</Badge>
       {summary.avgDurationMs && (
-        <Badge variant="outline">
-          Avg Duration: {(summary.avgDurationMs / 1000).toFixed(2)}s
-        </Badge>
+        <Badge variant="outline">Avg Duration: {(summary.avgDurationMs / 1000).toFixed(2)}s</Badge>
       )}
     </div>
   );

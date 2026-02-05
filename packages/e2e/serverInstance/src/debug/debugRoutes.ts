@@ -71,11 +71,13 @@ const handleStats =
     const { rateLimiter } = getStateComponents(state);
     const stats = rateLimiter.getStats();
     const instanceId = rateLimiter.getInstanceId();
+    const allocation = rateLimiter.getAllocation();
 
     res.status(HTTP_STATUS_OK).json({
       instanceId,
       timestamp: Date.now(),
       stats,
+      allocation,
     });
   };
 

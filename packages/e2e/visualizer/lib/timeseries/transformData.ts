@@ -21,6 +21,25 @@ function shortenInstanceId(instanceId: string): string {
   return parts.length > MIN_PARTS_FOR_SHORT_ID ? `inst-${lastPart}` : instanceId;
 }
 
+/** Aggregate job type totals from per-model jobTypes */
+function aggregateJobTypeMetrics(
+  state: CompactInstanceState
+): Record<string, { inFlight: number; slots: number }> {
+  const totals: Record<string, { inFlight: number; slots: number }> = {};
+
+  for (const modelState of Object.values(state.models)) {
+    if (modelState.jobTypes === undefined) continue;
+    for (const [jobType, jtState] of Object.entries(modelState.jobTypes)) {
+      const existing = totals[jobType] ?? { inFlight: 0, slots: 0 };
+      existing.inFlight += jtState.inFlight;
+      existing.slots += jtState.slots;
+      totals[jobType] = existing;
+    }
+  }
+
+  return totals;
+}
+
 /** Extract metrics from a single instance state */
 function extractInstanceMetrics(state: CompactInstanceState, shortId: string): Record<string, number> {
   const metrics: Record<string, number> = {};
@@ -33,11 +52,10 @@ function extractInstanceMetrics(state: CompactInstanceState, shortId: string): R
     metrics[`${shortId}_${modelKey}_rpmRemaining`] = rpmRemaining;
   }
 
-  for (const [jobType, jobState] of Object.entries(state.jobTypes)) {
-    const { inFlight, slots, ratio } = jobState;
-    metrics[`${shortId}_${jobType}_inFlight`] = inFlight;
-    metrics[`${shortId}_${jobType}_slots`] = slots;
-    metrics[`${shortId}_${jobType}_ratio`] = ratio;
+  const jobTypeTotals = aggregateJobTypeMetrics(state);
+  for (const [jobType, totals] of Object.entries(jobTypeTotals)) {
+    metrics[`${shortId}_${jobType}_inFlight`] = totals.inFlight;
+    metrics[`${shortId}_${jobType}_slots`] = totals.slots;
   }
 
   return metrics;
@@ -93,6 +111,18 @@ function buildMetricConfig(
   return { key, label, category, color: getMetricColor(index) };
 }
 
+/** Collect unique job type names from models */
+function collectJobTypeNames(state: CompactInstanceState): string[] {
+  const names = new Set<string>();
+  for (const modelState of Object.values(state.models)) {
+    if (modelState.jobTypes === undefined) continue;
+    for (const jobType of Object.keys(modelState.jobTypes)) {
+      names.add(jobType);
+    }
+  }
+  return Array.from(names);
+}
+
 /** Extract job metrics from first snapshot */
 function extractJobMetrics(
   instanceId: string,
@@ -113,7 +143,7 @@ function extractJobMetrics(
     index += 1;
   }
 
-  for (const jobType of Object.keys(state.jobTypes)) {
+  for (const jobType of collectJobTypeNames(state)) {
     metrics.push(
       buildMetricConfig(`${shortId}_${jobType}_inFlight`, index, 'jobs', `${shortId} ${jobType} In-Flight`)
     );

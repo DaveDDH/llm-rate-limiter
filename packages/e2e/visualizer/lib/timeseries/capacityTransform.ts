@@ -173,12 +173,15 @@ function getCapacityForInterval(
 
   if (!relevantSnapshot) return capacity;
 
-  // Sum slots for all job types per instance
+  // Sum slots from per-model-per-jobtype breakdown
   for (const [fullId, state] of Object.entries(relevantSnapshot.instances)) {
     const shortId = instanceIdMap.get(fullId) ?? fullId;
     let totalSlots = 0;
-    for (const jobType of Object.values(state.jobTypes)) {
-      totalSlots += jobType.slots;
+    for (const modelState of Object.values(state.models)) {
+      if (modelState.jobTypes === undefined) continue;
+      for (const jtState of Object.values(modelState.jobTypes)) {
+        totalSlots += jtState.slots;
+      }
     }
     capacity[shortId] = totalSlots;
   }
@@ -193,35 +196,6 @@ function logCapacityPerInterval(
   minTime: number,
   instanceIdMap: Map<string, string>
 ): void {
-  // Debug: check interval 2 (0.27s)
-  const testInterval = points[2];
-  const testIntervalTime = minTime + testInterval.time * MS_TO_SECONDS;
-  console.log(`=== Debug interval 2 at ${testInterval.time.toFixed(2)}s ===`);
-  console.log(`intervalTime (absolute): ${testIntervalTime}`);
-  console.log(`minTime: ${minTime}`);
-
-  // Find the snapshot that would be selected
-  let selectedSnapshot: (typeof testData.snapshots)[0] | null = null;
-  let selectedTimestamp = -Infinity;
-  for (const snapshot of testData.snapshots) {
-    if (snapshot.timestamp <= testIntervalTime && snapshot.timestamp > selectedTimestamp) {
-      selectedSnapshot = snapshot;
-      selectedTimestamp = snapshot.timestamp;
-    }
-  }
-
-  if (selectedSnapshot) {
-    const relTime = (selectedSnapshot.timestamp - minTime) / MS_TO_SECONDS;
-    console.log(`Selected snapshot at ${relTime.toFixed(3)}s:`);
-    for (const [fullId, state] of Object.entries(selectedSnapshot.instances)) {
-      const shortId = instanceIdMap.get(fullId) ?? fullId;
-      const jobTypes = Object.entries(state.jobTypes).map(([jt, data]) => `${jt}:${data.slots}`);
-      console.log(`  ${shortId}: ${jobTypes.join(', ') || 'no jobTypes'}`);
-    }
-  } else {
-    console.log('No snapshot found!');
-  }
-
   const capacityLog = points.slice(0, 50).map((p) => {
     const intervalTime = minTime + p.time * MS_TO_SECONDS;
     const capacity = getCapacityForInterval(testData.snapshots, intervalTime, instanceIdMap);

@@ -4,6 +4,45 @@
 
 This document describes the Redis backend's slot allocation system, which uses a **pool-based approach** where Redis tracks capacity per-model and local instances distribute that capacity across job types.
 
+## Two Independent Capacity Constraints
+
+The rate limiter enforces two fundamentally different constraints. Understanding the distinction is essential:
+
+### Slots (Concurrent In-Flight Limit)
+
+Slots control how many jobs can **execute simultaneously** on a given model per instance.
+
+- **Recycle immediately**: when a job completes (100ms later), its slot is available for the next job.
+- **Derived from time-window limits**: `totalSlots = floor(remainingCapacity / avgEstimatedResourcePerJob / instanceCount)`.
+- **Distributed by ratio**: each job type gets `floor(totalSlots × ratio)` slots per model.
+- **Local enforcement**: each instance manages its own slot counts independently.
+
+Slots answer the question: *"Can I start another job right now?"*
+
+### TPM / RPM / TPD / RPD (Cumulative Time-Window Budget)
+
+Time-window counters track the **total tokens and requests consumed** within a fixed window (minute or day).
+
+- **Do NOT recycle on job completion**: once 10,000 tokens are consumed, they remain counted until the window resets.
+- **Reset at window boundaries**: the minute window resets at the next minute mark, the day window at the next day mark.
+- **Global via Redis**: all instances share the same counters, so usage from instance A reduces availability for instance B.
+- **Refunds only within the same window**: if a job completes in the same window it started, the difference between estimated and actual usage is refunded. Cross-window completions get no refund.
+
+Time-window counters answer the question: *"Have I exceeded the provider's rate limit for this period?"*
+
+### How They Interact
+
+Both constraints must be satisfied for a job to start:
+
+1. **Slot check**: is there a free slot for this (model, jobType) pair? → If not, the job waits in the queue.
+2. **Rate limit check**: does the model have remaining TPM/RPM budget? → If not, the job waits for the window to reset.
+
+A practical example: with `openai/gpt-5.2` at 500,000 TPM across 2 instances, and jobs estimating 10,000 tokens each:
+- **Slots** allow ~59 concurrent jobs per instance (TPM-bottlenecked), recycling as each 100ms job finishes.
+- **TPM** allows 50 total jobs per minute (500,000 ÷ 10,000). Once 50 jobs have run — even if they all finished instantly — the 51st must wait for the minute window to reset.
+
+Slots limit concurrency; time-window counters limit throughput.
+
 ## Architecture: Pool-Based Allocation
 
 The system separates concerns between Redis (global coordination) and local instances (job type distribution):

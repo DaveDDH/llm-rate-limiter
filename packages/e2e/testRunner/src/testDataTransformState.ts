@@ -3,12 +3,12 @@
  */
 import type {
   CompactInstanceState,
-  CompactJobTypeState,
   CompactModelState,
   StateSnapshot,
 } from '@llm-rate-limiter/e2e-test-results';
 
 import type { InstanceState } from './stateAggregator.js';
+import { enrichModelsWithJobTypes } from './testDataTransformModelJobTypes.js';
 import type { RawSnapshot } from './testDataTransformTypes.js';
 
 const ZERO = 0;
@@ -143,23 +143,6 @@ export const transformModelState = (stats: Record<string, unknown>): CompactMode
 };
 
 /**
- * Transform job type stats to compact format
- */
-export const transformJobTypeState = (state: Record<string, unknown>): CompactJobTypeState | null => {
-  const inFlight = Number(state.inFlight ?? ZERO);
-
-  if (inFlight === ZERO) {
-    return null;
-  }
-
-  return {
-    ratio: Number(state.currentRatio ?? ZERO),
-    inFlight,
-    slots: Number(state.allocatedSlots ?? ZERO),
-  };
-};
-
-/**
  * Check if value is an object record
  */
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
@@ -197,42 +180,6 @@ const transformModels = (stats: Record<string, unknown>): Record<string, Compact
 };
 
 /**
- * Check if job types value is valid
- */
-interface JobTypesContainer {
-  jobTypes?: Record<string, Record<string, unknown>>;
-}
-
-const isJobTypesContainer = (value: unknown): value is JobTypesContainer =>
-  typeof value === 'object' && value !== null;
-
-/**
- * Transform job types from instance stats
- */
-const transformJobTypes = (stats: Record<string, unknown>): Record<string, CompactJobTypeState> => {
-  const jobTypes: Record<string, CompactJobTypeState> = {};
-  const { jobTypes: jobTypesValue } = stats;
-
-  if (!isJobTypesContainer(jobTypesValue)) {
-    return jobTypes;
-  }
-
-  const { jobTypes: innerJobTypes } = jobTypesValue;
-  if (innerJobTypes === undefined) {
-    return jobTypes;
-  }
-
-  for (const [jobTypeId, jtState] of Object.entries(innerJobTypes)) {
-    const compact = transformJobTypeState(jtState);
-    if (compact !== null) {
-      jobTypes[jobTypeId] = compact;
-    }
-  }
-
-  return jobTypes;
-};
-
-/**
  * Convert stats to record for transformation functions
  */
 const statsToRecord = (stats: InstanceState['stats']): Record<string, unknown> => {
@@ -245,12 +192,12 @@ const statsToRecord = (stats: InstanceState['stats']): Record<string, unknown> =
  */
 export const transformInstanceState = (state: InstanceState): CompactInstanceState => {
   const statsRecord = statsToRecord(state.stats);
+  const models = enrichModelsWithJobTypes(transformModels(statsRecord), state);
 
   return {
     activeJobs: state.activeJobs.length,
     activeJobIds: state.activeJobs.map((j) => j.jobId),
-    models: transformModels(statsRecord),
-    jobTypes: transformJobTypes(statsRecord),
+    models,
   };
 };
 

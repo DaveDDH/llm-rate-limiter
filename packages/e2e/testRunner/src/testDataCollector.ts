@@ -13,6 +13,7 @@ const SLEEP_DURATION_MS = 100;
 const SSE_DATA_PREFIX = 'data: ';
 const SSE_DATA_PREFIX_LENGTH = 6;
 const JSON_INDENT_SPACES = 2;
+const ZERO_INSTANCES = 0;
 
 /** A single event captured from SSE */
 interface CapturedEvent {
@@ -198,6 +199,14 @@ const processSSEChunk = (config: ChunkProcessorConfig): string => {
   return remainingBuffer;
 };
 
+/** Derive snapshot timestamp from instance timestamps (latest instance time) */
+const deriveTimestampFromInstances = (instances: InstanceState[]): number => {
+  if (instances.length === ZERO_INSTANCES) {
+    return Date.now();
+  }
+  return Math.max(...instances.map((inst) => inst.lastUpdate));
+};
+
 /**
  * Collects all data during an E2E test run.
  */
@@ -283,7 +292,7 @@ export class TestDataCollector {
    */
   addSnapshot(label: string, instances: InstanceState[]): void {
     this.snapshots.push({
-      timestamp: Date.now(),
+      timestamp: deriveTimestampFromInstances(instances),
       label,
       instances,
     });

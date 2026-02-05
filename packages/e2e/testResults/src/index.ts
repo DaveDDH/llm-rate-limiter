@@ -1,6 +1,6 @@
 export type {
   CompactInstanceState,
-  CompactJobTypeState,
+  CompactModelJobTypeState,
   CompactModelState,
   JobEventRecord,
   JobRecord,

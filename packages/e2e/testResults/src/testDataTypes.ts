@@ -79,6 +79,13 @@ export interface TimelineEvent {
 // Compact State Snapshots
 // =============================================================================
 
+export interface CompactModelJobTypeState {
+  /** Slots allocated to this job type on this model */
+  slots: number;
+  /** In-flight jobs of this type on this model */
+  inFlight: number;
+}
+
 export interface CompactModelState {
   /** Requests per minute - current usage */
   rpm: number;
@@ -92,15 +99,8 @@ export interface CompactModelState {
   concurrent?: number;
   /** Available concurrent slots */
   concurrentAvailable?: number;
-}
-
-export interface CompactJobTypeState {
-  /** Current ratio */
-  ratio: number;
-  /** In-flight jobs */
-  inFlight: number;
-  /** Allocated slots */
-  slots: number;
+  /** Per-job-type breakdown within this model */
+  jobTypes?: Record<string, CompactModelJobTypeState>;
 }
 
 export interface CompactInstanceState {
@@ -108,10 +108,8 @@ export interface CompactInstanceState {
   activeJobs: number;
   /** Active job IDs */
   activeJobIds: string[];
-  /** Model states (only non-zero values) */
+  /** Model states (includes all allocated models) */
   models: Record<string, CompactModelState>;
-  /** Job type states (only non-zero inFlight) */
-  jobTypes: Record<string, CompactJobTypeState>;
 }
 
 export interface StateSnapshot {

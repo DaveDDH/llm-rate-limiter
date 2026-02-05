@@ -39,6 +39,8 @@ export interface SuiteConfig {
   delayedJobs?: Array<{ jobId: string; jobType: string; payload: Record<string, unknown> }>;
   delayedJobsDelayMs?: number;
   configPreset?: ConfigPresetName;
+  /** Interval in ms for periodic state snapshots. When set, captures a snapshot every N ms. */
+  snapshotIntervalMs?: number;
 }
 
 /** Get the directory of this module */
@@ -152,6 +154,70 @@ const saveDataIfRequested = async (
   }
 };
 
+/** Start periodic snapshot polling, returns a stop function */
+const startPeriodicSnapshots = (
+  aggregator: StateAggregator,
+  collector: TestDataCollector,
+  intervalMs: number
+): { stop: () => void } => {
+  const intervalId = setInterval(() => {
+    aggregator
+      .fetchState()
+      .then((states) => {
+        collector.addSnapshot('periodic', states);
+      })
+      .catch(() => {
+        // Ignore periodic snapshot errors
+      });
+  }, intervalMs);
+
+  return {
+    stop: () => {
+      clearInterval(intervalId);
+    },
+  };
+};
+
+/** Data collection setup result */
+interface DataCollectionSetup {
+  aggregator: StateAggregator;
+  collector: TestDataCollector;
+  stopPeriodicSnapshots: () => void;
+}
+
+/** Initialize data collection: aggregator, collector, listeners, initial snapshot, periodic snapshots */
+const startDataCollection = async (
+  instanceUrls: string[],
+  snapshotIntervalMs: number | undefined
+): Promise<DataCollectionSetup> => {
+  const aggregator = new StateAggregator(instanceUrls);
+  const { collector } = createCollector(instanceUrls, aggregator);
+
+  await collector.startEventListeners();
+  const initialStates = await aggregator.fetchState();
+  collector.addSnapshot('initial', initialStates);
+
+  const periodic =
+    snapshotIntervalMs === undefined
+      ? null
+      : startPeriodicSnapshots(aggregator, collector, snapshotIntervalMs);
+
+  return {
+    aggregator,
+    collector,
+    stopPeriodicSnapshots: () => {
+      periodic?.stop();
+    },
+  };
+};
+
+/** Stop data collection and return collected data */
+const finishDataCollection = (setup: DataCollectionSetup): TestData => {
+  setup.stopPeriodicSnapshots();
+  setup.collector.stopEventListeners();
+  return setup.collector.getData();
+};
+
 /** Run a test suite */
 export const runSuite = async (config: SuiteConfig): Promise<TestData> => {
   const {
@@ -167,16 +233,11 @@ export const runSuite = async (config: SuiteConfig): Promise<TestData> => {
     delayedJobs = [],
     delayedJobsDelayMs = DEFAULT_DELAYED_JOBS_DELAY_MS,
     configPreset,
+    snapshotIntervalMs,
   } = config;
 
   await initializeSuite(proxyUrl, instanceUrls, proxyRatio, configPreset);
-
-  const aggregator = new StateAggregator(instanceUrls);
-  const { collector } = createCollector(instanceUrls, aggregator);
-
-  await collector.startEventListeners();
-  const initialStates = await aggregator.fetchState();
-  collector.addSnapshot('initial', initialStates);
+  const setup = await startDataCollection(instanceUrls, snapshotIntervalMs);
 
   if (waitForMinuteBoundary) {
     await waitUntilNextMinute();
@@ -187,15 +248,13 @@ export const runSuite = async (config: SuiteConfig): Promise<TestData> => {
     delayedJobs,
     delayedJobsDelayMs,
     proxyUrl,
-    collector,
+    collector: setup.collector,
     sendInParallel: sendJobsInParallel,
   });
-  await waitAndCollectFinal(aggregator, collector, waitTimeoutMs);
+  await waitAndCollectFinal(setup.aggregator, setup.collector, waitTimeoutMs);
 
-  collector.stopEventListeners();
-  const data = collector.getData();
-
-  await saveDataIfRequested(collector, suiteName, saveToFile);
+  const data = finishDataCollection(setup);
+  await saveDataIfRequested(setup.collector, suiteName, saveToFile);
 
   return data;
 };

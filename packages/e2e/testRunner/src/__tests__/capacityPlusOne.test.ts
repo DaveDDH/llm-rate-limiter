@@ -41,6 +41,9 @@ const PROXY_RATIO = '1:1';
 // Minimum wait should be significant (at least a few seconds) to prove it waited for rate limit reset.
 const MIN_WAIT_FOR_RATE_LIMIT_RESET_MS = 1000;
 
+// Periodic snapshot interval
+const SNAPSHOT_INTERVAL_MS = 500;
+
 // Longer timeout since we need to wait for rate limit reset (up to 60s)
 const WAIT_TIMEOUT_MS = 90000;
 const BEFORE_ALL_TIMEOUT_MS = 150000;
@@ -74,6 +77,7 @@ const setupTestData = async (): Promise<TestSetupData> => {
     jobs,
     waitTimeoutMs: WAIT_TIMEOUT_MS,
     proxyRatio: PROXY_RATIO,
+    snapshotIntervalMs: SNAPSHOT_INTERVAL_MS,
   });
 
   // Sort jobs by when they were sent (sentAt)
