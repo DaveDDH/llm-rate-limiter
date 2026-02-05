@@ -9,12 +9,15 @@ interface HorizonChartProps {
   config: MetricConfig;
   height?: number;
   bands?: number;
+  focusIndex?: number | null;
 }
 
 const DEFAULT_HEIGHT = 120;
 const DEFAULT_BANDS = 4;
-const POSITIVE_COLORS = ['#d0e8f2', '#a0d4e8', '#60b4d4', '#2090b0'];
-const NEGATIVE_COLORS = ['#ffe0e0', '#ffc0c0', '#ff9090', '#ff6060'];
+
+// Cubism default colors: blues for negative, greens for positive
+const NEGATIVE_COLORS = ['#bdd7e7', '#6baed6', '#3182bd', '#08519c'];
+const POSITIVE_COLORS = ['#bae4b3', '#74c476', '#31a354', '#006d2c'];
 
 function getMetricValues(data: ChartDataPoint[], metricKey: string): number[] {
   return data.map((d) => {
@@ -53,12 +56,23 @@ function renderHorizonBands(
   });
 }
 
+function formatValue(value: number): string {
+  if (Math.abs(value) >= 1000) {
+    return value.toFixed(0);
+  }
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+  return value.toFixed(2);
+}
+
 export function HorizonChart({
   data,
   metricKey,
   config,
   height = DEFAULT_HEIGHT,
   bands = DEFAULT_BANDS,
+  focusIndex,
 }: HorizonChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,13 +95,31 @@ export function HorizonChart({
     renderHorizonBands(ctx, values, width, height, bands, maxValue);
   }, [data, metricKey, height, bands]);
 
+  const displayIndex = focusIndex ?? data.length - 1;
+  const currentValue = data[displayIndex]?.[metricKey];
+  const displayValue = typeof currentValue === 'number' ? formatValue(currentValue) : '-';
+
   return (
-    <div className="flex items-center gap-3 border-b border-border py-2">
-      <div className="w-48 text-sm truncate font-medium" title={config.label}>
-        {config.label}
+    <div
+      className="flex items-stretch border-t border-black relative"
+      style={{ minHeight: height }}
+    >
+      <div
+        className="w-48 flex items-center px-3 bg-background/80 border-r border-black"
+        style={{ textShadow: '0 1px 0 rgba(255,255,255,.5)' }}
+      >
+        <span className="text-sm font-medium truncate" title={config.label}>
+          {config.label}
+        </span>
       </div>
-      <div ref={containerRef} className="flex-1 min-w-0">
-        <canvas ref={canvasRef} height={height} className="w-full" />
+      <div ref={containerRef} className="flex-1 min-w-0 relative">
+        <canvas ref={canvasRef} height={height} className="w-full block" />
+        <div
+          className="absolute top-1 right-2 text-sm font-semibold tabular-nums"
+          style={{ textShadow: '0 1px 0 rgba(255,255,255,.8)' }}
+        >
+          {displayValue}
+        </div>
       </div>
     </div>
   );

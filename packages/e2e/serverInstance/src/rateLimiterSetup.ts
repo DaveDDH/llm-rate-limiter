@@ -1,8 +1,15 @@
-import { type LLMRateLimiterInstance, createLLMRateLimiter } from '@llm-rate-limiter/core';
+import {
+  type LLMRateLimiterInstance,
+  type OnAvailableSlotsChange,
+  createLLMRateLimiter,
+} from '@llm-rate-limiter/core';
 import { createRedisBackend } from '@llm-rate-limiter/redis';
 
 import { logger } from './logger.js';
 import { type ConfigPresetName, getConfigPreset } from './rateLimiterConfigs.js';
+
+/** No-op callback to enable the availability tracker (required for debug allocation endpoint) */
+const noopSlotsChange: OnAvailableSlotsChange = (_availability, _reason, _modelId) => undefined;
 
 export const createRateLimiterInstance = (
   redisUrl: string,
@@ -22,6 +29,7 @@ export const createRateLimiterInstance = (
     resourceEstimationsPerJob: config.resourceEstimations,
     backend: createRedisBackend(redisUrl),
     onLog: (message, data) => logger.info(message, data),
+    onAvailableSlotsChange: noopSlotsChange,
   });
 };
 

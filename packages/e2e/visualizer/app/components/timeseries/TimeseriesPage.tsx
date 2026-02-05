@@ -5,13 +5,12 @@ import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DatasetSelector } from './DatasetSelector';
-import { TimeseriesChart } from './TimeseriesChart';
+import { CapacityContext, FocusInfo } from './CapacityContext';
 import {
-  transformSnapshotsToChartData,
-  getAvailableMetrics,
-  type ChartDataPoint,
-  type MetricConfig,
-} from '@/lib/timeseries';
+  transformToCapacityData,
+  getInstanceConfigs,
+} from '@/lib/timeseries/capacityTransform';
+import type { CapacityDataPoint, InstanceConfig } from '@/lib/timeseries/capacityTypes';
 
 async function loadDatasetJson(datasetId: string): Promise<TestData | null> {
   switch (datasetId) {
@@ -55,9 +54,10 @@ async function loadDatasetJson(datasetId: string): Promise<TestData | null> {
 export function TimeseriesPage() {
   const [selectedDataset, setSelectedDataset] = useState('capacity-plus-one');
   const [testData, setTestData] = useState<TestData | null>(null);
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [metrics, setMetrics] = useState<MetricConfig[]>([]);
+  const [chartData, setChartData] = useState<CapacityDataPoint[]>([]);
+  const [instances, setInstances] = useState<InstanceConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [focusIndex, setFocusIndex] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,8 +68,8 @@ export function TimeseriesPage() {
       if (cancelled || data === null) return;
 
       setTestData(data);
-      setChartData(transformSnapshotsToChartData(data));
-      setMetrics(getAvailableMetrics(data));
+      setChartData(transformToCapacityData(data));
+      setInstances(getInstanceConfigs(data));
       setLoading(false);
     }
 
@@ -80,56 +80,33 @@ export function TimeseriesPage() {
     };
   }, [selectedDataset]);
 
-  const allMetricKeys = metrics.map((m) => m.key);
-
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <Card>
+    <div className="w-full m-0 p-3">
+      <Card className='shadow-none ring-0'>
         <CardHeader>
-          <CardTitle>E2E Test Results Visualization</CardTitle>
+          <CardTitle>E2E Test Results - Capacity Visualization</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <DatasetSelector value={selectedDataset} onValueChange={setSelectedDataset} />
-          <ChartSection
-            loading={loading}
-            chartData={chartData}
-            selectedMetrics={allMetricKeys}
-            metricConfigs={metrics}
-          />
+          <div className="flex items-center justify-between">
+            <DatasetSelector value={selectedDataset} onValueChange={setSelectedDataset} />
+            <FocusInfo
+              focusData={focusIndex !== null ? chartData[focusIndex] : null}
+              isHovering={focusIndex !== null}
+            />
+          </div>
+
+          {loading ? (
+            <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+              Loading...
+            </div>
+          ) : (
+            <CapacityContext data={chartData} instances={instances} onFocusChange={setFocusIndex} />
+          )}
+
           {testData && <SummarySection testData={testData} />}
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-interface ChartSectionProps {
-  loading: boolean;
-  chartData: ChartDataPoint[];
-  selectedMetrics: string[];
-  metricConfigs: MetricConfig[];
-}
-
-function ChartSection({
-  loading,
-  chartData,
-  selectedMetrics,
-  metricConfigs,
-}: ChartSectionProps) {
-  if (loading) {
-    return (
-      <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-        Loading...
-      </div>
-    );
-  }
-
-  return (
-    <TimeseriesChart
-      data={chartData}
-      selectedMetrics={selectedMetrics}
-      metricConfigs={metricConfigs}
-    />
   );
 }
 

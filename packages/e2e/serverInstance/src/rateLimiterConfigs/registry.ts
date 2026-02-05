@@ -16,6 +16,7 @@ import {
   slotCalcRpmLimitingConfig,
   slotCalcTpdConfig,
   slotCalcTpdRpdConfig,
+  slotCalcTpmSingleConfig,
   slotCalcUnevenRatiosConfig,
   slotCalcZeroSlotsConfig,
 } from './slotCalcRatioConfigs.js';
@@ -47,6 +48,7 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'slotCalc-tpd-rpd': slotCalcTpdRpdConfig,
   'slotCalc-zero-slots': slotCalcZeroSlotsConfig,
   'slotCalc-rpm-limiting': slotCalcRpmLimitingConfig,
+  'slotCalc-tpm-single': slotCalcTpmSingleConfig,
 };
 
 /** Get a configuration preset by name */

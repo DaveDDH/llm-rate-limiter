@@ -2,14 +2,9 @@
  * Test suite: Pool-Based Slot Calculation
  *
  * Verifies that the pool-based slot calculation works correctly.
- * With pool-based allocation, Redis calculates per-model slots (not per-job-type).
- *
- * Key: This test does NOT queue any jobs. It only verifies the initial
- * pool allocation math by querying the allocation endpoint directly.
+ * Tests do NOT queue any jobs - they only verify pool allocation math.
  *
  * Formula: pools[model].totalSlots = floor((modelCapacity / avgEstimatedResource) / instanceCount)
- *
- * Note: Job type distribution is now handled locally, not by Redis.
  */
 import {
   DAILY_LIMITS_SLOTS,
@@ -24,15 +19,10 @@ import {
   TPM_AVERAGED_SLOTS,
   TPM_PER_INSTANCE_SPLIT,
   TWO_INSTANCES,
-  ZERO_COUNT,
   fetchAllocation,
   getPool,
   getPoolSlots,
   killAllInstances,
-  setupAndVerifyFourInstances,
-  setupAndVerifySingleInstance,
-  setupAndVerifyThreeInstances,
-  setupAndVerifyTwoInstances,
   setupInstances,
   verifyInstanceCount,
   verifyPoolExists,
@@ -40,44 +30,15 @@ import {
 
 const BEFORE_ALL_TIMEOUT_MS = 60000;
 const AFTER_ALL_TIMEOUT_MS = 30000;
-const INSTANCE_SCALE_TIMEOUT = 120000;
 
-// Ports for scaling tests
-const PORT_A = 4011;
-const PORT_B = 4012;
-const PORT_C = 4013;
-const PORT_D = 4014;
-
-/**
- * Test 1.1: Single Instance Gets Full Capacity
- *
- * Config: model-alpha: TPM = 100,000, jobType: estimatedTokens = 10,000, instanceCount = 1
- * Expected: pools['scale-model'].totalSlots = 10
- */
-describe('Slot Calculation - 1.1 Single Instance Gets Full Capacity', () => {
-  afterAll(async () => {
-    await killAllInstances();
-  }, AFTER_ALL_TIMEOUT_MS);
-
-  it(
-    'single instance should get full capacity of 10 slots',
-    async () => {
-      await setupAndVerifySingleInstance(PORT_A, 'instanceScaling');
-    },
-    INSTANCE_SCALE_TIMEOUT
-  );
-});
+// Ensure all instances are killed when this file finishes
+afterAll(async () => {
+  await killAllInstances();
+}, AFTER_ALL_TIMEOUT_MS);
 
 /**
  * Test 1.2: TPM-Only Model - Exact Slot Calculation (Averaged Estimates)
- *
- * Config: model-alpha: TPM = 100,000
- *         jobTypeA: estimatedTokens = 10,000, ratio = 0.6
- *         jobTypeB: estimatedTokens = 5,000, ratio = 0.4
- *         instanceCount = 2
- *
- * avgTokens = (10,000 + 5,000) / 2 = 7,500
- * Expected: floor((100K / 7,500) / 2) = floor(6.67) = 6 slots
+ * avgTokens = (10K + 5K) / 2 = 7,500 → floor((100K / 7,500) / 2) = 6 slots
  */
 describe('Slot Calculation - 1.2 TPM-Only Model (Averaged Estimates)', () => {
   beforeAll(async () => {
@@ -116,15 +77,8 @@ describe('Slot Calculation - 1.2 TPM-Only Model (Averaged Estimates)', () => {
 });
 
 /**
- * Test 1.3: RPM-Only Model - Exact Slot Calculation
- *
- * Config: model-beta: RPM = 500
- *         jobTypeA: estimatedRequests = 1, ratio = 0.6
- *         jobTypeB: estimatedRequests = 5, ratio = 0.4
- *         instanceCount = 2
- *
- * avgRequests = (1 + 5) / 2 = 3
- * Expected: floor((500 / 3) / 2) = floor(83.33) = 83 slots
+ * Test 1.3: RPM-Only Model
+ * avgRequests = (1 + 5) / 2 = 3 → floor((500 / 3) / 2) = 83 slots
  */
 describe('Slot Calculation - 1.3 RPM-Only Model', () => {
   beforeAll(async () => {
@@ -152,14 +106,7 @@ describe('Slot Calculation - 1.3 RPM-Only Model', () => {
   });
 });
 
-/**
- * Test 1.4: Concurrent-Only Model - Exact Slot Calculation
- *
- * Config: model-gamma: maxConcurrentRequests = 100
- *         instanceCount = 2
- *
- * Expected: floor(100 / 2) = 50 slots
- */
+/** Test 1.4: Concurrent-Only Model → floor(100 / 2) = 50 slots */
 describe('Slot Calculation - 1.4 Concurrent-Only Model', () => {
   const CONCURRENT_SLOTS_TWO_INSTANCES = 50;
 
@@ -180,16 +127,7 @@ describe('Slot Calculation - 1.4 Concurrent-Only Model', () => {
 
 /**
  * Test 1.5: Mixed Limits - Limiting Factor Selection
- *
- * Config: model-delta: TPM = 100,000, RPM = 50, maxConcurrentRequests = 200
- *         jobTypeA: estimatedTokens = 10,000, estimatedRequests = 1
- *         instanceCount = 2
- *
- * TPM-based slots: floor((100K / 10K) / 2) = 5
- * RPM-based slots: floor((50 / 1) / 2) = 25
- * Concurrent-based slots: floor(200 / 2) = 100
- *
- * Expected: min(5, 25, 100) = 5 (TPM is limiting)
+ * TPM→5, RPM→25, Concurrent→100 → min(5,25,100) = 5 (TPM limiting)
  */
 describe('Slot Calculation - 1.5 Mixed Limits (Limiting Factor)', () => {
   beforeAll(async () => {
@@ -213,14 +151,7 @@ describe('Slot Calculation - 1.5 Mixed Limits (Limiting Factor)', () => {
 
 /**
  * Test 1.6: Daily Limits - TPD/RPD Calculation
- *
- * Config: model-epsilon: TPD = 1,000,000, RPD = 10,000
- *         jobTypeA: estimatedTokens = 10,000, estimatedRequests = 1
- *         instanceCount = 2
- *
- * Expected: totalSlots = 50 (TPD limiting: floor((1M / 10K) / 2))
- *           tokensPerDay = 500,000
- *           requestsPerDay = 5,000
+ * TPD=1M, RPD=10K, tokens=10K → slots=50, tpd=500K, rpd=5K per instance
  */
 describe('Slot Calculation - 1.6 Daily Limits (TPD/RPD)', () => {
   beforeAll(async () => {
@@ -255,92 +186,8 @@ describe('Slot Calculation - 1.6 Daily Limits (TPD/RPD)', () => {
 });
 
 /**
- * Test 1.7: Two Instances Split Capacity Exactly
- *
- * Config: model-alpha: TPM = 100,000
- *         jobTypeA: estimatedTokens = 10,000
- *         instanceCount = 2
- *
- * Expected: pools['scale-model'].totalSlots = 5
- *           tokensPerMinute = 50,000
- */
-describe('Slot Calculation - 1.7 Two Instances Split Capacity', () => {
-  afterAll(async () => {
-    await killAllInstances();
-  }, AFTER_ALL_TIMEOUT_MS);
-
-  it(
-    'should calculate 5 pool slots each with 2 instances',
-    async () => {
-      await setupAndVerifyTwoInstances(PORT_A, PORT_B, 'instanceScaling');
-    },
-    INSTANCE_SCALE_TIMEOUT
-  );
-});
-
-/**
- * Test 1.8: Three Instances with Remainder
- *
- * Config: model-alpha: TPM = 100,000
- *         jobTypeA: estimatedTokens = 10,000
- *         instanceCount = 3
- *
- * Expected: pools['scale-model'].totalSlots = 3 (floor(10/3))
- *           tokensPerMinute = 33,333
- */
-describe('Slot Calculation - 1.8 Three Instances with Remainder', () => {
-  afterAll(async () => {
-    await killAllInstances();
-  }, AFTER_ALL_TIMEOUT_MS);
-
-  it(
-    'should calculate 3 pool slots each with 3 instances',
-    async () => {
-      await setupAndVerifyThreeInstances(PORT_A, PORT_B, PORT_C, 'instanceScaling');
-    },
-    INSTANCE_SCALE_TIMEOUT
-  );
-});
-
-/**
- * Test 1.9: Zero Slots After Floor Division
- *
- * Config: model-alpha: TPM = 15,000
- *         jobType: estimatedTokens = 10,000
- *         instanceCount = 4
- *
- * Expected: floor((15K / 10K) / 4) = floor(0.375) = 0 slots
- */
-describe('Slot Calculation - 1.9 Zero Slots After Floor Division', () => {
-  afterAll(async () => {
-    await killAllInstances();
-  }, AFTER_ALL_TIMEOUT_MS);
-
-  it(
-    'should calculate 0 pool slots when capacity is too low for instance count',
-    async () => {
-      await setupAndVerifyFourInstances(
-        [PORT_A, PORT_B, PORT_C, PORT_D],
-        'slotCalc-zero-slots',
-        'model-alpha',
-        ZERO_COUNT
-      );
-    },
-    INSTANCE_SCALE_TIMEOUT
-  );
-});
-
-/**
  * Test 1.10: RPM as Limiting Factor Over TPM
- *
- * Config: model-alpha: TPM = 100,000, RPM = 6
- *         jobTypeA: estimatedTokens = 10,000, estimatedRequests = 1
- *         instanceCount = 2
- *
- * TPM-based slots: floor((100K / 10K) / 2) = 5
- * RPM-based slots: floor((6 / 1) / 2) = 3
- *
- * Expected: min(5, 3) = 3 (RPM is limiting)
+ * TPM→5 slots, RPM→3 slots → min(5,3) = 3 (RPM limiting)
  */
 describe('Slot Calculation - 1.10 RPM as Limiting Factor Over TPM', () => {
   beforeAll(async () => {

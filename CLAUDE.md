@@ -20,7 +20,7 @@ npm run test:redis           # Redis package (unit)
 
 # E2E distributed tests (requires Redis running on localhost:6379)
 npm run test:e2e                                                  # Run full test suite
-npm run test:e2e:single -- --testPathPatterns=exactCapacity.test  # Run specific test
+npm run test:e2e:single -- --testPathPatterns=exactCapacity.test  # Run specific test, be aware of the 's' at the end, it is 'testPathPatterns' plural, NEVER 'testPathPattern' singular
 npm run test:e2e:verifySetup                                      # Verify infrastructure setup works
 ```
 
@@ -95,6 +95,37 @@ Detailed designs in `docs/`:
 ## Documentation for e2e tests
 
 Detailed docs for e2e tests can be found in `packages/e2e/docs/e2e-test-reference.md`
+
+## Writing E2E Tests
+
+### How to implement a new e2e test
+
+1. Locate the test in `packages/e2e/docs/e2e-test-reference.md`, find its complexity level
+2. Read the complexity-level doc (e.g., `complexity-low.md`) for detailed specs: configs, formulas, expected values
+3. Check if needed config presets exist in `packages/e2e/serverInstance/src/rateLimiterConfigs/`
+4. If a new config preset is needed, register it in **4 files**:
+   - `serverInstance/src/rateLimiterConfigs/types.ts` (add to `ConfigPresetName` union)
+   - `serverInstance/src/rateLimiterConfigs/registry.ts` (add import + registry entry)
+   - `serverInstance/src/rateLimiterConfigs/index.ts` (add export)
+   - `testRunner/src/resetInstance.ts` (add to its separate `ConfigPresetName` union)
+5. Write the test file, then run `npm run check` and fix all issues
+
+### Critical E2E infrastructure rules
+
+- **File-level `afterAll`**: Every test file that boots instances MUST have a file-level `afterAll(() => killAllInstances())` to prevent Jest from hanging (orphaned child processes keep Jest alive)
+- **Jest runs serially** (`maxWorkers: 1`) since E2E tests share infrastructure (Redis, ports)
+- **`setupInstances(preset)`** kills all existing instances, cleans Redis, boots 2 instances on ports 3001/3002, and waits for allocation propagation. Each `describe` block that calls `setupInstances` in `beforeAll` recycles the infrastructure
+- **`setupSingleInstance(preset)`** and **`setupThreeInstances(preset)`** are available for 1/3 instance tests (ports 3001-3003)
+- **Test helpers** live in `*Helpers.ts` files alongside the test files. Constants (expected slot counts, splits) should be defined there with descriptive names to avoid magic number lint errors
+- **`onAvailableSlotsChange` is required**: The server instance's rate limiter setup (`rateLimiterSetup.ts`) must include this callback. Without it, the `AvailabilityTracker` is never created, and `getAllocation()` returns `null` - causing `waitForAllocationUpdate` to always timeout
+- **Split large test suites**: With `max-lines: 300`, split tests across `<name>.test.ts` and `<name>Additional.test.ts`. The pattern `--testPathPatterns=<name>.test` matches both files
+
+### Debugging E2E test failures
+
+- **"Allocation update timeout"**: Usually means `getAllocation()` returns `null`. Verify `onAvailableSlotsChange` is set in `rateLimiterSetup.ts`
+- **"Failed to start server"**: Stale Redis state or zombie processes. Run `redis-cli FLUSHALL` and kill processes on ports 3001-3003
+- **Jest hangs after tests**: Missing `afterAll(() => killAllInstances())` at file level
+- **Verify infrastructure works**: `npm run test:e2e:verifySetup`
 
 ## UI Components
 

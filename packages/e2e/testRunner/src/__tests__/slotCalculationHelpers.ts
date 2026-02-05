@@ -66,10 +66,20 @@ export const RPD_PER_INSTANCE = 5000;
 // Limiting factor = min(5, 3) = 3 (RPM is limiting)
 export const RPM_LIMITING_SLOTS = 3;
 
+// Test 1.1/1.7/1.8: Single job type instance scaling
+// model-alpha: TPM=100K, jobTypeA: estimatedTokens=10K
+// 1 instance: floor(100K/10K/1) = 10, TPM=100K
+// 2 instances: floor(100K/10K/2) = 5, TPM=50K
+// 3 instances: floor(100K/10K/3) = 3, TPM=33333
+export const FULL_TPM_CAPACITY = 100000;
+export const TPM_THREE_WAY_SPLIT = 33333;
+
 export const INSTANCE_PORT_A = 3001;
 export const INSTANCE_PORT_B = 3002;
+export const INSTANCE_PORT_C = 3003;
 export const INSTANCE_A_URL = `http://localhost:${INSTANCE_PORT_A}`;
 export const INSTANCE_B_URL = `http://localhost:${INSTANCE_PORT_B}`;
+export const INSTANCE_C_URL = `http://localhost:${INSTANCE_PORT_C}`;
 
 export interface ModelPoolAllocation {
   totalSlots: number;
@@ -153,8 +163,17 @@ export const fetchAllocation = async (baseUrl: string): Promise<AllocationRespon
 };
 
 /**
- * Boot instances with a specific config preset.
- * Kills any existing instances, cleans Redis, then boots fresh instances.
+ * Boot a single instance with a specific config preset.
+ */
+export const setupSingleInstance = async (configPreset: ConfigPresetName): Promise<void> => {
+  await killAllInstances();
+  await cleanRedis();
+  await bootInstance(INSTANCE_PORT_A, configPreset);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+};
+
+/**
+ * Boot two instances with a specific config preset.
  */
 export const setupInstances = async (configPreset: ConfigPresetName): Promise<void> => {
   await killAllInstances();
@@ -162,6 +181,20 @@ export const setupInstances = async (configPreset: ConfigPresetName): Promise<vo
   await bootInstance(INSTANCE_PORT_A, configPreset);
   await bootInstance(INSTANCE_PORT_B, configPreset);
   await waitForAllocationUpdate(INSTANCE_PORT_A, (a) => a.instanceCount === TWO_INSTANCES);
+};
+
+/**
+ * Boot three instances with a specific config preset.
+ */
+export const setupThreeInstances = async (configPreset: ConfigPresetName): Promise<void> => {
+  await killAllInstances();
+  await cleanRedis();
+  await bootInstance(INSTANCE_PORT_A, configPreset);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+  await bootInstance(INSTANCE_PORT_B, configPreset);
+  await waitForAllocationUpdate(INSTANCE_PORT_A, (a) => a.instanceCount === TWO_INSTANCES);
+  await bootInstance(INSTANCE_PORT_C, configPreset);
+  await waitForAllocationUpdate(INSTANCE_PORT_A, (a) => a.instanceCount === THREE_INSTANCES);
 };
 
 /**

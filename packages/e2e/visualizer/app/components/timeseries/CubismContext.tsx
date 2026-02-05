@@ -111,7 +111,7 @@ export function CubismContext({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="space-y-0">
+        <div className="border-b border-black">
           {selectedMetrics.map((metricKey) => {
             const config = configMap.get(metricKey);
             if (!config) return null;
@@ -122,6 +122,7 @@ export function CubismContext({
                 metricKey={metricKey}
                 config={config}
                 height={height}
+                focusIndex={focusIndex}
               />
             );
           })}

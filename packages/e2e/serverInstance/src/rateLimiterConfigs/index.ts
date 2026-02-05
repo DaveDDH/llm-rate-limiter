@@ -28,6 +28,7 @@ export {
   slotCalcUnevenRatiosConfig,
   slotCalcMemoryConfig,
   slotCalcTpdRpdConfig,
+  slotCalcTpmSingleConfig,
   slotCalcZeroSlotsConfig,
   slotCalcRpmLimitingConfig,
 } from './slotCalcRatioConfigs.js';

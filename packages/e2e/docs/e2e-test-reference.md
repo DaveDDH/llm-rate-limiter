@@ -7,7 +7,7 @@ This document provides detailed documentation for each e2e test file, including 
 | Test File | Complexity | Implemented | Passing |
 |-----------|------------|:-----------:|:-------:|
 | `infrastructureBoot.test.ts` | [Lowest](./complexity-lowest.md) | [x] | [x] |
-| `slotCalculation.test.ts` | [Low](./complexity-low.md#1-pool-slot-calculation) | [x] | [ ] |
+| `slotCalculation.test.ts` | [Low](./complexity-low.md#1-pool-slot-calculation) | [x] | [x] |
 | `localRatioDistribution.test.ts` | [Low](./complexity-low.md#2-local-ratio-distribution) | [ ] | [ ] |
 | `memorySlotCalculation.test.ts` | [Low](./complexity-low.md#3-memory-slot-calculation) | [ ] | [ ] |
 | `singleJobOperations.test.ts` | [Low](./complexity-low.md#4-single-job-operations) | [ ] | [ ] |

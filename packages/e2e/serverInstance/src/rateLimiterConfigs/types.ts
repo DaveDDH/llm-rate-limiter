@@ -41,4 +41,5 @@ export type ConfigPresetName =
   | 'slotCalc-memory'
   | 'slotCalc-tpd-rpd'
   | 'slotCalc-zero-slots'
-  | 'slotCalc-rpm-limiting';
+  | 'slotCalc-rpm-limiting'
+  | 'slotCalc-tpm-single';
