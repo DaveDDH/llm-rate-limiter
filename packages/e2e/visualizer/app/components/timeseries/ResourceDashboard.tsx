@@ -380,9 +380,9 @@ export function ResourceDashboard() {
 
   return (
     <div
+    className='px-0 py-6'
       style={{
         color: '#ccc',
-        padding: '32px',
         fontFamily: "'Space Grotesk', sans-serif",
       }}
     >

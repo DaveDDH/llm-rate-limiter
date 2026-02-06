@@ -47,4 +47,10 @@ export type ConfigPresetName =
   | 'localRatio-twoTypes'
   | 'localRatio-threeTypes'
   | 'localRatio-equalThree'
-  | 'localRatio-zeroAlloc';
+  | 'localRatio-zeroAlloc'
+  | 'memCalc-basic'
+  | 'memCalc-memoryWins'
+  | 'memCalc-distributedWins'
+  | 'memCalc-ratios'
+  | 'memCalc-zeroMemory'
+  | 'memCalc-freeRatio';

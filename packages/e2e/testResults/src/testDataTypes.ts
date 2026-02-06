@@ -80,8 +80,10 @@ export interface TimelineEvent {
 // =============================================================================
 
 export interface CompactModelJobTypeState {
-  /** Slots allocated to this job type on this model */
+  /** Slots allocated to this job type on this model (most restrictive dimension) */
   slots: number;
+  /** Concurrency-based total slots for this (model, jobType) = floor(pool.totalSlots * ratio) */
+  totalSlots: number;
   /** In-flight jobs of this type on this model */
   inFlight: number;
 }

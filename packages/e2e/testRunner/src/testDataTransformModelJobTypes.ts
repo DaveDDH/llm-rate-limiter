@@ -66,6 +66,10 @@ const buildInFlightByModel = (activeJobs: ActiveJobInfo[]): InFlightByModel => {
   return counts;
 };
 
+/** Compute concurrency-based total slots for a (model, jobType) pair */
+const computeTotalSlots = (pool: ModelPoolAllocation, ratio: number): number =>
+  Math.floor(pool.totalSlots * ratio);
+
 /** Build per-jobtype state for a single model using correct slot formula */
 const buildModelJobTypes = (
   pool: ModelPoolAllocation,
@@ -75,8 +79,9 @@ const buildModelJobTypes = (
   const result: Record<string, CompactModelJobTypeState> = {};
   for (const [jtId, info] of Object.entries(jobTypeInfos)) {
     const { slots } = calculateModelJobTypeSlots(pool, info.ratio, info.resources, MIN_CAPACITY);
+    const totalSlots = computeTotalSlots(pool, info.ratio);
     const inFlight = modelInFlight?.get(jtId) ?? ZERO;
-    result[jtId] = { slots, inFlight };
+    result[jtId] = { slots, totalSlots, inFlight };
   }
   return result;
 };

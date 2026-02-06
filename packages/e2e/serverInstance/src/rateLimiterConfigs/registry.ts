@@ -9,6 +9,14 @@ import {
   localRatioZeroAllocConfig,
 } from './localRatioConfigs.js';
 import {
+  memCalcBasicConfig,
+  memCalcDistributedWinsConfig,
+  memCalcFreeRatioConfig,
+  memCalcMemoryWinsConfig,
+  memCalcRatiosConfig,
+  memCalcZeroMemoryConfig,
+} from './memoryCalcConfigs.js';
+import {
   slotCalcConcurrentConfig,
   slotCalcMultiModelConfig,
   slotCalcRpmConfig,
@@ -59,6 +67,12 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'localRatio-threeTypes': localRatioThreeTypesConfig,
   'localRatio-equalThree': localRatioEqualThreeConfig,
   'localRatio-zeroAlloc': localRatioZeroAllocConfig,
+  'memCalc-basic': memCalcBasicConfig,
+  'memCalc-memoryWins': memCalcMemoryWinsConfig,
+  'memCalc-distributedWins': memCalcDistributedWinsConfig,
+  'memCalc-ratios': memCalcRatiosConfig,
+  'memCalc-zeroMemory': memCalcZeroMemoryConfig,
+  'memCalc-freeRatio': memCalcFreeRatioConfig,
 };
 
 /** Get a configuration preset by name */

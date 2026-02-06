@@ -39,5 +39,14 @@ export {
   slotCalcRpmLimitingConfig,
 } from './slotCalcRatioConfigs.js';
 
+export {
+  memCalcBasicConfig,
+  memCalcDistributedWinsConfig,
+  memCalcFreeRatioConfig,
+  memCalcMemoryWinsConfig,
+  memCalcRatiosConfig,
+  memCalcZeroMemoryConfig,
+} from './memoryCalcConfigs.js';
+
 // Re-export registry and helpers from registry file
 export { configPresets, getConfigPreset, isValidPresetName } from './registry.js';

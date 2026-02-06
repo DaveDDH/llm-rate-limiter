@@ -21,15 +21,12 @@ function buildInstanceIdMap(testData: TestData): Map<string, string> {
   return map;
 }
 
-/** Find the time span from snapshots */
+/** Find the time span from metadata */
 function findTimeSpan(testData: TestData): { minTime: number; maxTime: number } {
-  const { snapshots } = testData;
-  if (snapshots.length === 0) {
-    return { minTime: 0, maxTime: 1 };
-  }
+  const { startTime, durationMs } = testData.metadata;
   return {
-    minTime: snapshots[0].timestamp,
-    maxTime: snapshots[snapshots.length - 1].timestamp,
+    minTime: startTime,
+    maxTime: startTime + durationMs,
   };
 }
 
@@ -109,23 +106,12 @@ function buildDataPoints(
   const intervalDuration = timeSpan / NUM_INTERVALS;
   const points: CapacityDataPoint[] = [];
 
-  // Log first few intervals for debugging
-  const LOG_FIRST_N = 5;
-
   for (let i = 0; i < NUM_INTERVALS; i += 1) {
     const intervalStart = minTime + i * intervalDuration;
     const intervalMidpoint = intervalStart + intervalDuration / 2;
 
     const snapshot = findSnapshotAtTime(testData.snapshots, intervalMidpoint);
     const snapshotData = extractSnapshotData(snapshot, instanceIdMap);
-
-    if (i < LOG_FIRST_N) {
-      console.log(`Interval ${i}: midpoint=${intervalMidpoint}, snapshot=${snapshot?.timestamp ?? 'null'}`);
-      const slotsKeys = Object.keys(snapshotData).filter((k) => k.endsWith('_slots'));
-      for (const key of slotsKeys) {
-        console.log(`  ${key} = ${snapshotData[key]}`);
-      }
-    }
 
     const point = buildIntervalDataPoint(i, intervalMidpoint, minTime, snapshotData);
     points.push(point);
@@ -134,38 +120,98 @@ function buildDataPoints(
   return points;
 }
 
-/** Log snapshot slots for debugging */
-function logSnapshotSlots(testData: TestData, instanceIdMap: Map<string, string>): void {
-  console.log('=== SNAPSHOT SLOTS DEBUG ===');
-  console.log(`Total snapshots: ${testData.snapshots.length}`);
+interface JobEvent {
+  type: string;
+  timestamp: number;
+}
 
-  for (const snapshot of testData.snapshots) {
-    console.log(`\nSnapshot at ${snapshot.timestamp}:`);
-    for (const [fullId, state] of Object.entries(snapshot.instances)) {
-      const shortId = instanceIdMap.get(fullId) ?? fullId;
-      for (const [modelId, modelState] of Object.entries(state.models)) {
-        if (modelState.jobTypes) {
-          for (const [jobType, jtState] of Object.entries(modelState.jobTypes)) {
-            console.log(
-              `  ${shortId}/${modelId}/${jobType}: slots=${jtState.slots}, inFlight=${jtState.inFlight}`
-            );
-          }
+interface JobInfo {
+  events?: JobEvent[];
+}
+
+/** Find the job with highest completion timestamp and its start time */
+function findLastJob(testData: TestData): { startTime: number; endTime: number } | null {
+  let lastJob: { startTime: number; endTime: number } | null = null;
+  const jobs = testData.jobs as Record<string, JobInfo>;
+
+  for (const job of Object.values(jobs)) {
+    if (job.events) {
+      let started: number | null = null;
+      let completed: number | null = null;
+      for (const event of job.events) {
+        if (event.type === 'started') started = event.timestamp;
+        if (event.type === 'completed') completed = event.timestamp;
+      }
+      if (completed !== null && started !== null) {
+        if (lastJob === null || completed > lastJob.endTime) {
+          lastJob = { startTime: started, endTime: completed };
         }
       }
     }
   }
-  console.log('=== END SNAPSHOT SLOTS DEBUG ===\n');
+  return lastJob;
+}
+
+/** Log active jobs for last N intervals */
+function logActiveJobsDebug(testData: TestData, points: CapacityDataPoint[]): void {
+  const LAST_N = 10;
+  const startIdx = Math.max(0, points.length - LAST_N);
+  const { startTime, durationMs } = testData.metadata;
+
+  const lastJob = findLastJob(testData);
+  const lastJobStartRel = lastJob ? (lastJob.startTime - startTime) / MS_TO_SECONDS : null;
+  const lastJobEndRel = lastJob ? (lastJob.endTime - startTime) / MS_TO_SECONDS : null;
+
+  console.log('=== DEBUG INFO ===');
+  console.log(`Duration from metadata: ${(durationMs / MS_TO_SECONDS).toFixed(2)}s`);
+  console.log(`Last job: started=${lastJobStartRel?.toFixed(2) ?? 'N/A'}s, completed=${lastJobEndRel?.toFixed(2) ?? 'N/A'}s`);
+  console.log('');
+  console.log(`=== ACTIVE JOBS (last ${LAST_N} intervals) ===`);
+
+  // Also check what snapshots exist near these intervals
+  const { snapshots } = testData;
+  const lastSnapshots = snapshots.slice(-5);
+  console.log('Last 5 snapshots (relative time) with inFlight:');
+  for (const snap of lastSnapshots) {
+    const relTime = (snap.timestamp - startTime) / MS_TO_SECONDS;
+    const inFlightJobs: string[] = [];
+    for (const [instId, instState] of Object.entries(snap.instances)) {
+      for (const [modelId, modelState] of Object.entries(instState.models)) {
+        if (modelState.jobTypes) {
+          for (const [jt, jtState] of Object.entries(modelState.jobTypes)) {
+            if (jtState.inFlight > 0) {
+              inFlightJobs.push(`${jt}=${jtState.inFlight}`);
+            }
+          }
+        }
+      }
+    }
+    const inFlightStr = inFlightJobs.length > 0 ? inFlightJobs.join(', ') : '(none)';
+    console.log(`  Snapshot at ${relTime.toFixed(2)}s: ${inFlightStr}`);
+  }
+  console.log('');
+
+  for (let i = startIdx; i < points.length; i += 1) {
+    const point = points[i];
+    const jobs: string[] = [];
+    for (const [key, value] of Object.entries(point)) {
+      if (key.endsWith('_inFlight') && typeof value === 'number' && value > 0) {
+        jobs.push(`${key.replace('_inFlight', '')}=${value}`);
+      }
+    }
+    const jobsStr = jobs.length > 0 ? jobs.join(', ') : '(none)';
+    console.log(`Interval ${i}: time=${point.time.toFixed(2)}s | inFlight: ${jobsStr}`);
+  }
+  console.log('=== END DEBUG ===');
 }
 
 /** Transform test data to capacity data points */
 export function transformToCapacityData(testData: TestData): CapacityDataPoint[] {
   const instanceIdMap = buildInstanceIdMap(testData);
   const { minTime, maxTime } = findTimeSpan(testData);
-
-  // Debug: log all snapshot slots
-  logSnapshotSlots(testData, instanceIdMap);
-
   const points = buildDataPoints(testData, minTime, maxTime, instanceIdMap);
+
+  logActiveJobsDebug(testData, points);
 
   // Add padding point at the end
   const timeSpan = maxTime - minTime;
