@@ -42,6 +42,7 @@ export interface JobTypeManager {
   acquire: (jobTypeId: string) => Promise<void>;
   release: (jobTypeId: string) => void;
   setTotalCapacity: (totalSlots: number) => void;
+  setMemoryCapacityKB: (kb: number) => void;
   getTotalCapacity: () => number;
   adjustRatios: () => void;
   getStats: () => JobTypeStats;

@@ -85,6 +85,8 @@ export interface MemoryLimitConfig {
   freeMemoryRatio?: number;
   /** How often to recalculate capacity in ms (default: 1000) */
   recalculationIntervalMs?: number;
+  /** Fixed memory budget in KB. When set, used instead of auto-detecting from system memory. */
+  maxMemoryKB?: number;
 }
 
 // =============================================================================

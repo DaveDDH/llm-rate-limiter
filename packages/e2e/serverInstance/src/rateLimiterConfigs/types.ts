@@ -1,7 +1,11 @@
 /**
  * Type definitions for rate limiter configuration presets.
  */
-import type { RatioAdjustmentConfig, ResourceEstimationsPerJob } from '@llm-rate-limiter/core';
+import type {
+  MemoryLimitConfig,
+  RatioAdjustmentConfig,
+  ResourceEstimationsPerJob,
+} from '@llm-rate-limiter/core';
 
 export interface RateLimiterPreset {
   models: Record<
@@ -22,6 +26,7 @@ export interface RateLimiterPreset {
   escalationOrder: readonly string[];
   resourceEstimations: ResourceEstimationsPerJob;
   ratioAdjustmentConfig?: RatioAdjustmentConfig;
+  memory?: MemoryLimitConfig;
 }
 
 export type ConfigPresetName =

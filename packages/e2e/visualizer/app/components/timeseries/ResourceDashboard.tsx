@@ -1,6 +1,6 @@
 'use client';
 
-import type { TestData } from '@llm-rate-limiter/e2e-test-results';
+import type { StateSnapshot, TestData } from '@llm-rate-limiter/e2e-test-results';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Area,
@@ -53,6 +53,156 @@ const COLORS: Record<string, string> = {
   analytics: '#D4A843',
 };
 const INSTANCE_COLORS = ['#E8715A', '#5A9CE8', '#6EC97D'];
+
+// --- Real Data Extraction ---
+
+const JOB_TYPE_PALETTE = ['#E85E3B', '#3B8EE8', '#5EBB6E', '#D4A843', '#9B59B6', '#E67E22', '#1ABC9C', '#E74C3C'];
+
+interface GaugeSegment {
+  jobType: string;
+  used: number;
+  color: string;
+}
+
+interface GaugeData {
+  resource: string;
+  total: number;
+  used: number;
+  segments: GaugeSegment[];
+}
+
+interface RealJobTypeInfo {
+  id: string;
+  color: string;
+  slotsRatio: number;
+}
+
+interface ResourceTotals {
+  rpmTotal: number;
+  rpmUsed: number;
+  tpmTotal: number;
+  tpmUsed: number;
+  concurrentTotal: number;
+  concurrentUsed: number;
+  hasConcurrent: boolean;
+}
+
+interface JobTypeSlotData {
+  inFlight: Record<string, number>;
+  totalSlots: Record<string, number>;
+  sumInFlight: number;
+  sumTotalSlots: number;
+}
+
+function accumulateSnapshotResources(totals: ResourceTotals, snapshot: StateSnapshot): void {
+  for (const state of Object.values(snapshot.instances)) {
+    for (const model of Object.values(state.models)) {
+      totals.rpmTotal += model.rpm + model.rpmRemaining;
+      totals.rpmUsed += model.rpm;
+      totals.tpmTotal += model.tpm + model.tpmRemaining;
+      totals.tpmUsed += model.tpm;
+      if (model.concurrent !== undefined) {
+        totals.hasConcurrent = true;
+        totals.concurrentTotal += model.concurrent + (model.concurrentAvailable ?? 0);
+        totals.concurrentUsed += model.concurrent;
+      }
+    }
+  }
+}
+
+function accumulateResourceTotals(snapshots: StateSnapshot[]): ResourceTotals {
+  const totals: ResourceTotals = {
+    rpmTotal: 0, rpmUsed: 0,
+    tpmTotal: 0, tpmUsed: 0,
+    concurrentTotal: 0, concurrentUsed: 0,
+    hasConcurrent: false,
+  };
+
+  for (const snapshot of snapshots) {
+    accumulateSnapshotResources(totals, snapshot);
+  }
+
+  return totals;
+}
+
+function accumulateSnapshotJobTypes(data: JobTypeSlotData, snapshot: StateSnapshot): void {
+  for (const state of Object.values(snapshot.instances)) {
+    for (const model of Object.values(state.models)) {
+      if (!model.jobTypes) continue;
+      for (const [jt, jtState] of Object.entries(model.jobTypes)) {
+        data.inFlight[jt] = (data.inFlight[jt] ?? 0) + jtState.inFlight;
+        data.totalSlots[jt] = (data.totalSlots[jt] ?? 0) + jtState.totalSlots;
+        data.sumInFlight += jtState.inFlight;
+        data.sumTotalSlots += jtState.totalSlots;
+      }
+    }
+  }
+}
+
+function accumulateJobTypeData(snapshots: StateSnapshot[]): JobTypeSlotData {
+  const data: JobTypeSlotData = { inFlight: {}, totalSlots: {}, sumInFlight: 0, sumTotalSlots: 0 };
+
+  for (const snapshot of snapshots) {
+    accumulateSnapshotJobTypes(data, snapshot);
+  }
+
+  return data;
+}
+
+function assignJobTypeColors(jobTypeIds: string[]): Record<string, string> {
+  const colors: Record<string, string> = {};
+  jobTypeIds.forEach((id, i) => {
+    colors[id] = JOB_TYPE_PALETTE[i % JOB_TYPE_PALETTE.length];
+  });
+  return colors;
+}
+
+function makeGaugeSegments(
+  totalUsed: number,
+  jtData: JobTypeSlotData,
+  colors: Record<string, string>,
+): GaugeSegment[] {
+  if (jtData.sumInFlight === 0) return [];
+  return Object.entries(jtData.inFlight)
+    .map(([jt, inFlight]) => ({
+      jobType: jt,
+      used: Math.round(totalUsed * (inFlight / jtData.sumInFlight)),
+      color: colors[jt] ?? '#888',
+    }))
+    .sort((a, b) => b.used - a.used);
+}
+
+function buildGauges(
+  res: ResourceTotals,
+  jtData: JobTypeSlotData,
+  colors: Record<string, string>,
+): GaugeData[] {
+  const gauges: GaugeData[] = [];
+
+  if (res.rpmTotal > 0) {
+    gauges.push({ resource: 'RPM', total: res.rpmTotal, used: res.rpmUsed, segments: makeGaugeSegments(res.rpmUsed, jtData, colors) });
+  }
+  if (res.tpmTotal > 0) {
+    gauges.push({ resource: 'TPM', total: res.tpmTotal, used: res.tpmUsed, segments: makeGaugeSegments(res.tpmUsed, jtData, colors) });
+  }
+  if (res.hasConcurrent && res.concurrentTotal > 0) {
+    gauges.push({ resource: 'Concurrent', total: res.concurrentTotal, used: res.concurrentUsed, segments: makeGaugeSegments(res.concurrentUsed, jtData, colors) });
+  }
+
+  return gauges;
+}
+
+function buildJobTypeInfo(jtData: JobTypeSlotData, colors: Record<string, string>): RealJobTypeInfo[] {
+  return Object.keys(jtData.totalSlots)
+    .map((jt) => ({
+      id: jt,
+      color: colors[jt] ?? '#888',
+      slotsRatio: jtData.sumTotalSlots > 0 ? Math.round((jtData.totalSlots[jt] / jtData.sumTotalSlots) * 100) : 0,
+    }))
+    .sort((a, b) => b.slotsRatio - a.slotsRatio);
+}
+
+// --- Simulation Types ---
 
 interface DataEntry {
   time: string;
@@ -215,11 +365,8 @@ function MetricCard({
   );
 }
 
-function ResourceGauge({ resource, data }: { resource: string; data: DataEntry[] }) {
-  const latest = data[data.length - 1];
-  const total = TOTAL_LIMITS[resource];
-  const used = JOB_TYPES.reduce((sum, jt) => sum + (Number(latest[`${jt.id}_${resource}_used`]) || 0), 0);
-  const pct = Math.round((used / total) * 100);
+function ResourceGauge({ gauge }: { gauge: GaugeData }) {
+  const pct = gauge.total > 0 ? Math.round((gauge.used / gauge.total) * 100) : 0;
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -232,9 +379,9 @@ function ResourceGauge({ resource, data }: { resource: string; data: DataEntry[]
           fontFamily: "'JetBrains Mono', monospace",
         }}
       >
-        <span style={{ color: '#999' }}>{resource}</span>
+        <span style={{ color: '#999' }}>{gauge.resource}</span>
         <span style={{ color: pct > 80 ? '#E85E3B' : pct > 50 ? '#D4A843' : '#5EBB6E' }}>
-          {used.toLocaleString()} / {total.toLocaleString()} ({pct}%)
+          {gauge.used.toLocaleString()} / {gauge.total.toLocaleString()} ({pct}%)
         </span>
       </div>
       <div
@@ -246,13 +393,12 @@ function ResourceGauge({ resource, data }: { resource: string; data: DataEntry[]
           display: 'flex',
         }}
       >
-        {JOB_TYPES.map((jt) => {
-          const jobUsed = Number(latest[`${jt.id}_${resource}_used`]) || 0;
-          const w = (jobUsed / total) * 100;
+        {gauge.segments.map((seg) => {
+          const w = gauge.total > 0 ? (seg.used / gauge.total) * 100 : 0;
           return (
             <div
-              key={jt.id}
-              style={{ width: `${w}%`, background: COLORS[jt.id], transition: 'width 0.5s ease' }}
+              key={seg.jobType}
+              style={{ width: `${w}%`, background: seg.color, transition: 'width 0.5s ease' }}
             />
           );
         })}
@@ -324,6 +470,15 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
   const instanceCount = Object.keys(testData.metadata.instances).length;
   const jobTypeCount = Object.keys(testData.summary.byJobType).length;
   const resourceDimensionCount = countResourceDimensions(testData);
+
+  // Extract real resource utilization across all snapshots
+  const { snapshots } = testData;
+  const resourceTotals = snapshots.length > 0 ? accumulateResourceTotals(snapshots) : null;
+  const jobTypeSlotData = snapshots.length > 0 ? accumulateJobTypeData(snapshots) : null;
+  const realJobTypeIds = jobTypeSlotData ? Object.keys(jobTypeSlotData.totalSlots) : [];
+  const jobTypeColors = assignJobTypeColors(realJobTypeIds);
+  const gauges = resourceTotals && jobTypeSlotData ? buildGauges(resourceTotals, jobTypeSlotData, jobTypeColors) : [];
+  const realJobTypes = jobTypeSlotData ? buildJobTypeInfo(jobTypeSlotData, jobTypeColors) : [];
 
   const [data, setData] = useState<DataEntry[]>(() => generateTimeSeriesData(60));
   const [selectedResource, setSelectedResource] = useState('TPM');
@@ -507,11 +662,11 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
         }}
       >
         <SectionHeader subtitle="Current snapshot across all job types">Resource Utilization</SectionHeader>
-        {RESOURCE_TYPES.map((r) => (
-          <ResourceGauge key={r} resource={r} data={data} />
+        {gauges.map((g) => (
+          <ResourceGauge key={g.resource} gauge={g} />
         ))}
         <div style={{ display: 'flex', gap: '16px', marginTop: '12px', flexWrap: 'wrap' }}>
-          {JOB_TYPES.map((jt) => (
+          {realJobTypes.map((jt) => (
             <div
               key={jt.id}
               style={{
@@ -522,9 +677,9 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
                 fontFamily: "'JetBrains Mono', monospace",
               }}
             >
-              <div style={{ width: 10, height: 10, borderRadius: '2px', background: COLORS[jt.id] }} />
-              <span style={{ color: '#888' }}>{jt.label}</span>
-              <span style={{ color: '#555' }}>({latest[`${jt.id}_ratio`]}%)</span>
+              <div style={{ width: 10, height: 10, borderRadius: '2px', background: jt.color }} />
+              <span style={{ color: '#888' }}>{jt.id}</span>
+              <span style={{ color: '#555' }}>({jt.slotsRatio}%)</span>
             </div>
           ))}
         </div>

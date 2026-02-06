@@ -17,6 +17,9 @@ const RATIO_FULL = 1.0;
 const RATIO_SEVENTY_PERCENT = 0.7;
 const RATIO_HALF = 0.5;
 const RATIO_THIRTY_PERCENT = 0.3;
+const FREE_MEMORY_RATIO_FULL = 1.0;
+const FREE_MEMORY_RATIO_80_PERCENT = 0.8;
+const MIN_JOB_TYPE_CAPACITY_ZERO = 0;
 
 // TPM constants
 const HIGH_TPM = 10_000_000;
@@ -56,6 +59,7 @@ export const memCalcBasicConfig: RateLimiterPreset = {
     },
   },
   escalationOrder: ['mem-model'],
+  memory: { freeMemoryRatio: FREE_MEMORY_RATIO_FULL },
   resourceEstimations: {
     jobTypeA: {
       estimatedUsedTokens: LOW_TOKENS,
@@ -91,6 +95,7 @@ export const memCalcMemoryWinsConfig: RateLimiterPreset = {
     },
   },
   escalationOrder: ['mem-model'],
+  memory: { freeMemoryRatio: FREE_MEMORY_RATIO_FULL },
   resourceEstimations: {
     jobTypeA: {
       estimatedUsedTokens: STANDARD_TOKENS,
@@ -120,6 +125,8 @@ export const memCalcDistributedWinsConfig: RateLimiterPreset = {
     },
   },
   escalationOrder: ['mem-model'],
+  memory: { freeMemoryRatio: FREE_MEMORY_RATIO_FULL },
+  ratioAdjustmentConfig: { minJobTypeCapacity: MIN_JOB_TYPE_CAPACITY_ZERO },
   resourceEstimations: {
     jobTypeA: {
       estimatedUsedTokens: STANDARD_TOKENS,
@@ -148,6 +155,7 @@ export const memCalcRatiosConfig: RateLimiterPreset = {
     },
   },
   escalationOrder: ['mem-model'],
+  memory: { freeMemoryRatio: FREE_MEMORY_RATIO_FULL },
   resourceEstimations: {
     jobTypeA: {
       estimatedUsedTokens: LOW_TOKENS,
@@ -210,6 +218,7 @@ export const memCalcFreeRatioConfig: RateLimiterPreset = {
     },
   },
   escalationOrder: ['mem-model'],
+  memory: { freeMemoryRatio: FREE_MEMORY_RATIO_80_PERCENT },
   resourceEstimations: {
     jobTypeA: {
       estimatedUsedTokens: LOW_TOKENS,

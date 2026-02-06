@@ -32,6 +32,7 @@ export interface MemoryManagerInstance {
   release: (jobType: string) => void;
   setRatios: (ratios: Map<string, number>) => void;
   getStats: () => InternalLimiterStats['memory'] | undefined;
+  getSlotBudgetKB: () => number;
   stop: () => void;
 }
 
@@ -56,7 +57,8 @@ class PerJobTypeMemoryManager implements MemoryManagerInstance {
     const { config, resourceEstimationsPerJob, label, onLog, onAvailabilityChange } = managerConfig;
 
     this.freeMemoryRatio = config.memory?.freeMemoryRatio ?? DEFAULT_FREE_MEMORY_RATIO;
-    this.totalMemoryKB = Math.floor(getAvailableMemoryKB() * this.freeMemoryRatio);
+    const baseMemoryKB = config.memory?.maxMemoryKB ?? getAvailableMemoryKB();
+    this.totalMemoryKB = Math.floor(baseMemoryKB * this.freeMemoryRatio);
     this.onAvailabilityChange = onAvailabilityChange;
     this.log =
       onLog === undefined
@@ -65,26 +67,32 @@ class PerJobTypeMemoryManager implements MemoryManagerInstance {
             onLog(`${label}| ${msg}`, data);
           };
     this.jobTypeStates = new Map();
+    this.initializeJobTypeStates(resourceEstimationsPerJob, label, onLog);
+    this.logInitialization();
+    this.maybeStartRecalculation(config);
+  }
 
-    // Calculate initial ratios using the same logic as JobTypeManager
+  private initializeJobTypeStates(
+    resourceEstimationsPerJob: ResourceEstimationsPerJob,
+    label: string,
+    onLog?: LogFn
+  ): void {
     const calculated = calculateInitialRatios(resourceEstimationsPerJob);
     const { length: jobTypeCount } = Object.keys(resourceEstimationsPerJob);
     const defaultRatio = jobTypeCount > ZERO ? ONE / jobTypeCount : ONE;
-
-    // Create per-job-type semaphores
     for (const [jobType, jobConfig] of Object.entries(resourceEstimationsPerJob)) {
       const ratio = calculated.ratios.get(jobType) ?? defaultRatio;
       const allocatedMemoryKB = Math.floor(this.totalMemoryKB * ratio);
-      const estimatedUsedMemoryKB = jobConfig.estimatedUsedMemoryKB ?? ZERO;
-
       this.jobTypeStates.set(jobType, {
         semaphore: new Semaphore(Math.max(ONE, allocatedMemoryKB), `${label}/Memory/${jobType}`, onLog),
-        estimatedUsedMemoryKB,
+        estimatedUsedMemoryKB: jobConfig.estimatedUsedMemoryKB ?? ZERO,
         currentRatio: ratio,
         allocatedMemoryKB,
       });
     }
+  }
 
+  private logInitialization(): void {
     this.log('PerJobTypeMemoryManager initialized', {
       totalMemoryKB: this.totalMemoryKB,
       jobTypes: Array.from(this.jobTypeStates.keys()),
@@ -92,8 +100,10 @@ class PerJobTypeMemoryManager implements MemoryManagerInstance {
         Array.from(this.jobTypeStates.entries()).map(([id, s]) => [id, s.allocatedMemoryKB])
       ),
     });
+  }
 
-    // Start periodic memory recalculation
+  private maybeStartRecalculation(config: LLMRateLimiterConfig): void {
+    if (config.memory?.maxMemoryKB !== undefined) return;
     this.startRecalculationInterval(
       config.memory?.recalculationIntervalMs ?? DEFAULT_RECALCULATION_INTERVAL_MS
     );
@@ -176,6 +186,10 @@ class PerJobTypeMemoryManager implements MemoryManagerInstance {
     });
 
     this.onAvailabilityChange?.(MEMORY_REASON, '*');
+  }
+
+  getSlotBudgetKB(): number {
+    return this.totalMemoryKB;
   }
 
   getStats(): InternalLimiterStats['memory'] | undefined {

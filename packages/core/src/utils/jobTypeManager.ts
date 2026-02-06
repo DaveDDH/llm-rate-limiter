@@ -3,9 +3,9 @@
  */
 import type { ModelPoolAllocation } from '../backendTypes.js';
 import type { JobTypeState, JobTypeStats, RatioAdjustmentConfig } from '../jobTypeTypes.js';
-import type { LogFn } from '../types.js';
 import { validateCapacityInvariant } from './capacityInvariantCheck.js';
 import {
+  applyMemoryConstraints,
   applyRatioTransfers,
   calculateDonorContributions,
   collectLoadMetrics,
@@ -35,16 +35,6 @@ export type { JobTypeManager, JobTypeManagerConfig, OnRatioChangeCallback } from
 const ZERO = 0;
 const ONE = 1;
 
-/** Create a no-op logger */
-const createNoOpLogger = (): ((message: string, data?: Record<string, unknown>) => void) => () => undefined;
-
-/** Create a prefixed logger */
-const createPrefixedLogger =
-  (label: string, onLog: LogFn): ((message: string, data?: Record<string, unknown>) => void) =>
-  (msg, data) => {
-    onLog(`${label}| ${msg}`, data);
-  };
-
 /** Build HasCapacityParams for a model+jobType, returns undefined if job type unknown */
 const buildCapacityParams = (
   states: Map<string, JobTypeState>,
@@ -69,6 +59,7 @@ class JobTypeManagerImpl implements JobTypeManager {
   private readonly onModelCapacityRelease?: (modelId: string) => void;
   private readonly modelState: ModelJobTypeTracker;
   private totalCapacity: number = ZERO;
+  private memoryCapacityKB: number | null = null;
   private lastAdjustmentTime: number | null = null;
   private releasesSinceAdjustment: number = ZERO;
   private adjustmentInterval: ReturnType<typeof setInterval> | null = null;
@@ -91,7 +82,12 @@ class JobTypeManagerImpl implements JobTypeManager {
     validateCalculatedRatios(calculated);
 
     this.config = mergeRatioConfig(ratioAdjustmentConfig);
-    this.log = onLog === undefined ? createNoOpLogger() : createPrefixedLogger(label, onLog);
+    this.log =
+      onLog === undefined
+        ? () => undefined
+        : (msg, data) => {
+            onLog(`${label}| ${msg}`, data);
+          };
     this.states = createInitialStates(resourceEstimationsPerJob, calculated.ratios);
     this.waitQueues = new Map(Array.from(this.states.keys()).map((id) => [id, []]));
 
@@ -114,7 +110,6 @@ class JobTypeManagerImpl implements JobTypeManager {
   getState(jobTypeId: string): JobTypeState | undefined {
     return this.states.get(jobTypeId);
   }
-
   getAllStates(): Record<string, JobTypeState> {
     const result: Record<string, JobTypeState> = {};
     for (const [id, state] of this.states) {
@@ -127,7 +122,6 @@ class JobTypeManagerImpl implements JobTypeManager {
     const state = this.states.get(jobTypeId);
     return state !== undefined && state.inFlight < state.allocatedSlots;
   }
-
   async acquire(jobTypeId: string): Promise<void> {
     const state = this.states.get(jobTypeId);
     if (state === undefined) {
@@ -233,10 +227,16 @@ class JobTypeManagerImpl implements JobTypeManager {
   setTotalCapacity(totalSlots: number): void {
     this.totalCapacity = Math.max(ZERO, totalSlots);
     recalculateAllocatedSlots(this.states, this.totalCapacity, this.config.minJobTypeCapacity);
+    applyMemoryConstraints(this.states, this.memoryCapacityKB, this.config.minJobTypeCapacity);
     this.notifyRatioChange();
     this.validateInvariant();
   }
-
+  setMemoryCapacityKB(kb: number): void {
+    this.memoryCapacityKB = kb;
+    recalculateAllocatedSlots(this.states, this.totalCapacity, this.config.minJobTypeCapacity);
+    applyMemoryConstraints(this.states, this.memoryCapacityKB, this.config.minJobTypeCapacity);
+    this.notifyRatioChange();
+  }
   private notifyRatioChange(): void {
     if (this.onRatioChange === undefined) return;
     const ratios = new Map<string, number>();
@@ -269,6 +269,7 @@ class JobTypeManagerImpl implements JobTypeManager {
     applyRatioTransfers(this.states, donorContributions, receivers, availableToTransfer);
     normalizeRatios(this.states);
     recalculateAllocatedSlots(this.states, this.totalCapacity, this.config.minJobTypeCapacity);
+    applyMemoryConstraints(this.states, this.memoryCapacityKB, this.config.minJobTypeCapacity);
     this.lastAdjustmentTime = Date.now();
     logRatioAdjustment(this.log, this.states, donors, receivers);
     this.notifyRatioChange();

@@ -178,7 +178,22 @@ export const recalculateAllocatedSlots = (
   minCapacity: number = ONE
 ): void => {
   for (const state of states.values()) {
-    // Enforce minCapacity to prevent job types from being completely blocked
     state.allocatedSlots = Math.max(minCapacity, Math.floor(totalCapacity * state.currentRatio));
+  }
+};
+
+/** Apply memory constraints to allocated slots: finalSlots = min(distributed, memoryBased) */
+export const applyMemoryConstraints = (
+  states: Map<string, JobTypeState>,
+  memoryCapacityKB: number | null,
+  minCapacity: number
+): void => {
+  if (memoryCapacityKB === null) return;
+  for (const state of states.values()) {
+    const memKB = state.resources.estimatedUsedMemoryKB ?? ZERO;
+    if (memKB > ZERO) {
+      const memSlots = Math.floor((memoryCapacityKB * state.currentRatio) / memKB);
+      state.allocatedSlots = Math.max(minCapacity, Math.min(state.allocatedSlots, memSlots));
+    }
   }
 };

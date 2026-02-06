@@ -127,6 +127,7 @@ export class LLMRateLimiter implements LLMRateLimiterInstance<string> {
     });
     const jobTypeCapacity = calculateJobTypeCapacity(config.models, this.resourceEstimationsPerJob);
     initializeJobTypeCapacity(this.jobTypeManager, jobTypeCapacity);
+    this.applyMemoryToJobTypeManager();
     this.log('Initialized', {
       models: this.escalationOrder,
       jobTypes: getJobTypeKeysFromConfig(this.resourceEstimationsPerJob),
@@ -134,6 +135,11 @@ export class LLMRateLimiter implements LLMRateLimiterInstance<string> {
     });
   }
 
+  private applyMemoryToJobTypeManager(): void {
+    if (this.memoryManager !== null && this.jobTypeManager !== null) {
+      this.jobTypeManager.setMemoryCapacityKB(this.memoryManager.getSlotBudgetKB());
+    }
+  }
   private log(message: string, data?: Record<string, unknown>): void {
     this.config.onLog?.(`${this.label}| ${message}`, data);
   }
@@ -194,6 +200,7 @@ export class LLMRateLimiter implements LLMRateLimiterInstance<string> {
       }
     }
     this.jobTypeManager?.setTotalCapacity(totalPoolSlots);
+    this.applyMemoryToJobTypeManager();
     this.log('JTM capacity updated', { totalPoolSlots, jtmStats: this.jobTypeManager?.getStats() });
     notifyAllModelLimiters(this.modelLimiters);
   }
@@ -201,7 +208,6 @@ export class LLMRateLimiter implements LLMRateLimiterInstance<string> {
   private getModelLimiter(modelId: string): InternalLimiterInstance {
     return getModelLimiterById(this.modelLimiters, modelId);
   }
-
   private backendCtx(modelId: string, jobId: string, jobType: string): BackendOperationContext {
     return buildBackendContext({
       backend: this.resolvedBackend,
@@ -212,7 +218,6 @@ export class LLMRateLimiter implements LLMRateLimiterInstance<string> {
       jobType,
     });
   }
-
   hasCapacity(): boolean {
     return this.getAvailableModel() !== null;
   }
@@ -265,11 +270,9 @@ export class LLMRateLimiter implements LLMRateLimiterInstance<string> {
       getModelLimiter: (m) => this.getModelLimiter(m),
     });
   }
-
   getStats(): LLMRateLimiterStats {
     return buildCombinedStats(this.modelLimiters, this.memoryManager, this.jobTypeManager);
   }
-
   hasCapacityForJobType(jobType: string): boolean {
     return checkJobTypeCapacity(this.jobTypeManager, jobType);
   }
@@ -285,11 +288,9 @@ export class LLMRateLimiter implements LLMRateLimiterInstance<string> {
   getAllocation(): AllocationInfo | null {
     return this.availabilityTracker?.getDistributedAllocation() ?? null;
   }
-
   setDistributedAvailability(availability: DistributedAvailability): void {
     this.config.onAvailableSlotsChange?.(toFullAvailability(availability), 'distributed', '*', undefined);
   }
-
   stop(): void {
     this.backendUnsubscribe?.();
     this.backendUnsubscribe = null;
