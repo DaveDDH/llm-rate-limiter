@@ -13,10 +13,10 @@ interface CapacityChartProps {
 
 const DEFAULT_HEIGHT = 80;
 
-// Colors - same base color, different opacity for allocated vs used
+// Colors
 const BASE_COLOR = '#E8715A';
-const ALLOCATED_COLOR = 'rgba(232, 113, 90, 0.25)'; // Faded
-const USED_COLOR = '#E8715A'; // Solid
+const ALLOCATED_COLOR = 'rgba(90, 156, 232, 0.4)'; // Blue
+const USED_COLOR = '#E8715A'; // Orange/red
 
 interface ChartValues {
   inFlight: number[];
@@ -57,6 +57,12 @@ function renderChart(
 
   ctx.clearRect(0, 0, width, height);
 
+  // Ensure no shadows or strokes
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
   if (timeRange === 0) return;
 
   // First pass: Draw slots (allocated) as faded bars
@@ -68,17 +74,18 @@ function renderChart(
       const xRatio = (point.time - minTime) / timeRange;
       const x = xRatio * width;
 
+      const flooredX = Math.floor(x);
       let barWidth: number;
       if (i < data.length - 1) {
         const nextXRatio = (data[i + 1].time - minTime) / timeRange;
-        barWidth = (nextXRatio - xRatio) * width;
+        barWidth = Math.ceil((nextXRatio - xRatio) * width);
       } else {
-        barWidth = width - x;
+        barWidth = Math.ceil(width - x);
       }
 
       const barHeight = (slotVal / maxValue) * height;
       ctx.fillStyle = ALLOCATED_COLOR;
-      ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+      ctx.fillRect(flooredX, height - barHeight, barWidth, barHeight);
     }
   }
 
@@ -90,17 +97,18 @@ function renderChart(
     const xRatio = (point.time - minTime) / timeRange;
     const x = xRatio * width;
 
+    const flooredX = Math.floor(x);
     let barWidth: number;
     if (i < data.length - 1) {
       const nextXRatio = (data[i + 1].time - minTime) / timeRange;
-      barWidth = (nextXRatio - xRatio) * width;
+      barWidth = Math.ceil((nextXRatio - xRatio) * width);
     } else {
-      barWidth = width - x;
+      barWidth = Math.ceil(width - x);
     }
 
     const barHeight = (inFlightVal / maxValue) * height;
     ctx.fillStyle = USED_COLOR;
-    ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+    ctx.fillRect(flooredX, height - barHeight, barWidth, barHeight);
   }
 }
 
@@ -181,13 +189,13 @@ export function CapacityChart({
         <canvas ref={canvasRef} height={height} className="w-full block" />
         <div
           className="absolute top-1 right-2 text-xs tabular-nums"
-          style={{ color: '#888', fontFamily: "'JetBrains Mono', monospace" }}
+          style={{ color: 'white', fontFamily: "'JetBrains Mono', monospace" }}
         >
-          <span style={{ color: BASE_COLOR, fontWeight: 600 }}>{formatValue(inFlightVal)}</span>
-          <span style={{ color: '#444' }}> used</span>
-          <span style={{ color: '#555' }}> / </span>
-          <span style={{ color: '#666' }}>{slotsVal !== null ? formatValue(slotsVal) : '?'}</span>
-          <span style={{ color: '#444' }}> allocated</span>
+          <span style={{ color: 'white', fontWeight: 600 }}>{formatValue(inFlightVal)}</span>
+          <span style={{ color: 'white' }}> used</span>
+          <span style={{ color: 'white' }}> / </span>
+          <span style={{ color: 'white' }}>{slotsVal !== null ? formatValue(slotsVal) : '?'}</span>
+          <span style={{ color: 'white' }}> allocated</span>
         </div>
       </div>
     </div>

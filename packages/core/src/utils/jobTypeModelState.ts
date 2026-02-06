@@ -6,7 +6,7 @@
  * Delegates slot computation to jobTypeSlotCalculation.
  */
 import type { ModelPoolAllocation } from '../backendTypes.js';
-import type { JobTypeResources } from '../jobTypeTypes.js';
+import type { JobTypeResources, ModelJobTypeInfo } from '../jobTypeTypes.js';
 import type { SlotCalculationResult } from './jobTypeSlotCalculation.js';
 import { calculateModelJobTypeSlots } from './jobTypeSlotCalculation.js';
 
@@ -34,10 +34,15 @@ export interface ModelJobTypeTracker {
   acquire: (modelId: string, jobTypeId: string, windowMs: number) => void;
   /** Release a slot for a (model, jobType) pair (decrements inFlight only, not window counter) */
   release: (modelId: string, jobTypeId: string) => void;
-  /** Get inFlight count for a (model, jobType) pair */
-  getInFlight: (modelId: string, jobTypeId: string) => number;
+  /** Get effective inFlight: window counter for rate-based, concurrent count for concurrency-based */
+  getInFlight: (params: HasCapacityParams) => number;
   /** Get allocated slots for a (model, jobType) pair */
   getAllocated: (params: HasCapacityParams) => number;
+  /** Get info for all (model, jobType) pairs */
+  getAllModelJobTypeInfo: (
+    states: ReadonlyMap<string, { currentRatio: number; resources: JobTypeResources }>,
+    minCapacity: number
+  ) => Record<string, Record<string, ModelJobTypeInfo>>;
   /** Check if any model pools have been set (distributed mode active) */
   hasModelPools: () => boolean;
   /** Get all model pools for invariant checking */
@@ -70,6 +75,12 @@ interface WindowEntry {
   windowId: number;
   count: number;
   windowMs: number;
+}
+
+/** Bundled counter state shared across tracker methods */
+interface TrackerCounters {
+  windowCounters: Map<string, WindowEntry>;
+  modelInFlight: Map<string, Map<string, number>>;
 }
 
 /** Composite key for window counter map */
@@ -126,7 +137,63 @@ const getSlotResult = (
 };
 
 // =============================================================================
-// Tracker factory
+// Effective inFlight helpers
+// =============================================================================
+
+/** Compute effective inFlight for a (model, jobType) pair based on model type */
+const computeEffectiveInFlight = (
+  result: SlotCalculationResult,
+  counters: TrackerCounters,
+  modelId: string,
+  jobTypeId: string
+): number => {
+  if (result.windowMs > ZERO) {
+    return getWindowCount(counters.windowCounters, modelId, jobTypeId, result.windowMs);
+  }
+  return counters.modelInFlight.get(modelId)?.get(jobTypeId) ?? ZERO;
+};
+
+/** Resolve slot state (allocated + effective inFlight) from capacity params */
+const resolveSlotState = (
+  modelPools: Map<string, ModelPoolAllocation>,
+  counters: TrackerCounters,
+  params: HasCapacityParams
+): { slots: number; inFlight: number } => {
+  const pool = modelPools.get(params.modelId);
+  const result = getSlotResult(pool, params.ratio, params.resources, params.minCapacity);
+  const inFlight = computeEffectiveInFlight(result, counters, params.modelId, params.jobTypeId);
+  return { slots: result.slots, inFlight };
+};
+
+/** Context for building per-model job type info */
+interface ModelInfoContext {
+  pool: ModelPoolAllocation;
+  counters: TrackerCounters;
+  modelId: string;
+  minCapacity: number;
+}
+
+/** Build info for all job types on a single model */
+const buildSingleModelInfo = (
+  context: ModelInfoContext,
+  states: ReadonlyMap<string, { currentRatio: number; resources: JobTypeResources }>
+): Record<string, ModelJobTypeInfo> => {
+  const modelResult: Record<string, ModelJobTypeInfo> = {};
+  for (const [jobTypeId, state] of states) {
+    const slotResult = calculateModelJobTypeSlots(
+      context.pool,
+      state.currentRatio,
+      state.resources,
+      context.minCapacity
+    );
+    const inFlight = computeEffectiveInFlight(slotResult, context.counters, context.modelId, jobTypeId);
+    modelResult[jobTypeId] = { allocated: slotResult.slots, inFlight };
+  }
+  return modelResult;
+};
+
+// =============================================================================
+// Tracker factory helpers
 // =============================================================================
 
 /** Create release closure for inFlight tracking */
@@ -141,40 +208,55 @@ const createRelease =
     }
   };
 
+/** Create getAllModelJobTypeInfo closure */
+const createGetAllInfo =
+  (
+    modelPools: Map<string, ModelPoolAllocation>,
+    counters: TrackerCounters
+  ): ModelJobTypeTracker['getAllModelJobTypeInfo'] =>
+  (states, minCapacity) => {
+    const result: Record<string, Record<string, ModelJobTypeInfo>> = {};
+    for (const [modelId, pool] of modelPools) {
+      const context: ModelInfoContext = { pool, counters, modelId, minCapacity };
+      result[modelId] = buildSingleModelInfo(context, states);
+    }
+    return result;
+  };
+
+// =============================================================================
+// Tracker factory
+// =============================================================================
+
 /** Create a ModelJobTypeTracker instance */
 export const createModelJobTypeTracker = (): ModelJobTypeTracker => {
   const modelPools = new Map<string, ModelPoolAllocation>();
-  const modelInFlight = new Map<string, Map<string, number>>();
-  const windowCounters = new Map<string, WindowEntry>();
-  const releaseFn = createRelease(modelInFlight);
+  const counters: TrackerCounters = {
+    modelInFlight: new Map(),
+    windowCounters: new Map(),
+  };
 
   return {
     setModelPool: (modelId, pool) => {
       modelPools.set(modelId, pool);
     },
     getModelPool: (modelId) => modelPools.get(modelId),
-    hasCapacity(params: HasCapacityParams): boolean {
-      const { modelId, jobTypeId, ratio, resources, minCapacity } = params;
-      const pool = modelPools.get(modelId);
-      const result = getSlotResult(pool, ratio, resources, minCapacity);
-      if (result.windowMs > ZERO) {
-        return getWindowCount(windowCounters, modelId, jobTypeId, result.windowMs) < result.slots;
-      }
-      const inFlight = modelInFlight.get(modelId)?.get(jobTypeId) ?? ZERO;
-      return inFlight < result.slots;
+    hasCapacity: (params) => {
+      const state = resolveSlotState(modelPools, counters, params);
+      return state.inFlight < state.slots;
     },
-    acquire(modelId: string, jobTypeId: string, windowMs: number): void {
-      const inner = getOrCreateModelMap(modelInFlight, modelId);
+    acquire(modelId, jobTypeId, windowMs) {
+      const inner = getOrCreateModelMap(counters.modelInFlight, modelId);
       const current = inner.get(jobTypeId) ?? ZERO;
       inner.set(jobTypeId, current + ONE);
       if (windowMs > ZERO) {
-        incrementWindowCounter(windowCounters, modelId, jobTypeId, windowMs);
+        incrementWindowCounter(counters.windowCounters, modelId, jobTypeId, windowMs);
       }
     },
-    release: releaseFn,
-    getInFlight: (modelId, jobTypeId) => modelInFlight.get(modelId)?.get(jobTypeId) ?? ZERO,
+    release: createRelease(counters.modelInFlight),
+    getInFlight: (params) => resolveSlotState(modelPools, counters, params).inFlight,
     getAllocated: (params) =>
       getSlotResult(modelPools.get(params.modelId), params.ratio, params.resources, params.minCapacity).slots,
+    getAllModelJobTypeInfo: createGetAllInfo(modelPools, counters),
     hasModelPools: () => modelPools.size > ZERO,
     getModelPools: () => modelPools as ReadonlyMap<string, ModelPoolAllocation>,
   };

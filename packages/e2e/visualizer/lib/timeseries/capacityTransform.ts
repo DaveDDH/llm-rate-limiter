@@ -68,7 +68,7 @@ function extractSnapshotData(
           const jtKey = makeKey(jobType);
           const prefix = `${shortId}_${modelKey}_${jtKey}`;
 
-          data[`${prefix}_slots`] = jtState.slots;
+          data[`${prefix}_slots`] = jtState.totalSlots;
           data[`${prefix}_inFlight`] = jtState.inFlight;
         }
       }
@@ -120,98 +120,11 @@ function buildDataPoints(
   return points;
 }
 
-interface JobEvent {
-  type: string;
-  timestamp: number;
-}
-
-interface JobInfo {
-  events?: JobEvent[];
-}
-
-/** Find the job with highest completion timestamp and its start time */
-function findLastJob(testData: TestData): { startTime: number; endTime: number } | null {
-  let lastJob: { startTime: number; endTime: number } | null = null;
-  const jobs = testData.jobs as Record<string, JobInfo>;
-
-  for (const job of Object.values(jobs)) {
-    if (job.events) {
-      let started: number | null = null;
-      let completed: number | null = null;
-      for (const event of job.events) {
-        if (event.type === 'started') started = event.timestamp;
-        if (event.type === 'completed') completed = event.timestamp;
-      }
-      if (completed !== null && started !== null) {
-        if (lastJob === null || completed > lastJob.endTime) {
-          lastJob = { startTime: started, endTime: completed };
-        }
-      }
-    }
-  }
-  return lastJob;
-}
-
-/** Log active jobs for last N intervals */
-function logActiveJobsDebug(testData: TestData, points: CapacityDataPoint[]): void {
-  const LAST_N = 10;
-  const startIdx = Math.max(0, points.length - LAST_N);
-  const { startTime, durationMs } = testData.metadata;
-
-  const lastJob = findLastJob(testData);
-  const lastJobStartRel = lastJob ? (lastJob.startTime - startTime) / MS_TO_SECONDS : null;
-  const lastJobEndRel = lastJob ? (lastJob.endTime - startTime) / MS_TO_SECONDS : null;
-
-  console.log('=== DEBUG INFO ===');
-  console.log(`Duration from metadata: ${(durationMs / MS_TO_SECONDS).toFixed(2)}s`);
-  console.log(`Last job: started=${lastJobStartRel?.toFixed(2) ?? 'N/A'}s, completed=${lastJobEndRel?.toFixed(2) ?? 'N/A'}s`);
-  console.log('');
-  console.log(`=== ACTIVE JOBS (last ${LAST_N} intervals) ===`);
-
-  // Also check what snapshots exist near these intervals
-  const { snapshots } = testData;
-  const lastSnapshots = snapshots.slice(-5);
-  console.log('Last 5 snapshots (relative time) with inFlight:');
-  for (const snap of lastSnapshots) {
-    const relTime = (snap.timestamp - startTime) / MS_TO_SECONDS;
-    const inFlightJobs: string[] = [];
-    for (const [instId, instState] of Object.entries(snap.instances)) {
-      for (const [modelId, modelState] of Object.entries(instState.models)) {
-        if (modelState.jobTypes) {
-          for (const [jt, jtState] of Object.entries(modelState.jobTypes)) {
-            if (jtState.inFlight > 0) {
-              inFlightJobs.push(`${jt}=${jtState.inFlight}`);
-            }
-          }
-        }
-      }
-    }
-    const inFlightStr = inFlightJobs.length > 0 ? inFlightJobs.join(', ') : '(none)';
-    console.log(`  Snapshot at ${relTime.toFixed(2)}s: ${inFlightStr}`);
-  }
-  console.log('');
-
-  for (let i = startIdx; i < points.length; i += 1) {
-    const point = points[i];
-    const jobs: string[] = [];
-    for (const [key, value] of Object.entries(point)) {
-      if (key.endsWith('_inFlight') && typeof value === 'number' && value > 0) {
-        jobs.push(`${key.replace('_inFlight', '')}=${value}`);
-      }
-    }
-    const jobsStr = jobs.length > 0 ? jobs.join(', ') : '(none)';
-    console.log(`Interval ${i}: time=${point.time.toFixed(2)}s | inFlight: ${jobsStr}`);
-  }
-  console.log('=== END DEBUG ===');
-}
-
 /** Transform test data to capacity data points */
 export function transformToCapacityData(testData: TestData): CapacityDataPoint[] {
   const instanceIdMap = buildInstanceIdMap(testData);
   const { minTime, maxTime } = findTimeSpan(testData);
   const points = buildDataPoints(testData, minTime, maxTime, instanceIdMap);
-
-  logActiveJobsDebug(testData, points);
 
   // Add padding point at the end
   const timeSpan = maxTime - minTime;

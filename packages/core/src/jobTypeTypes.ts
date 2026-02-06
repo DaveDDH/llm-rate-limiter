@@ -165,6 +165,17 @@ export interface JobTypeState {
 }
 
 /**
+ * Per-model-per-jobType allocation and effective inFlight info.
+ * For rate-based models, inFlight reflects the window counter (not concurrent count).
+ */
+export interface ModelJobTypeInfo {
+  /** Allocated slots for this (model, jobType) pair */
+  allocated: number;
+  /** Effective in-flight: window counter for rate-based, concurrent count for concurrency-based */
+  inFlight: number;
+}
+
+/**
  * Stats for job types returned by getStats().
  */
 export interface JobTypeStats {
@@ -176,6 +187,9 @@ export interface JobTypeStats {
 
   /** Timestamp of last ratio adjustment (ms since epoch) */
   lastAdjustmentTime: number | null;
+
+  /** Per-model per-jobType breakdown (present in distributed mode with pools) */
+  modelJobTypes?: Record<string, Record<string, ModelJobTypeInfo>>;
 }
 
 // =============================================================================

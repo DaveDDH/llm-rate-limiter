@@ -13,6 +13,7 @@ export type {
   JobTypeState,
   JobTypeStats,
   MaxWaitMSConfig,
+  ModelJobTypeInfo,
   RatioAdjustmentConfig,
   ResourceEstimationsPerJob,
 } from './jobTypeTypes.js';

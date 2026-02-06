@@ -185,7 +185,7 @@ class JobTypeManagerImpl implements JobTypeManager {
     if (params === undefined) return undefined;
     return {
       allocated: this.modelState.getAllocated(params),
-      inFlight: this.modelState.getInFlight(modelId, jobTypeId),
+      inFlight: this.modelState.getInFlight(params),
     };
   }
 
@@ -280,6 +280,7 @@ class JobTypeManagerImpl implements JobTypeManager {
       jobTypes: this.getAllStates(),
       totalSlots: this.totalCapacity,
       lastAdjustmentTime: this.lastAdjustmentTime,
+      modelJobTypes: this.modelState.getAllModelJobTypeInfo(this.states, this.config.minJobTypeCapacity),
     };
   }
 

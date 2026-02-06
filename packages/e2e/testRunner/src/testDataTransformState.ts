@@ -1,6 +1,7 @@
 /**
  * State transformation helpers
  */
+import type { ModelPoolAllocation } from '@llm-rate-limiter/core';
 import type {
   CompactInstanceState,
   CompactModelState,
@@ -187,12 +188,18 @@ const statsToRecord = (stats: InstanceState['stats']): Record<string, unknown> =
   return { models, memory, jobTypes };
 };
 
+/** Pools keyed by model ID */
+type PoolsByModel = Record<string, ModelPoolAllocation>;
+
 /**
  * Transform instance state to compact format
  */
-export const transformInstanceState = (state: InstanceState): CompactInstanceState => {
+const transformInstanceState = (
+  state: InstanceState,
+  basePools: PoolsByModel | undefined
+): CompactInstanceState => {
   const statsRecord = statsToRecord(state.stats);
-  const models = enrichModelsWithJobTypes(transformModels(statsRecord), state);
+  const models = enrichModelsWithJobTypes(transformModels(statsRecord), state, basePools);
 
   return {
     activeJobs: state.activeJobs.length,
@@ -201,15 +208,32 @@ export const transformInstanceState = (state: InstanceState): CompactInstanceSta
   };
 };
 
+/** Find first instance with a non-null allocation in a single snapshot */
+const findAllocatedInstance = (instances: InstanceState[]): InstanceState | undefined =>
+  instances.find((inst) => inst.allocation !== null);
+
+/** Extract base pools from the first snapshot that has a non-null allocation */
+const extractBasePools = (rawSnapshots: RawSnapshot[]): PoolsByModel | undefined => {
+  for (const snap of rawSnapshots) {
+    const inst = findAllocatedInstance(snap.instances);
+    if (inst?.allocation !== null && inst?.allocation !== undefined) {
+      return inst.allocation.pools;
+    }
+  }
+  return undefined;
+};
+
 /**
  * Transform snapshots to compact format
  */
-export const buildSnapshots = (rawSnapshots: RawSnapshot[]): StateSnapshot[] =>
-  rawSnapshots.map((raw) => {
+export const buildSnapshots = (rawSnapshots: RawSnapshot[]): StateSnapshot[] => {
+  const basePools = extractBasePools(rawSnapshots);
+
+  return rawSnapshots.map((raw) => {
     const instances: Record<string, CompactInstanceState> = {};
 
     for (const inst of raw.instances) {
-      instances[inst.instanceId] = transformInstanceState(inst);
+      instances[inst.instanceId] = transformInstanceState(inst, basePools);
     }
 
     return {
@@ -218,3 +242,4 @@ export const buildSnapshots = (rawSnapshots: RawSnapshot[]): StateSnapshot[] =>
       instances,
     };
   });
+};
