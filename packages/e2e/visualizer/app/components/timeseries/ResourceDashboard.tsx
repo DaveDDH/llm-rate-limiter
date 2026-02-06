@@ -1,5 +1,6 @@
 'use client';
 
+import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Area,
@@ -292,9 +293,38 @@ function SectionHeader({ children, subtitle }: { children: React.ReactNode; subt
   );
 }
 
+// --- Helpers ---
+
+function countResourceDimensions(testData: TestData): number {
+  let hasRpm = false;
+  let hasTpm = false;
+  let hasConcurrent = false;
+
+  for (const snapshot of testData.snapshots) {
+    for (const state of Object.values(snapshot.instances)) {
+      for (const model of Object.values(state.models)) {
+        if (model.rpm > 0 || model.rpmRemaining > 0) hasRpm = true;
+        if (model.tpm > 0 || model.tpmRemaining > 0) hasTpm = true;
+        if (model.concurrent !== undefined) hasConcurrent = true;
+      }
+    }
+    if (hasRpm && hasTpm && hasConcurrent) break;
+  }
+
+  return Number(hasRpm) + Number(hasTpm) + Number(hasConcurrent);
+}
+
 // --- Main Dashboard ---
 
-export function ResourceDashboard() {
+interface ResourceDashboardProps {
+  testData: TestData;
+}
+
+export function ResourceDashboard({ testData }: ResourceDashboardProps) {
+  const instanceCount = Object.keys(testData.metadata.instances).length;
+  const jobTypeCount = Object.keys(testData.summary.byJobType).length;
+  const resourceDimensionCount = countResourceDimensions(testData);
+
   const [data, setData] = useState<DataEntry[]>(() => generateTimeSeriesData(60));
   const [selectedResource, setSelectedResource] = useState('TPM');
   const [isLive, setIsLive] = useState(false);
@@ -449,8 +479,8 @@ export function ResourceDashboard() {
               fontFamily: "'JetBrains Mono', monospace",
             }}
           >
-            Distributed resource orchestration — {INSTANCES.length} instances ∙ {JOB_TYPES.length} job types ∙{' '}
-            {RESOURCE_TYPES.length} resource dimensions
+            Distributed resource orchestration — {instanceCount} instances ∙ {jobTypeCount} job types ∙{' '}
+            {resourceDimensionCount} resource dimensions
           </p>
         </div>
         <button

@@ -184,10 +184,27 @@ export function CapacityChart({
 
   // Clamp displayIndex to valid data range (focusIndex can be beyond for fill bars)
   const displayIndex = Math.min(focusIndex ?? data.length - 1, data.length - 1);
-  const currentInFlight = data[displayIndex]?.[metric.usageKey];
-  const currentSlots = metric.slotsKey ? data[displayIndex]?.[metric.slotsKey] : undefined;
-  const inFlightVal = typeof currentInFlight === 'number' ? currentInFlight : 0;
-  const slotsVal = typeof currentSlots === 'number' ? currentSlots : null;
+  const isPaddingOrFill = (focusIndex ?? 0) >= 400;
+
+  let inFlightVal = 0;
+  let slotsVal: number | null = null;
+
+  if (isPaddingOrFill) {
+    // For padding/fill bars, show 0 used and last non-zero allocated
+    inFlightVal = 0;
+    for (let i = 399; i >= 0; i -= 1) {
+      const slots = metric.slotsKey ? data[i]?.[metric.slotsKey] : undefined;
+      if (typeof slots === 'number' && slots > 0) {
+        slotsVal = slots;
+        break;
+      }
+    }
+  } else {
+    const currentInFlight = data[displayIndex]?.[metric.usageKey];
+    const currentSlots = metric.slotsKey ? data[displayIndex]?.[metric.slotsKey] : undefined;
+    inFlightVal = typeof currentInFlight === 'number' ? currentInFlight : 0;
+    slotsVal = typeof currentSlots === 'number' ? currentSlots : null;
+  }
 
   return (
     <div className="flex items-stretch border-t border-border pr-2" style={{ minHeight: height }}>

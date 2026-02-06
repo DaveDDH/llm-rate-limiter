@@ -109,7 +109,7 @@ export function TimeseriesPage() {
             </>
           )}
 
-          {testData && <ResourceDashboard />}
+          {testData && <ResourceDashboard testData={testData} />}
 
           {testData && <SummarySection testData={testData} />}
         </CardContent>
