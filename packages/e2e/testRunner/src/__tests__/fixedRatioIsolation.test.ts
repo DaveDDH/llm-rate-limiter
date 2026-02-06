@@ -152,7 +152,7 @@ const runOverloadTest = async (): Promise<TestData> => {
     waitTimeoutMs: WAIT_TIMEOUT_MS * WAIT_TIMEOUT_MULTIPLIER,
     proxyRatio: '1:1',
     configPreset: CONFIG_PRESET,
-    sendJobsInParallel: true,
+    waitForMinuteBoundary: true,
   });
 };
 
@@ -184,7 +184,7 @@ const runBorrowTest = async (): Promise<TestData> => {
     waitTimeoutMs: WAIT_TIMEOUT_MS,
     proxyRatio: '1:1',
     configPreset: CONFIG_PRESET,
-    sendJobsInParallel: true,
+    waitForMinuteBoundary: true,
   });
 };
 
