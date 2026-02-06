@@ -11,6 +11,8 @@ export interface CapacityMetric {
   usageKey: string;
   /** Capacity value key in chart data */
   capacityKey: string;
+  /** Slots value key in chart data (optional) */
+  slotsKey?: string;
   /** Type of metric */
   type: 'model' | 'jobType';
 }

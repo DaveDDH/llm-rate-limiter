@@ -6,12 +6,16 @@
  *
  * Uses the flexibleRatio config preset:
  * - flex-model: 100K TPM
- * - flexJobA, flexJobB, flexJobC: 10K tokens each, ratio ~0.33 each, all flexible
+ * - flexJobA, flexJobB, flexJobC: 10K tokens each, ratio 0.33 each, all flexible
  *
- * Expected behavior:
- * - When one job type is overloaded and others are idle, ratios shift
- * - Idle job types (donors) give ratio to overloaded job types (receivers)
- * - Total ratio always sums to 1.0
+ * Pool (Redis): totalSlots = floor(100K / 10K / 2) = 5 per instance
+ * Pool: tokensPerMinute = 100K / 2 = 50,000
+ *
+ * Per-model-per-jobType (JTM) for each type (tokens=10K, ratio=0.33):
+ *   TPM: floor(50K × 0.33 / 10K) = 1 (windowMs=60,000)
+ *   Concurrency: floor(5 × 0.33) = 1 (windowMs=0)
+ *   Winner: 1 rate slot (tie-break: prefer windowMs=60,000)
+ *   Total: 1 × 2 instances = 2 per type
  *
  * Note: Ratio adjustment is LOCAL to each instance (not shared across instances).
  * This is the intended behavior - each instance manages its own load balance.
@@ -29,10 +33,9 @@ import {
 } from './infrastructureHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
 
-// With flexibleRatio config and 2 instances:
-// Each job type starts with ~0.33 ratio = floor((100K/10K) / 2 * 0.33) = ~1-2 slots per instance
-// Total: ~3 slots per job type (6-9 total across all types)
-const INITIAL_SLOTS_PER_TYPE = 3;
+// Per-model-per-jobType slots (see header comment for derivation):
+// Each type: floor(50K × 0.33 / 10K) = 1 per instance × 2 = 2 total
+const INITIAL_SLOTS_PER_TYPE = 2;
 const DOUBLE_SLOTS = 2;
 const SINGLE_JOB = 1;
 const ZERO_COUNT = 0;

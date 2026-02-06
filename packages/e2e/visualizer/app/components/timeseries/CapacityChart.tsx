@@ -13,54 +13,83 @@ interface CapacityChartProps {
 
 const DEFAULT_HEIGHT = 80;
 
-// Colors for capacity visualization (matching ResourceDashboard)
-const USAGE_COLOR = '#E8715A';
-const CAPACITY_COLOR = 'rgba(255,255,255,0.1)';
+// Colors - same base color, different opacity for allocated vs used
+const BASE_COLOR = '#E8715A';
+const ALLOCATED_COLOR = 'rgba(232, 113, 90, 0.25)'; // Faded
+const USED_COLOR = '#E8715A'; // Solid
+
+interface ChartValues {
+  inFlight: number[];
+  slots: number[];
+}
 
 function getValues(
   data: CapacityDataPoint[],
-  usageKey: string,
-  capacityKey: string
-): { usage: number[]; capacity: number[] } {
-  const usage = data.map((d) => {
-    const v = d[usageKey];
+  inFlightKey: string,
+  slotsKey: string | undefined
+): ChartValues {
+  const inFlight = data.map((d) => {
+    const v = d[inFlightKey];
     return typeof v === 'number' ? v : 0;
   });
-  const capacity = data.map((d) => {
-    const v = d[capacityKey];
-    return typeof v === 'number' ? v : 0;
-  });
-  return { usage, capacity };
+  const slots = slotsKey
+    ? data.map((d) => {
+        const v = d[slotsKey];
+        return typeof v === 'number' ? v : 0;
+      })
+    : [];
+  return { inFlight, slots };
 }
 
-function renderCapacityBars(
+function renderChart(
   ctx: CanvasRenderingContext2D,
   data: CapacityDataPoint[],
-  usage: number[],
-  capacity: number[],
+  values: ChartValues,
   width: number,
   height: number,
   timeExtent: [number, number]
 ): void {
   const [minTime, maxTime] = timeExtent;
   const timeRange = maxTime - minTime;
-  const maxCapacity = Math.max(...capacity, 1);
+
+  // Find max value for scaling (slots should be >= inFlight typically)
+  const maxValue = Math.max(...values.inFlight, ...values.slots, 1);
 
   ctx.clearRect(0, 0, width, height);
 
   if (timeRange === 0) return;
 
-  // Draw bars at time-based positions
+  // First pass: Draw slots (allocated) as faded bars
+  if (values.slots.length > 0) {
+    for (let i = 0; i < data.length; i += 1) {
+      const point = data[i];
+      const slotVal = values.slots[i];
+
+      const xRatio = (point.time - minTime) / timeRange;
+      const x = xRatio * width;
+
+      let barWidth: number;
+      if (i < data.length - 1) {
+        const nextXRatio = (data[i + 1].time - minTime) / timeRange;
+        barWidth = (nextXRatio - xRatio) * width;
+      } else {
+        barWidth = width - x;
+      }
+
+      const barHeight = (slotVal / maxValue) * height;
+      ctx.fillStyle = ALLOCATED_COLOR;
+      ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+    }
+  }
+
+  // Second pass: Draw in-flight (used) as solid bars on top
   for (let i = 0; i < data.length; i += 1) {
     const point = data[i];
-    const usageVal = usage[i];
-    const capacityVal = capacity[i];
+    const inFlightVal = values.inFlight[i];
 
-    // Calculate x position based on time
     const xRatio = (point.time - minTime) / timeRange;
     const x = xRatio * width;
 
-    // Calculate bar width to extend to next point (or end)
     let barWidth: number;
     if (i < data.length - 1) {
       const nextXRatio = (data[i + 1].time - minTime) / timeRange;
@@ -69,15 +98,9 @@ function renderCapacityBars(
       barWidth = width - x;
     }
 
-    // Draw capacity background
-    const capacityHeight = (capacityVal / maxCapacity) * height;
-    ctx.fillStyle = CAPACITY_COLOR;
-    ctx.fillRect(x, height - capacityHeight, barWidth, capacityHeight);
-
-    // Draw usage fill
-    const usageHeight = (usageVal / maxCapacity) * height;
-    ctx.fillStyle = USAGE_COLOR;
-    ctx.fillRect(x, height - usageHeight, barWidth, usageHeight);
+    const barHeight = (inFlightVal / maxValue) * height;
+    ctx.fillStyle = USED_COLOR;
+    ctx.fillRect(x, height - barHeight, barWidth, barHeight);
   }
 }
 
@@ -127,15 +150,15 @@ export function CapacityChart({
     canvas.width = containerWidth;
     canvas.height = height;
 
-    const { usage, capacity } = getValues(data, metric.usageKey, metric.capacityKey);
-    renderCapacityBars(ctx, data, usage, capacity, containerWidth, height, timeExtent);
+    const values = getValues(data, metric.usageKey, metric.slotsKey);
+    renderChart(ctx, data, values, containerWidth, height, timeExtent);
   }, [data, metric, height, containerWidth, timeExtent]);
 
   const displayIndex = focusIndex ?? data.length - 1;
-  const currentUsage = data[displayIndex]?.[metric.usageKey];
-  const currentCapacity = data[displayIndex]?.[metric.capacityKey];
-  const usageVal = typeof currentUsage === 'number' ? currentUsage : 0;
-  const capacityVal = typeof currentCapacity === 'number' ? currentCapacity : 0;
+  const currentInFlight = data[displayIndex]?.[metric.usageKey];
+  const currentSlots = metric.slotsKey ? data[displayIndex]?.[metric.slotsKey] : undefined;
+  const inFlightVal = typeof currentInFlight === 'number' ? currentInFlight : 0;
+  const slotsVal = typeof currentSlots === 'number' ? currentSlots : null;
 
   return (
     <div className="flex items-stretch border-t border-border pr-2" style={{ minHeight: height }}>
@@ -152,7 +175,7 @@ export function CapacityChart({
             fontFamily: 'monospace',
             outline: 0,
             border: 0,
-            textShadow: 'none'
+            textShadow: 'none',
           }}
         >
           {metric.label}
@@ -161,10 +184,13 @@ export function CapacityChart({
       <div ref={containerRef} className="flex-1 min-w-0 relative">
         <canvas ref={canvasRef} height={height} className="w-full block" />
         <div
-          className="absolute top-1 right-2 text-sm font-semibold tabular-nums"
-          style={{ textShadow: '0 1px 0 rgba(255,255,255,.8)' }}
+          className="absolute top-1 right-2 text-xs tabular-nums"
+          style={{ color: '#888', fontFamily: "'JetBrains Mono', monospace" }}
         >
-          {formatValue(usageVal)} / {formatValue(capacityVal)}
+          <span style={{ color: BASE_COLOR, fontWeight: 600 }}>{formatValue(inFlightVal)}</span>
+          <span style={{ color: '#555' }}> / </span>
+          <span style={{ color: '#666' }}>{slotsVal !== null ? formatValue(slotsVal) : '?'}</span>
+          <span style={{ color: '#444', marginLeft: '4px' }}>used/allocated</span>
         </div>
       </div>
     </div>

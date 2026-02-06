@@ -1,12 +1,26 @@
 /**
  * Test suite: Exact Capacity
  *
- * Sends exactly the rate limiter capacity worth of jobs and verifies all complete.
+ * Sends exactly the per-model-per-jobType rate capacity worth of "summary" jobs
+ * and verifies all complete on openai without any waiting or escalation.
  *
- * Capacity calculation for openai/gpt-5.2:
- * - TPM limit: 500,000 tokens/minute
- * - Summary job: 10,000 tokens each
- * - Capacity: 500,000 / 10,000 = 50 jobs
+ * Capacity calculation (per-model-per-jobType):
+ *   Model: openai/gpt-5.2 (TPM=500,000, RPM=500)
+ *   Job type: summary (estimatedTokens=10,000, estimatedRequests=1, ratio=0.3)
+ *   Instances: 2
+ *
+ *   Per-instance pool from Redis:
+ *     tokensPerMinute = 500,000 / 2 = 250,000
+ *
+ *   Per-instance rate slots for summary:
+ *     TPM: floor(250,000 × 0.3 / 10,000) = 7 (windowMs=60,000)
+ *     RPM: floor(250 × 0.3 / 1) = 75 (windowMs=60,000)
+ *     Winner: TPM with 7 rate slots per minute
+ *
+ *   Total across 2 instances: 14 rate slots per minute window
+ *
+ * All 14 jobs start immediately within the current minute's rate budget,
+ * complete in 100ms each, and run on the primary model (openai).
  */
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
@@ -20,8 +34,9 @@ import {
 } from './infrastructureHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
 
-// Exact capacity: 500,000 TPM / 10,000 tokens per summary job = 50 jobs
-const EXACT_CAPACITY = 50;
+// Per-model-per-jobType rate capacity for "summary" on openai:
+// 2 instances × floor(250,000 × 0.3 / 10,000) = 2 × 7 = 14 rate slots per minute
+const EXACT_CAPACITY = 14;
 const JOB_DURATION_MS = 100;
 const WAIT_TIMEOUT_MS = 60000;
 const BEFORE_ALL_TIMEOUT_MS = 120000;

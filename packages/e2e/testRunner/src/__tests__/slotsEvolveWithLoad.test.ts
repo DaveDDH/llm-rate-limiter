@@ -5,16 +5,25 @@
  * as load increases and decreases.
  *
  * Uses the slotCalculation config preset:
- * - model-alpha: 100K TPM
- * - model-beta: 100K TPM
+ * - model-alpha: 100K TPM, model-beta: 100K TPM
  * - jobTypeA: 10K tokens, ratio 0.6
  * - jobTypeB: 5K tokens, ratio 0.4
  *
- * Key behaviors to verify:
- * 1. When jobs are acquired, available slots decrease
- * 2. When jobs complete, available slots increase (slots freed up)
- * 3. New jobs can use the freed slots immediately
- * 4. The system correctly manages slot count over multiple acquire/release cycles
+ * Pool (Redis): totalSlots = floor(100K / avgTokens(7500) / 2) = 6 per instance
+ * Pool: tokensPerMinute = 100K / 2 = 50,000
+ *
+ * Per-model-per-jobType (JTM):
+ *   jobTypeA (tokens=10K, ratio=0.6):
+ *     TPM: floor(50K × 0.6 / 10K) = 3 (windowMs=60,000)
+ *     Concurrency: floor(6 × 0.6) = 3 (windowMs=0)
+ *     Winner: 3 rate slots (tie-break: prefer windowMs=60,000)
+ *     Total: 3 × 2 instances = 6
+ *
+ *   jobTypeB (tokens=5K, ratio=0.4):
+ *     TPM: floor(50K × 0.4 / 5K) = 4 (windowMs=60,000)
+ *     Concurrency: floor(6 × 0.4) = 2 (windowMs=0)
+ *     Winner: 2 concurrency slots (concurrency < rate)
+ *     Total: 2 × 2 instances = 4
  */
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
@@ -29,11 +38,11 @@ import {
 } from './infrastructureHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
 
-// With slotCalculation config and 2 instances:
-// jobTypeA: floor((100K/10K) / 2 * 0.6) = 3 slots per instance = 6 total
-// jobTypeB: floor((100K/5K) / 2 * 0.4) = 4 slots per instance = 8 total
+// Per-model-per-jobType slots (see header comment for full derivation):
+// jobTypeA: 3 rate slots per instance × 2 = 6 total (TPM wins, windowMs=60,000)
+// jobTypeB: 2 concurrency slots per instance × 2 = 4 total (concurrency wins, windowMs=0)
 const JOB_TYPE_A_TOTAL_SLOTS = 6;
-const JOB_TYPE_B_TOTAL_SLOTS = 8;
+const JOB_TYPE_B_TOTAL_SLOTS = 4;
 const LONG_JOB_COUNT = 3;
 const ADDITIONAL_JOBS = 3;
 const DOUBLE_SLOTS = 2;

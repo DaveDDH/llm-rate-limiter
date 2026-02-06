@@ -1012,26 +1012,33 @@ instances: 2
 
 ---
 
-## 48. Model Escalation Test (Legacy)
+## 48. Model Escalation Test
 
 **File:** `modelEscalation.test.ts`
 
 **Complexity:** High
 
-**Purpose:** Verify that when capacity is filled for 2 minutes, a job escalates to the next model after maxWaitMS timeout.
+**Purpose:** Verify that when the openai rate capacity is exhausted, an additional job escalates to the next model after maxWaitMS timeout.
 
 **Config Preset:** `default`
 
+**Per-model-per-jobType rate capacity for "summary" on openai:**
+```
+Per-instance: floor(250,000 × 0.3 / 10,000) = 7 rate slots per minute
+Total: 2 × 7 = 14 rate slots per minute window
+```
+
 **Mechanism:**
-- Jobs 1-50: Fill minute 0 capacity
-- Jobs 51-100: Fill minute 1 capacity (queued until T=60)
-- Job 101: Needs minute 2 capacity (T=120)
-- Job 101's maxWaitMS (~65s) expires at T=65, before minute 2
-- Job 101 escalates to xai/grok-4.1-fast
+- 100 capacity jobs sent in parallel (saturates both instances' queues)
+- Minute 0: 7 start per instance (14 total), remaining queued
+- Escalation job sent at T=500ms, queued behind capacity jobs
+- Rate slots don't free on job completion (window counter stays at 7/7)
+- T=~65s: maxWaitMS expires → escalation job moves to xai/grok-4.1-fast
 
 **Configuration:**
-- openai/gpt-5.2: 500,000 TPM → 50 summary jobs per minute
-- 100 capacity jobs + 1 test job = 101 total
+- openai/gpt-5.2: 500,000 TPM, 500 RPM
+- summary: 10,000 tokens, 1 request, ratio 0.3
+- 100 capacity jobs + 1 escalation job = 101 total
 - Job duration: 60 seconds
 
 ### Test Cases
@@ -1046,7 +1053,7 @@ instances: 2
 
 ---
 
-## 49. Model Escalation to Third Model Test (Legacy)
+## 49. Model Escalation to Third Model Test
 
 **File:** `modelEscalationToThird.test.ts`
 
@@ -1056,16 +1063,18 @@ instances: 2
 
 **Config Preset:** `default`
 
-**Mechanism:**
-- Fill primary model (openai) with capacity jobs
-- Fill secondary model (xai) with capacity jobs
-- Send an additional job that can't fit on either
-- The job times out on openai (~65s), then times out on xai (~65s)
-- Job escalates to the third model (deepinfra)
+**Per-model-per-jobType capacity for "summary":**
+```
+openai: floor(250K × 0.3 / 10K) = 7 rate slots/instance/min (14 total)
+xai: concurrency-limited at floor(109 pool × 0.3) = 32/instance (64 total)
+deepinfra: concurrency-limited at floor(100 pool × 0.3) = 30/instance (60 total)
+```
 
-**Capacity calculations:**
-- openai/gpt-5.2: 500,000 TPM / 10,000 tokens = 50 jobs/min × 2 = 100 jobs
-- xai/grok-4.1-fast: 4,000,000 TPM / 10,000 tokens = 400 jobs/min × 2 = 800 jobs
+**Mechanism:**
+- 100 openai-fill + 800 xai-fill capacity jobs sent to saturate all queues
+- Escalation job sent at T=500ms
+- Times out on openai (~65s), then times out on xai (~65s)
+- Escalates to deepinfra/gpt-oss-20b
 
 ### Test Cases
 

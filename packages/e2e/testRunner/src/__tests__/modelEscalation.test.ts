@@ -1,20 +1,28 @@
 /**
  * Test suite: Model Escalation via maxWaitMS Timeout
  *
- * Verifies that when capacity is filled for 2 minutes, the 101st job
- * escalates to the next model after maxWaitMS timeout.
+ * Verifies that when the openai rate capacity is exhausted, an additional
+ * job escalates to the next model after maxWaitMS timeout.
+ *
+ * Per-model-per-jobType rate capacity for "summary" on openai:
+ *   Per-instance: floor(250,000 × 0.3 / 10,000) = 7 rate slots per minute
+ *   Total: 2 × 7 = 14 rate slots per minute window
  *
  * Mechanism:
- * - Jobs 1-50: Fill minute 0 capacity
- * - Jobs 51-100: Fill minute 1 capacity (queued until T=60)
- * - Job 101: Needs minute 2 capacity (T=120)
- * - Job 101's maxWaitMS (~65s) expires at T=65, before minute 2
- * - Job 101 escalates to xai/grok-4.1-fast
+ * - 100 capacity jobs sent in parallel (saturates both instances' queues)
+ * - Minute 0: 7 start per instance (14 total), remaining queued
+ * - Escalation job sent at T=500ms, queued behind capacity jobs
+ * - Rate slots don't free on job completion (window counter stays at 7/7)
+ * - At minute boundaries, window resets but capacity jobs ahead in queue
+ *   consume the new rate slots before the escalation job
+ * - T=~65s: maxWaitMS expires → escalation job moves to xai/grok-4.1-fast
+ * - On xai, the escalation job starts immediately (xai queue is empty)
  *
  * Configuration:
- * - openai/gpt-5.2: 500,000 TPM → 50 summary jobs per minute
- * - 100 capacity jobs + 1 test job = 101 total
- * - Job duration: 60 seconds
+ * - openai/gpt-5.2: 500,000 TPM, 500 RPM
+ * - summary: 10,000 tokens, 1 request, ratio 0.3
+ * - 100 capacity jobs + 1 escalation job = 101 total
+ * - Job duration: 60 seconds (longer than maxWaitMS ~65s)
  */
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
@@ -28,9 +36,10 @@ import {
 } from './infrastructureHelpers.js';
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
-// Total capacity: 500,000 TPM / 10,000 tokens = 50 jobs per minute
-// Fill 2 minutes: 100 jobs
-// Job 101's maxWaitMS (~65s) expires before minute 2 (T=120)
+// Per-model-per-jobType rate capacity for "summary" on openai:
+// floor(250,000 × 0.3 / 10,000) = 7 per instance = 14 rate slots per minute
+// 100 capacity jobs saturate the queue so the escalation job can't get a slot
+// Escalation job's maxWaitMS (~65s) expires → escalates to xai
 const CAPACITY_JOBS = 100;
 const ESCALATION_JOB_COUNT = 1;
 const TOTAL_JOBS = CAPACITY_JOBS + ESCALATION_JOB_COUNT;

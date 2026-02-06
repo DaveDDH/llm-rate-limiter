@@ -53,14 +53,16 @@ instanceCount = 2
 **Config:**
 ```
 model-beta: RPM = 500
-jobTypeA: estimatedRequests = 1, ratio = 0.5
-jobTypeB: estimatedRequests = 3, ratio = 0.5
+jobTypeA: estimatedRequests = 1, ratio = 0.6
+jobTypeB: estimatedRequests = 5, ratio = 0.4
 instanceCount = 2
 ```
 
+**Note:** Pool slots use averaged estimates: `avgRequests = (1 + 5) / 2 = 3`
+
 | What We Check | Formula | Expected |
 |---------------|---------|----------|
-| `allocation.pools['model-beta'].totalSlots` | `floor((500 / 2) / 2)` | 125 |
+| `allocation.pools['model-beta'].totalSlots` | `floor((500 / 3) / 2)` | 83 |
 | `allocation.pools['model-beta'].requestsPerMinute` | `500 / 2` | 250 |
 
 #### 1.4 Concurrent-Only Model - Exact Slot Calculation
@@ -79,17 +81,19 @@ instanceCount = 3
 
 **Config:**
 ```
-model-delta: TPM = 100,000, RPM = 50, maxConcurrentRequests = 200
-jobTypeA: estimatedTokens = 10,000, estimatedRequests = 1
+model-delta: TPM = 100,000, RPM = 50
+jobTypeA: estimatedTokens = 10,000, estimatedRequests = 1, ratio = 0.5
+jobTypeB: estimatedTokens = 10,000, estimatedRequests = 1, ratio = 0.5
 instanceCount = 2
 ```
+
+**Note:** avgEstimatedTokens = 10,000, avgEstimatedRequests = 1 (both job types are identical)
 
 | What We Check | Formula | Expected |
 |---------------|---------|----------|
 | TPM-based slots | `floor((100K / 10K) / 2)` | 5 |
 | RPM-based slots | `floor((50 / 1) / 2)` | 25 |
-| Concurrent-based slots | `floor(200 / 2)` | 100 |
-| `allocation.pools['model-delta'].totalSlots` | `min(5, 25, 100)` | 5 (TPM is limiting) |
+| `allocation.pools['model-delta'].totalSlots` | `min(5, 25)` | 5 (TPM is limiting) |
 
 #### 1.6 Daily Limits - TPD/RPD Calculation
 
@@ -433,23 +437,35 @@ model-alpha: maxConcurrentRequests = 10
 
 **Complexity:** Low
 
-**Purpose:** Send exactly the rate limiter capacity worth of jobs and verify all complete without failures.
+**Purpose:** Send exactly the per-model-per-jobType rate capacity worth of "summary" jobs and verify all complete on openai without any waiting or escalation.
 
 **Config Preset:** `default`
 
-**Capacity Calculation:**
-- TPM limit: 500,000 tokens/minute
-- Summary job: 10,000 tokens each
-- Capacity: 500,000 / 10,000 = 50 jobs
+**Capacity Calculation (per-model-per-jobType):**
+```
+Model: openai/gpt-5.2 (TPM=500,000, RPM=500)
+Job type: summary (estimatedTokens=10,000, estimatedRequests=1, ratio=0.3)
+Instances: 2
+
+Per-instance pool from Redis:
+  tokensPerMinute = 500,000 / 2 = 250,000
+
+Per-instance rate slots for summary:
+  TPM: floor(250,000 × 0.3 / 10,000) = 7 (windowMs=60,000)
+  RPM: floor(250 × 0.3 / 1) = 75 (windowMs=60,000)
+  Winner: TPM with 7 rate slots per minute
+
+Total across 2 instances: 14 rate slots per minute window
+```
 
 ### Test Cases
 
 | What We Check | Expected Result |
 |---------------|-----------------|
-| Job count | Exactly 50 jobs sent |
-| Completions | All 50 jobs complete |
+| Job count | Exactly 14 jobs sent |
+| Completions | All 14 jobs complete |
 | Failures | No jobs fail |
-| Distribution | Jobs split evenly across 2 instances (25 each) |
+| Distribution | Jobs split evenly across 2 instances (7 each) |
 | Model used | All jobs use primary model (openai/gpt-5.2) |
 
 ---

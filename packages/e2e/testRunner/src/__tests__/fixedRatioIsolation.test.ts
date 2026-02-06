@@ -10,10 +10,13 @@
  * - flexibleJobTypeA: 10K tokens, ratio 0.3, flexible: true
  * - flexibleJobTypeB: 10K tokens, ratio 0.3, flexible: true
  *
- * Expected slots with 2 instances:
- * - fixedJobType: floor((100K/10K) / 2 * 0.4) = floor(5 * 0.4) = 2 per instance = 4 total
- * - flexibleJobTypeA: floor((100K/10K) / 2 * 0.3) = floor(5 * 0.3) = 1 per instance = 2 total
- * - flexibleJobTypeB: floor((100K/10K) / 2 * 0.3) = floor(5 * 0.3) = 1 per instance = 2 total
+ * Pool (Redis): totalSlots = floor(100K / 10K / 2) = 5 per instance
+ * Pool: tokensPerMinute = 100K / 2 = 50,000
+ *
+ * Per-model-per-jobType (JTM):
+ *   fixedJobType: floor(50K × 0.4 / 10K) = 2 per instance = 4 total
+ *   flexibleJobTypeA: floor(50K × 0.3 / 10K) = 1 per instance = 2 total
+ *   flexibleJobTypeB: floor(50K × 0.3 / 10K) = 1 per instance = 2 total
  *
  * Key behavior to verify:
  * - When flexible types are overloaded, fixedJobType capacity remains unchanged
@@ -33,10 +36,10 @@ import {
 } from './infrastructureHelpers.js';
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
-// With fixedRatio config and 2 instances:
-// fixedJobType: floor((100K/10K) / 2 * 0.4) = 2 per instance = 4 total
-// flexibleJobTypeA: floor((100K/10K) / 2 * 0.3) = 1 per instance = 2 total
-// flexibleJobTypeB: floor((100K/10K) / 2 * 0.3) = 1 per instance = 2 total
+// Per-model-per-jobType slots (see header comment for derivation):
+// fixedJobType: floor(50K × 0.4 / 10K) = 2 per instance = 4 total
+// flexibleJobTypeA: floor(50K × 0.3 / 10K) = 1 per instance = 2 total
+// flexibleJobTypeB: floor(50K × 0.3 / 10K) = 1 per instance = 2 total
 const FIXED_JOB_TYPE_SLOTS = 4;
 const FLEXIBLE_JOB_TYPE_A_SLOTS = 2;
 const FLEXIBLE_JOB_TYPE_B_SLOTS = 2;

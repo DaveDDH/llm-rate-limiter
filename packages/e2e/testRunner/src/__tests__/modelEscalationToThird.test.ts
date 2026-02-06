@@ -4,16 +4,16 @@
  * Verifies that when capacity is filled on BOTH primary and secondary models,
  * jobs escalate to the third model after maxWaitMS timeouts.
  *
- * Mechanism:
- * - Fill primary model (openai) with 50 long-running jobs
- * - Fill secondary model (xai) with 400 long-running jobs
- * - Send an additional job that can't fit on either
- * - The job times out on openai (~65s), then times out on xai (~65s)
- * - Job escalates to the third model (deepinfra)
+ * Per-model-per-jobType capacity for "summary":
+ *   openai: floor(250K × 0.3 / 10K) = 7 rate slots/instance/min (14 total)
+ *   xai: concurrency-limited at floor(109 pool × 0.3) = 32/instance (64 total)
+ *   deepinfra: concurrency-limited at floor(100 pool × 0.3) = 30/instance (60 total)
  *
- * Capacity calculations:
- * - openai/gpt-5.2: 500,000 TPM / 10,000 tokens = 50 jobs
- * - xai/grok-4.1-fast: 4,000,000 TPM / 10,000 tokens = 400 jobs
+ * Mechanism:
+ * - 100 openai-fill + 800 xai-fill capacity jobs sent to saturate all queues
+ * - Escalation job sent at T=500ms
+ * - Times out on openai (~65s), then times out on xai (~65s)
+ * - Escalates to deepinfra/gpt-oss-20b
  */
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 
@@ -27,8 +27,9 @@ import {
 } from './infrastructureHelpers.js';
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
-// Capacity to fill 2 minutes worth of each model
-// openai: 50/min x 2 = 100, xai: 400/min x 2 = 800
+// Saturate both openai and xai queues so the escalation job can't get a slot:
+// openai: 7 rate slots/instance/min → 100 jobs saturates queue
+// xai: 32 concurrency slots/instance → 800 jobs saturates queue
 // Total: 900 capacity jobs, so job 901 (escalation) reaches deepinfra
 const OPENAI_CAPACITY = 100;
 const XAI_CAPACITY = 800;

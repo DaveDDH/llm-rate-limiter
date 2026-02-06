@@ -1,14 +1,13 @@
 /**
  * Transform test data into capacity-based format for visualization.
- * Uses interval-based approach: divides time span into 500 intervals
- * and counts active jobs per interval.
+ * Shows data per job type, per model, per instance.
  */
-import type { TestData } from '@llm-rate-limiter/e2e-test-results';
+import type { StateSnapshot, TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import type { CapacityDataPoint, CapacityMetric, InstanceConfig } from './capacityTypes';
 
 const FIRST_INSTANCE_INDEX = 1;
-const MODEL_KEY_REGEXP = /[^a-zA-Z0-9]/gu;
+const KEY_REGEXP = /[^a-zA-Z0-9]/gu;
 const NUM_INTERVALS = 500;
 const MS_TO_SECONDS = 1000;
 
@@ -22,116 +21,86 @@ function buildInstanceIdMap(testData: TestData): Map<string, string> {
   return map;
 }
 
-interface JobTimeRange {
-  jobId: string;
-  instanceId: string;
-  modelId: string | null;
-  startTime: number;
-  endTime: number;
-}
-
-/** Extract job time ranges (start to end) from jobs data */
-function extractJobTimeRanges(testData: TestData): JobTimeRange[] {
-  const ranges: JobTimeRange[] = [];
-
-  for (const job of Object.values(testData.jobs)) {
-    let startTime: number | null = null;
-    let endTime: number | null = null;
-    let modelId: string | null = null;
-
-    for (const event of job.events) {
-      if (event.type === 'started') {
-        startTime = event.timestamp;
-        modelId = event.modelId ?? null;
-      }
-      if (event.type === 'completed' || event.type === 'failed') {
-        endTime = event.timestamp;
-      }
-    }
-
-    if (startTime !== null && endTime !== null) {
-      ranges.push({ jobId: job.jobId, instanceId: job.instanceId, modelId, startTime, endTime });
-    }
-  }
-
-  return ranges;
-}
-
-/** Find the time span of all jobs */
-function findTimeSpan(ranges: JobTimeRange[]): { minTime: number; maxTime: number } {
-  if (ranges.length === 0) {
+/** Find the time span from snapshots */
+function findTimeSpan(testData: TestData): { minTime: number; maxTime: number } {
+  const { snapshots } = testData;
+  if (snapshots.length === 0) {
     return { minTime: 0, maxTime: 1 };
   }
-
-  let minTime = Infinity;
-  let maxTime = 0;
-
-  for (const range of ranges) {
-    if (range.startTime < minTime) minTime = range.startTime;
-    if (range.endTime > maxTime) maxTime = range.endTime;
-  }
-
-  return { minTime, maxTime };
+  return {
+    minTime: snapshots[0].timestamp,
+    maxTime: snapshots[snapshots.length - 1].timestamp,
+  };
 }
 
-/** Count active jobs for a single interval */
-function countActiveJobsForInterval(
-  ranges: JobTimeRange[],
-  intervalStart: number,
-  intervalEnd: number,
+/** Find the snapshot that applies at a given timestamp */
+function findSnapshotAtTime(snapshots: StateSnapshot[], timestamp: number): StateSnapshot | null {
+  let applicable: StateSnapshot | null = null;
+  for (const snap of snapshots) {
+    if (snap.timestamp <= timestamp) {
+      applicable = snap;
+    } else {
+      break;
+    }
+  }
+  return applicable;
+}
+
+/** Make a safe key from a string */
+function makeKey(str: string): string {
+  return str.replace(KEY_REGEXP, '_');
+}
+
+/** Extract per-jobType per-model data from a snapshot */
+function extractSnapshotData(
+  snapshot: StateSnapshot | null,
   instanceIdMap: Map<string, string>
-): Record<string, Record<string, number>> {
-  const counts: Record<string, Record<string, number>> = {};
+): Record<string, number> {
+  const data: Record<string, number> = {};
 
-  for (const range of ranges) {
-    if (range.startTime < intervalEnd && range.endTime > intervalStart) {
-      const shortId = instanceIdMap.get(range.instanceId) ?? range.instanceId;
+  if (!snapshot) return data;
 
-      if (!counts[shortId]) {
-        counts[shortId] = {};
+  for (const [fullId, state] of Object.entries(snapshot.instances)) {
+    const shortId = instanceIdMap.get(fullId) ?? fullId;
+
+    for (const [modelId, modelState] of Object.entries(state.models)) {
+      const modelKey = makeKey(modelId);
+
+      if (modelState.jobTypes) {
+        for (const [jobType, jtState] of Object.entries(modelState.jobTypes)) {
+          const jtKey = makeKey(jobType);
+          const prefix = `${shortId}_${modelKey}_${jtKey}`;
+
+          data[`${prefix}_slots`] = jtState.slots;
+          data[`${prefix}_inFlight`] = jtState.inFlight;
+        }
       }
-
-      const modelKey = range.modelId ? range.modelId.replace(MODEL_KEY_REGEXP, '_') : 'unknown';
-
-      if (!counts[shortId][modelKey]) {
-        counts[shortId][modelKey] = 0;
-      }
-
-      counts[shortId][modelKey] += 1;
     }
   }
 
-  return counts;
+  return data;
 }
 
-/** Build data point from active job counts */
+/** Build data point from snapshot */
 function buildIntervalDataPoint(
   intervalIndex: number,
   intervalMidpoint: number,
   minTime: number,
-  activeJobCounts: Record<string, Record<string, number>>
+  snapshotData: Record<string, number>
 ): CapacityDataPoint {
   const point: CapacityDataPoint = {
     time: (intervalMidpoint - minTime) / MS_TO_SECONDS,
     timestamp: intervalMidpoint,
     trigger: `interval-${intervalIndex}`,
+    ...snapshotData,
   };
-
-  for (const [shortId, models] of Object.entries(activeJobCounts)) {
-    let totalActive = 0;
-    for (const [modelKey, count] of Object.entries(models)) {
-      point[`${shortId}_${modelKey}_active`] = count;
-      totalActive += count;
-    }
-    point[`${shortId}_activeJobs`] = totalActive;
-  }
 
   return point;
 }
 
-/** Count active jobs per interval */
-function countActiveJobsPerInterval(
-  ranges: JobTimeRange[],
+/** Build all data points */
+function buildDataPoints(
+  testData: TestData,
   minTime: number,
   maxTime: number,
   instanceIdMap: Map<string, string>
@@ -142,11 +111,12 @@ function countActiveJobsPerInterval(
 
   for (let i = 0; i < NUM_INTERVALS; i += 1) {
     const intervalStart = minTime + i * intervalDuration;
-    const intervalEnd = intervalStart + intervalDuration;
     const intervalMidpoint = intervalStart + intervalDuration / 2;
 
-    const activeJobCounts = countActiveJobsForInterval(ranges, intervalStart, intervalEnd, instanceIdMap);
-    const point = buildIntervalDataPoint(i, intervalMidpoint, minTime, activeJobCounts);
+    const snapshot = findSnapshotAtTime(testData.snapshots, intervalMidpoint);
+    const snapshotData = extractSnapshotData(snapshot, instanceIdMap);
+
+    const point = buildIntervalDataPoint(i, intervalMidpoint, minTime, snapshotData);
     points.push(point);
   }
 
@@ -156,11 +126,10 @@ function countActiveJobsPerInterval(
 /** Transform test data to capacity data points */
 export function transformToCapacityData(testData: TestData): CapacityDataPoint[] {
   const instanceIdMap = buildInstanceIdMap(testData);
-  const ranges = extractJobTimeRanges(testData);
-  const { minTime, maxTime } = findTimeSpan(ranges);
-  const points = countActiveJobsPerInterval(ranges, minTime, maxTime, instanceIdMap);
+  const { minTime, maxTime } = findTimeSpan(testData);
+  const points = buildDataPoints(testData, minTime, maxTime, instanceIdMap);
 
-  // Add padding point at the end so the last real interval has width
+  // Add padding point at the end
   const timeSpan = maxTime - minTime;
   const intervalDuration = timeSpan / NUM_INTERVALS;
   const paddingTime = (maxTime + intervalDuration - minTime) / MS_TO_SECONDS;
@@ -169,11 +138,14 @@ export function transformToCapacityData(testData: TestData): CapacityDataPoint[]
     timestamp: maxTime + intervalDuration,
     trigger: 'end-padding',
   };
-  // Copy keys from first point with value 0
-  const firstPoint = points[0];
-  for (const key of Object.keys(firstPoint)) {
-    if (key.endsWith('_active')) {
-      paddingPoint[key] = 0;
+
+  // Copy keys from last point with value 0
+  const lastPoint = points[points.length - 1];
+  if (lastPoint) {
+    for (const key of Object.keys(lastPoint)) {
+      if (key.endsWith('_slots') || key.endsWith('_inFlight')) {
+        paddingPoint[key] = 0;
+      }
     }
   }
   points.push(paddingPoint);
@@ -181,55 +153,38 @@ export function transformToCapacityData(testData: TestData): CapacityDataPoint[]
   return points;
 }
 
-interface AggregatedInstanceData {
+/** Collected metric info per instance */
+interface InstanceMetricInfo {
   fullId: string;
-  modelIds: Set<string>;
+  /** Map of modelKey -> Set of jobTypeKeys */
+  models: Map<string, Set<string>>;
 }
 
-/** Aggregate models from jobs data */
-function aggregateModelsFromJobs(testData: TestData): Map<string, Set<string>> {
-  const instanceModels = new Map<string, Set<string>>();
+/** Aggregate all model/jobType combinations from snapshots */
+function aggregateMetricInfo(testData: TestData): Map<string, InstanceMetricInfo> {
+  const aggregated = new Map<string, InstanceMetricInfo>();
 
-  for (const job of Object.values(testData.jobs)) {
-    if (job.modelUsed) {
-      let models = instanceModels.get(job.instanceId);
-      if (!models) {
-        models = new Set();
-        instanceModels.set(job.instanceId, models);
-      }
-      models.add(job.modelUsed);
-    }
-  }
-
-  return instanceModels;
-}
-
-/** Aggregate all models across all snapshots and jobs for each instance */
-function aggregateInstanceData(testData: TestData): Map<string, AggregatedInstanceData> {
-  const aggregated = new Map<string, AggregatedInstanceData>();
-
-  // Get models from snapshots
   for (const snapshot of testData.snapshots) {
     for (const [fullId, state] of Object.entries(snapshot.instances)) {
-      let data = aggregated.get(fullId);
-      if (!data) {
-        data = { fullId, modelIds: new Set() };
-        aggregated.set(fullId, data);
+      let info = aggregated.get(fullId);
+      if (!info) {
+        info = { fullId, models: new Map() };
+        aggregated.set(fullId, info);
       }
 
-      for (const modelId of Object.keys(state.models)) {
-        data.modelIds.add(modelId);
-      }
-    }
-  }
+      for (const [modelId, modelState] of Object.entries(state.models)) {
+        const modelKey = makeKey(modelId);
+        let jobTypes = info.models.get(modelKey);
+        if (!jobTypes) {
+          jobTypes = new Set();
+          info.models.set(modelKey, jobTypes);
+        }
 
-  // Add models from jobs (includes escalation/fallback models)
-  const jobModels = aggregateModelsFromJobs(testData);
-  for (const [instanceId, models] of jobModels) {
-    const data = aggregated.get(instanceId);
-    if (data) {
-      for (const modelId of models) {
-        data.modelIds.add(modelId);
+        if (modelState.jobTypes) {
+          for (const jobType of Object.keys(modelState.jobTypes)) {
+            jobTypes.add(jobType);
+          }
+        }
       }
     }
   }
@@ -237,21 +192,24 @@ function aggregateInstanceData(testData: TestData): Map<string, AggregatedInstan
   return aggregated;
 }
 
-/** Build model metrics from aggregated model IDs */
-function buildModelMetricsFromIds(modelIds: Set<string>, shortId: string): CapacityMetric[] {
+/** Build metrics for an instance */
+function buildInstanceMetrics(shortId: string, info: InstanceMetricInfo): CapacityMetric[] {
   const metrics: CapacityMetric[] = [];
 
-  for (const modelId of modelIds) {
-    const modelKey = modelId.replace(MODEL_KEY_REGEXP, '_');
-    const prefix = `${shortId}_${modelKey}`;
+  for (const [modelKey, jobTypes] of info.models) {
+    for (const jobType of jobTypes) {
+      const jtKey = makeKey(jobType);
+      const prefix = `${shortId}_${modelKey}_${jtKey}`;
 
-    metrics.push({
-      key: `${prefix}_active`,
-      label: `${modelId}`,
-      usageKey: `${prefix}_active`,
-      capacityKey: `${prefix}_active`,
-      type: 'model',
-    });
+      metrics.push({
+        key: prefix,
+        label: `${modelKey} / ${jobType}`,
+        usageKey: `${prefix}_inFlight`,
+        capacityKey: `${prefix}_inFlight`,
+        slotsKey: `${prefix}_slots`,
+        type: 'jobType',
+      });
+    }
   }
 
   return metrics;
@@ -261,16 +219,16 @@ function buildModelMetricsFromIds(modelIds: Set<string>, shortId: string): Capac
 export function getInstanceConfigs(testData: TestData): InstanceConfig[] {
   const configs: InstanceConfig[] = [];
   const instanceIdMap = buildInstanceIdMap(testData);
-  const aggregated = aggregateInstanceData(testData);
+  const aggregated = aggregateMetricInfo(testData);
 
-  for (const [fullId, data] of aggregated) {
+  for (const [fullId, info] of aggregated) {
     const shortId = instanceIdMap.get(fullId) ?? fullId;
-    const modelMetrics = buildModelMetricsFromIds(data.modelIds, shortId);
+    const metrics = buildInstanceMetrics(shortId, info);
 
     configs.push({
       instanceId: shortId,
       fullId,
-      models: modelMetrics,
+      models: metrics,
       jobTypes: [],
     });
   }
