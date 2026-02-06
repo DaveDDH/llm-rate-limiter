@@ -17,8 +17,8 @@ function getTimeExtent(data: CapacityDataPoint[]): [number, number] {
   return [Math.min(...times), Math.max(...times)];
 }
 
-// Label width matches w-40 in CapacityChart (40 * 4px = 160px)
-const LABEL_WIDTH = 160;
+// Left margin matches ml-1 in CapacityChart (1 * 4px = 4px)
+const LEFT_MARGIN = 4;
 // Right padding matches pr-2 in CapacityChart (2 * 4px = 8px)
 const RIGHT_PADDING = 8;
 
@@ -47,7 +47,7 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
     const svg = axisRef.current;
     if (!svg || containerWidth === 0 || data.length === 0) return;
 
-    const chartWidth = containerWidth - LABEL_WIDTH - RIGHT_PADDING;
+    const chartWidth = containerWidth - LEFT_MARGIN - RIGHT_PADDING;
     if (chartWidth <= 0) return;
 
     const [minTime, maxTime] = getTimeExtent(data);
@@ -57,7 +57,7 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
     d3.select(svg).selectAll('*').remove();
     d3.select(svg)
       .append('g')
-      .attr('transform', `translate(${LABEL_WIDTH}, 0)`)
+      .attr('transform', `translate(${LEFT_MARGIN}, 0)`)
       .call(axis);
   }, [data, containerWidth]);
 
@@ -66,11 +66,11 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
       const container = containerRef.current;
       if (!container || data.length === 0 || containerWidth === 0) return;
 
-      const chartWidth = containerWidth - LABEL_WIDTH - RIGHT_PADDING;
+      const chartWidth = containerWidth - LEFT_MARGIN - RIGHT_PADDING;
       if (chartWidth <= 0) return;
 
       const rect = container.getBoundingClientRect();
-      const x = event.clientX - rect.left - LABEL_WIDTH;
+      const x = event.clientX - rect.left - LEFT_MARGIN;
       if (x < 0) return;
 
       // Match bar positioning: barX = i * barWidth + i
@@ -120,12 +120,12 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
           ))}
         </div>
 
-        {focusIndex !== null && containerWidth > LABEL_WIDTH && (() => {
-          const chartWidth = containerWidth - LABEL_WIDTH - RIGHT_PADDING;
+        {focusIndex !== null && containerWidth > LEFT_MARGIN && (() => {
+          const chartWidth = containerWidth - LEFT_MARGIN - RIGHT_PADDING;
           const barWidth = Math.floor(chartWidth / data.length) - 1;
           const step = barWidth + 1;
           // Position cursor at the center of the bar
-          const xPos = LABEL_WIDTH + focusIndex * step + barWidth / 2;
+          const xPos = LEFT_MARGIN + focusIndex * step + barWidth / 2;
           return (
             <div
               className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"
