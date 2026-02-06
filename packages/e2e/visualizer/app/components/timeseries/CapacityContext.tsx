@@ -76,13 +76,15 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
       // Match bar positioning: barX = i * barWidth + i
       const barWidth = Math.floor(chartWidth / data.length) - 1;
       const step = barWidth + 1;
+      // Allow cursor to move across full width (including fill bars)
       const index = Math.floor(x / step);
+      // Clamp data index to valid range, but allow visual position beyond
       const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
 
-      console.log(`cursor x: ${x}, barWidth: ${barWidth}, step: ${step}, index: ${clampedIndex}`);
+      console.log(`cursor x: ${x}, barWidth: ${barWidth}, step: ${step}, index: ${index}, clamped: ${clampedIndex}`);
 
-      setFocusIndex(clampedIndex);
-      onFocusChange?.(clampedIndex);
+      setFocusIndex(index); // Use unclamped index for cursor position
+      onFocusChange?.(clampedIndex); // Use clamped index for data
     },
     [containerWidth, data, onFocusChange]
   );
@@ -124,8 +126,8 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
           const chartWidth = containerWidth - LEFT_MARGIN - RIGHT_PADDING;
           const barWidth = Math.floor(chartWidth / data.length) - 1;
           const step = barWidth + 1;
-          // Position cursor at the center of the bar
-          const xPos = LEFT_MARGIN + focusIndex * step + barWidth / 2;
+          // Position cursor at the center of the bar (can be beyond data.length for fill bars)
+          const xPos = Math.min(LEFT_MARGIN + focusIndex * step + barWidth / 2, containerWidth - RIGHT_PADDING);
           return (
             <div
               className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"

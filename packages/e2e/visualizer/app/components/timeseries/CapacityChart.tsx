@@ -182,7 +182,8 @@ export function CapacityChart({
     renderChart(ctx, data, values, containerWidth, height, timeExtent);
   }, [data, metric, height, containerWidth, timeExtent]);
 
-  const displayIndex = focusIndex ?? data.length - 1;
+  // Clamp displayIndex to valid data range (focusIndex can be beyond for fill bars)
+  const displayIndex = Math.min(focusIndex ?? data.length - 1, data.length - 1);
   const currentInFlight = data[displayIndex]?.[metric.usageKey];
   const currentSlots = metric.slotsKey ? data[displayIndex]?.[metric.slotsKey] : undefined;
   const inFlightVal = typeof currentInFlight === 'number' ? currentInFlight : 0;
