@@ -186,10 +186,6 @@ class JobTypeManagerImpl implements JobTypeManager {
   acquireForModel(modelId: string, jobTypeId: string): void {
     const windowMs = this.getWindowMsForModel(modelId, jobTypeId);
     this.modelState.acquire(modelId, jobTypeId, windowMs);
-    const state = this.states.get(jobTypeId);
-    if (state !== undefined) {
-      state.inFlight += ONE;
-    }
   }
 
   private getWindowMsForModel(modelId: string, jobTypeId: string): number {
@@ -206,13 +202,7 @@ class JobTypeManagerImpl implements JobTypeManager {
 
   releaseForModel(modelId: string, jobTypeId: string): void {
     this.modelState.release(modelId, jobTypeId);
-    const state = this.states.get(jobTypeId);
-    if (state !== undefined && state.inFlight > ZERO) {
-      state.inFlight -= ONE;
-    }
     this.onModelCapacityRelease?.(modelId);
-    this.releasesSinceAdjustment += ONE;
-    this.maybeAdjustOnRelease();
   }
 
   private maybeAdjustOnRelease(): void {

@@ -11,7 +11,8 @@ import {
 import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 
 const NUM_JOBS = 20;
-const JOB_DURATION_MS = 100;
+const JOB_DURATION_MS = 5000;
+const AFTER_SEND_TRIGGER = 'after-sending-jobs';
 const WAIT_TIMEOUT_MS = 60000;
 const BEFORE_ALL_TIMEOUT_MS = 120000;
 
@@ -58,7 +59,7 @@ describe('Rate Limit Queuing', () => {
 
   it('should show jobs waiting in snapshots when rate limit is reached', () => {
     const { snapshots } = data;
-    const [, postSendSnapshot] = snapshots;
+    const postSendSnapshot = snapshots.find((s) => s.trigger === AFTER_SEND_TRIGGER);
     expect(postSendSnapshot).toBeDefined();
 
     const totalActiveJobs = Object.values(postSendSnapshot?.instances ?? {}).reduce(

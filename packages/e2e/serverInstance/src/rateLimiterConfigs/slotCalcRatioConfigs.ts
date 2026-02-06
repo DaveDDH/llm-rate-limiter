@@ -249,7 +249,8 @@ export const slotCalcZeroSlotsConfig: RateLimiterPreset = {
   },
 };
 
-// RPM limiting constants
+// RPM constants
+const SLOT_CALC_RPM_HIGH = 1000;
 const SLOT_CALC_RPM_LIMITING_RPM = 6;
 
 /** RPM as Limiting Factor Over TPM config */
@@ -285,6 +286,7 @@ export const slotCalcTpmSingleConfig: RateLimiterPreset = {
   models: {
     'model-alpha': {
       tokensPerMinute: SLOT_CALC_TPM_100K,
+      requestsPerMinute: SLOT_CALC_RPM_HIGH,
       pricing: {
         input: PRICING_INPUT_STANDARD,
         cached: PRICING_CACHED_STANDARD,

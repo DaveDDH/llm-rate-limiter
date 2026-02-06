@@ -290,6 +290,8 @@ export interface InternalLimiterInstance {
   getStats: () => InternalLimiterStats;
   /** Update rate limits dynamically (for distributed coordination) */
   setRateLimits: (update: RateLimitUpdate) => void;
+  /** Update concurrency limit dynamically (for distributed coordination) */
+  setConcurrencyLimit: (limit: number) => void;
   /** Notify wait queue that external capacity changed (e.g., JTM per-model slot freed) */
   notifyExternalCapacityChange: () => void;
   /**

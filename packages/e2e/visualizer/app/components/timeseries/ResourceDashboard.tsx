@@ -1,6 +1,6 @@
 'use client';
 
-import type { StateSnapshot, TestData } from '@llm-rate-limiter/e2e-test-results';
+import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Area,
@@ -77,76 +77,39 @@ interface RealJobTypeInfo {
   slotsRatio: number;
 }
 
-interface ResourceTotals {
-  rpmTotal: number;
-  rpmUsed: number;
-  tpmTotal: number;
-  tpmUsed: number;
-  concurrentTotal: number;
-  concurrentUsed: number;
-  hasConcurrent: boolean;
+interface JobTypeUsage {
+  jobCount: Record<string, number>;
+  tokenUsage: Record<string, number>;
+  totalJobs: number;
+  totalTokens: number;
 }
 
-interface JobTypeSlotData {
-  inFlight: Record<string, number>;
-  totalSlots: Record<string, number>;
-  sumInFlight: number;
-  sumTotalSlots: number;
+function computeJobUsage(testData: TestData): JobTypeUsage {
+  const result: JobTypeUsage = { jobCount: {}, tokenUsage: {}, totalJobs: 0, totalTokens: 0 };
+
+  for (const job of Object.values(testData.jobs)) {
+    result.jobCount[job.jobType] = (result.jobCount[job.jobType] ?? 0) + 1;
+    result.tokenUsage[job.jobType] = (result.tokenUsage[job.jobType] ?? 0) + job.totalCost;
+    result.totalJobs += 1;
+    result.totalTokens += job.totalCost;
+  }
+
+  return result;
 }
 
-function accumulateSnapshotResources(totals: ResourceTotals, snapshot: StateSnapshot): void {
-  for (const state of Object.values(snapshot.instances)) {
-    for (const model of Object.values(state.models)) {
-      totals.rpmTotal += model.rpm + model.rpmRemaining;
-      totals.rpmUsed += model.rpm;
-      totals.tpmTotal += model.tpm + model.tpmRemaining;
-      totals.tpmUsed += model.tpm;
-      if (model.concurrent !== undefined) {
-        totals.hasConcurrent = true;
-        totals.concurrentTotal += model.concurrent + (model.concurrentAvailable ?? 0);
-        totals.concurrentUsed += model.concurrent;
+function extractCapacity(testData: TestData): { rpm: number; tpm: number } {
+  for (const snapshot of testData.snapshots) {
+    let rpm = 0;
+    let tpm = 0;
+    for (const state of Object.values(snapshot.instances)) {
+      for (const model of Object.values(state.models)) {
+        rpm += model.rpm + model.rpmRemaining;
+        tpm += model.tpm + model.tpmRemaining;
       }
     }
+    if (rpm > 0 || tpm > 0) return { rpm, tpm };
   }
-}
-
-function accumulateResourceTotals(snapshots: StateSnapshot[]): ResourceTotals {
-  const totals: ResourceTotals = {
-    rpmTotal: 0, rpmUsed: 0,
-    tpmTotal: 0, tpmUsed: 0,
-    concurrentTotal: 0, concurrentUsed: 0,
-    hasConcurrent: false,
-  };
-
-  for (const snapshot of snapshots) {
-    accumulateSnapshotResources(totals, snapshot);
-  }
-
-  return totals;
-}
-
-function accumulateSnapshotJobTypes(data: JobTypeSlotData, snapshot: StateSnapshot): void {
-  for (const state of Object.values(snapshot.instances)) {
-    for (const model of Object.values(state.models)) {
-      if (!model.jobTypes) continue;
-      for (const [jt, jtState] of Object.entries(model.jobTypes)) {
-        data.inFlight[jt] = (data.inFlight[jt] ?? 0) + jtState.inFlight;
-        data.totalSlots[jt] = (data.totalSlots[jt] ?? 0) + jtState.totalSlots;
-        data.sumInFlight += jtState.inFlight;
-        data.sumTotalSlots += jtState.totalSlots;
-      }
-    }
-  }
-}
-
-function accumulateJobTypeData(snapshots: StateSnapshot[]): JobTypeSlotData {
-  const data: JobTypeSlotData = { inFlight: {}, totalSlots: {}, sumInFlight: 0, sumTotalSlots: 0 };
-
-  for (const snapshot of snapshots) {
-    accumulateSnapshotJobTypes(data, snapshot);
-  }
-
-  return data;
+  return { rpm: 0, tpm: 0 };
 }
 
 function assignJobTypeColors(jobTypeIds: string[]): Record<string, string> {
@@ -157,47 +120,44 @@ function assignJobTypeColors(jobTypeIds: string[]): Record<string, string> {
   return colors;
 }
 
-function makeGaugeSegments(
-  totalUsed: number,
-  jtData: JobTypeSlotData,
+function makeSegments(
+  usage: Record<string, number>,
   colors: Record<string, string>,
 ): GaugeSegment[] {
-  if (jtData.sumInFlight === 0) return [];
-  return Object.entries(jtData.inFlight)
-    .map(([jt, inFlight]) => ({
-      jobType: jt,
-      used: Math.round(totalUsed * (inFlight / jtData.sumInFlight)),
-      color: colors[jt] ?? '#888',
-    }))
+  return Object.entries(usage)
+    .map(([jt, used]) => ({ jobType: jt, used, color: colors[jt] ?? '#888' }))
     .sort((a, b) => b.used - a.used);
 }
 
 function buildGauges(
-  res: ResourceTotals,
-  jtData: JobTypeSlotData,
+  jobUsage: JobTypeUsage,
+  capacity: { rpm: number; tpm: number },
   colors: Record<string, string>,
 ): GaugeData[] {
   const gauges: GaugeData[] = [];
 
-  if (res.rpmTotal > 0) {
-    gauges.push({ resource: 'RPM', total: res.rpmTotal, used: res.rpmUsed, segments: makeGaugeSegments(res.rpmUsed, jtData, colors) });
+  if (capacity.rpm > 0) {
+    gauges.push({ resource: 'RPM', total: capacity.rpm, used: jobUsage.totalJobs, segments: makeSegments(jobUsage.jobCount, colors) });
   }
-  if (res.tpmTotal > 0) {
-    gauges.push({ resource: 'TPM', total: res.tpmTotal, used: res.tpmUsed, segments: makeGaugeSegments(res.tpmUsed, jtData, colors) });
+  if (capacity.tpm > 0 && jobUsage.totalTokens > 0) {
+    gauges.push({ resource: 'TPM', total: capacity.tpm, used: jobUsage.totalTokens, segments: makeSegments(jobUsage.tokenUsage, colors) });
   }
-  if (res.hasConcurrent && res.concurrentTotal > 0) {
-    gauges.push({ resource: 'Concurrent', total: res.concurrentTotal, used: res.concurrentUsed, segments: makeGaugeSegments(res.concurrentUsed, jtData, colors) });
-  }
+
+  gauges.sort((a, b) => {
+    const pctA = a.total > 0 ? a.used / a.total : 0;
+    const pctB = b.total > 0 ? b.used / b.total : 0;
+    return pctB - pctA;
+  });
 
   return gauges;
 }
 
-function buildJobTypeInfo(jtData: JobTypeSlotData, colors: Record<string, string>): RealJobTypeInfo[] {
-  return Object.keys(jtData.totalSlots)
-    .map((jt) => ({
+function buildJobTypeInfo(jobUsage: JobTypeUsage, colors: Record<string, string>): RealJobTypeInfo[] {
+  return Object.entries(jobUsage.jobCount)
+    .map(([jt, count]) => ({
       id: jt,
       color: colors[jt] ?? '#888',
-      slotsRatio: jtData.sumTotalSlots > 0 ? Math.round((jtData.totalSlots[jt] / jtData.sumTotalSlots) * 100) : 0,
+      slotsRatio: jobUsage.totalJobs > 0 ? Math.round((count / jobUsage.totalJobs) * 100) : 0,
     }))
     .sort((a, b) => b.slotsRatio - a.slotsRatio);
 }
@@ -471,16 +431,27 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
   const jobTypeCount = Object.keys(testData.summary.byJobType).length;
   const resourceDimensionCount = countResourceDimensions(testData);
 
-  // Extract real resource utilization across all snapshots
-  const { snapshots } = testData;
-  const resourceTotals = snapshots.length > 0 ? accumulateResourceTotals(snapshots) : null;
-  const jobTypeSlotData = snapshots.length > 0 ? accumulateJobTypeData(snapshots) : null;
-  const realJobTypeIds = jobTypeSlotData ? Object.keys(jobTypeSlotData.totalSlots) : [];
+  // Extract real resource utilization from job records
+  const jobUsage = computeJobUsage(testData);
+  const capacity = extractCapacity(testData);
+  const realJobTypeIds = Object.keys(jobUsage.jobCount);
   const jobTypeColors = assignJobTypeColors(realJobTypeIds);
-  const gauges = resourceTotals && jobTypeSlotData ? buildGauges(resourceTotals, jobTypeSlotData, jobTypeColors) : [];
-  const realJobTypes = jobTypeSlotData ? buildJobTypeInfo(jobTypeSlotData, jobTypeColors) : [];
+  const gauges = buildGauges(jobUsage, capacity, jobTypeColors);
+  const realJobTypes = buildJobTypeInfo(jobUsage, jobTypeColors);
 
-  const [data, setData] = useState<DataEntry[]>(() => generateTimeSeriesData(60));
+  // Debug TPM: log a sample of jobs to inspect totalCost values
+  const sampleJobs = Object.values(testData.jobs).slice(0, 5);
+  console.log('[TPM Debug] sample jobs:', sampleJobs.map((j) => ({
+    jobId: j.jobId, jobType: j.jobType, totalCost: j.totalCost, status: j.status,
+    events: j.events.map((e) => ({ type: e.type, cost: e.cost })),
+  })));
+  console.log('[TPM Debug] capacity:', JSON.stringify(capacity));
+  console.log('[TPM Debug] jobUsage.tokenUsage:', JSON.stringify(jobUsage.tokenUsage));
+  console.log('[TPM Debug] jobUsage.totalTokens:', jobUsage.totalTokens);
+  console.log('[TPM Debug] jobUsage.jobCount:', JSON.stringify(jobUsage.jobCount));
+  console.log('[TPM Debug] jobUsage.totalJobs:', jobUsage.totalJobs);
+
+const [data, setData] = useState<DataEntry[]>(() => generateTimeSeriesData(60));
   const [selectedResource, setSelectedResource] = useState('TPM');
   const [isLive, setIsLive] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);

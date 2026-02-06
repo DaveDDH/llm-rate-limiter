@@ -11,6 +11,7 @@ interface PerInstanceLimits {
   requestsPerMinute: number | undefined;
   tokensPerDay: number | undefined;
   requestsPerDay: number | undefined;
+  maxConcurrentRequests: number | undefined;
 }
 
 interface AllocationParams {
@@ -58,6 +59,7 @@ export const calculatePerInstanceLimits = (params: AllocationParams): PerInstanc
       modelConfig.requestsPerDay,
       instanceCount
     ),
+    maxConcurrentRequests: calculateLimitValue(undefined, modelConfig.maxConcurrentRequests, instanceCount),
   };
 };
 
@@ -78,4 +80,7 @@ export const applyLimitsToLimiter = (limiter: InternalLimiterInstance, limits: P
     requestsPerDay: limits.requestsPerDay,
   };
   limiter.setRateLimits(rateLimits);
+  if (limits.maxConcurrentRequests !== undefined) {
+    limiter.setConcurrencyLimit(limits.maxConcurrentRequests);
+  }
 };

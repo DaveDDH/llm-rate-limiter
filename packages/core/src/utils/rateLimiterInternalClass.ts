@@ -266,6 +266,12 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     this.updateCounterLimit(this.tpdCounter, update.tokensPerDay, 'TPD');
     this.updateCounterLimit(this.rpdCounter, update.requestsPerDay, 'RPD');
   }
+  setConcurrencyLimit(limit: number): void {
+    if (this.concurrencySemaphore !== null) {
+      this.concurrencySemaphore.resize(limit);
+      this.log('Updated concurrency limit', { newLimit: limit });
+    }
+  }
   private updateCounterLimit(
     counter: TimeWindowCounter | null,
     newLimit: number | undefined,
