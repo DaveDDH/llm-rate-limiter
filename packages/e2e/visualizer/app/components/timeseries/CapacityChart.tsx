@@ -107,23 +107,27 @@ function renderChart(
   const n = data.length;
   const step = barWidth + 1;
 
-  // Find last non-zero blue height
+  // Find last bar with non-zero blue height
+  let lastVisibleIndex = -1;
   let lastBlueHeight = 0;
   for (let i = n - 1; i >= 0; i -= 1) {
     if (barLog[i].blue.h > 0) {
+      lastVisibleIndex = i;
       lastBlueHeight = barLog[i].blue.h;
       break;
     }
   }
 
-  // Draw additional bars to fill remaining space
-  let extraBarIndex = n;
-  let extraBarX = extraBarIndex * step;
-  while (extraBarX + barWidth <= width && lastBlueHeight > 0) {
-    ctx.fillStyle = ALLOCATED_COLOR;
-    ctx.fillRect(extraBarX, height - lastBlueHeight, barWidth, lastBlueHeight);
-    extraBarIndex += 1;
-    extraBarX = extraBarIndex * step;
+  // Draw additional bars starting right after the last visible bar
+  if (lastVisibleIndex >= 0 && lastBlueHeight > 0) {
+    let extraBarIndex = lastVisibleIndex + 1;
+    let extraBarX = extraBarIndex * step;
+    while (extraBarX + barWidth <= width) {
+      ctx.fillStyle = ALLOCATED_COLOR;
+      ctx.fillRect(extraBarX, height - lastBlueHeight, barWidth, lastBlueHeight);
+      extraBarIndex += 1;
+      extraBarX = extraBarIndex * step;
+    }
   }
   // console.log('bars:', barLog);
 }
