@@ -162,10 +162,7 @@ export function CapacityChart({
 
   return (
     <div className="flex items-stretch border-t border-border pr-2" style={{ minHeight: height }}>
-      <div
-        className="w-40 flex items-center px-3 bg-muted/30 border-r border-border"
-        style={{ textShadow: '0 1px 0 rgba(255,255,255,.5)' }}
-      >
+      <div className="w-40 flex items-center px-3 bg-muted/30 border-r border-border">
         <div
           title={metric.label}
           style={{
@@ -175,7 +172,6 @@ export function CapacityChart({
             fontFamily: 'monospace',
             outline: 0,
             border: 0,
-            textShadow: 'none',
           }}
         >
           {metric.label}
@@ -188,9 +184,10 @@ export function CapacityChart({
           style={{ color: '#888', fontFamily: "'JetBrains Mono', monospace" }}
         >
           <span style={{ color: BASE_COLOR, fontWeight: 600 }}>{formatValue(inFlightVal)}</span>
+          <span style={{ color: '#444' }}> used</span>
           <span style={{ color: '#555' }}> / </span>
           <span style={{ color: '#666' }}>{slotsVal !== null ? formatValue(slotsVal) : '?'}</span>
-          <span style={{ color: '#444', marginLeft: '4px' }}>used/allocated</span>
+          <span style={{ color: '#444' }}> allocated</span>
         </div>
       </div>
     </div>

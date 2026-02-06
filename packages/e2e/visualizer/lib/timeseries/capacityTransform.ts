@@ -109,12 +109,23 @@ function buildDataPoints(
   const intervalDuration = timeSpan / NUM_INTERVALS;
   const points: CapacityDataPoint[] = [];
 
+  // Log first few intervals for debugging
+  const LOG_FIRST_N = 5;
+
   for (let i = 0; i < NUM_INTERVALS; i += 1) {
     const intervalStart = minTime + i * intervalDuration;
     const intervalMidpoint = intervalStart + intervalDuration / 2;
 
     const snapshot = findSnapshotAtTime(testData.snapshots, intervalMidpoint);
     const snapshotData = extractSnapshotData(snapshot, instanceIdMap);
+
+    if (i < LOG_FIRST_N) {
+      console.log(`Interval ${i}: midpoint=${intervalMidpoint}, snapshot=${snapshot?.timestamp ?? 'null'}`);
+      const slotsKeys = Object.keys(snapshotData).filter((k) => k.endsWith('_slots'));
+      for (const key of slotsKeys) {
+        console.log(`  ${key} = ${snapshotData[key]}`);
+      }
+    }
 
     const point = buildIntervalDataPoint(i, intervalMidpoint, minTime, snapshotData);
     points.push(point);
@@ -123,10 +134,37 @@ function buildDataPoints(
   return points;
 }
 
+/** Log snapshot slots for debugging */
+function logSnapshotSlots(testData: TestData, instanceIdMap: Map<string, string>): void {
+  console.log('=== SNAPSHOT SLOTS DEBUG ===');
+  console.log(`Total snapshots: ${testData.snapshots.length}`);
+
+  for (const snapshot of testData.snapshots) {
+    console.log(`\nSnapshot at ${snapshot.timestamp}:`);
+    for (const [fullId, state] of Object.entries(snapshot.instances)) {
+      const shortId = instanceIdMap.get(fullId) ?? fullId;
+      for (const [modelId, modelState] of Object.entries(state.models)) {
+        if (modelState.jobTypes) {
+          for (const [jobType, jtState] of Object.entries(modelState.jobTypes)) {
+            console.log(
+              `  ${shortId}/${modelId}/${jobType}: slots=${jtState.slots}, inFlight=${jtState.inFlight}`
+            );
+          }
+        }
+      }
+    }
+  }
+  console.log('=== END SNAPSHOT SLOTS DEBUG ===\n');
+}
+
 /** Transform test data to capacity data points */
 export function transformToCapacityData(testData: TestData): CapacityDataPoint[] {
   const instanceIdMap = buildInstanceIdMap(testData);
   const { minTime, maxTime } = findTimeSpan(testData);
+
+  // Debug: log all snapshot slots
+  logSnapshotSlots(testData, instanceIdMap);
+
   const points = buildDataPoints(testData, minTime, maxTime, instanceIdMap);
 
   // Add padding point at the end
