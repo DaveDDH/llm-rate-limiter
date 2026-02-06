@@ -40,14 +40,29 @@ export function InstanceSection({ config, data, focusIndex, timeExtent }: Instan
       {activeModels.length > 0 && (
         <div>
           {activeModels.map((metric) => (
-            <CapacityChart
-              key={metric.key}
-              data={data}
-              metric={metric}
-              height={CHART_HEIGHT}
-              focusIndex={focusIndex}
-              timeExtent={timeExtent}
-            />
+            <div className="w-full flex flex-col" key={metric.key}>
+              <div className="w-full flex justify-center items-center bg-muted/30 border-b border-t border-border">
+                <div
+                  title={metric.label}
+                  style={{
+                    fontSize: '12px',
+                    color: '#555',
+                    fontFamily: 'monospace',
+                    outline: 0,
+                    border: 0,
+                  }}
+                >
+                  {metric.label}
+                </div>
+              </div>
+              <CapacityChart
+                data={data}
+                metric={metric}
+                height={CHART_HEIGHT}
+                focusIndex={focusIndex}
+                timeExtent={timeExtent}
+              />
+            </div>
           ))}
         </div>
       )}

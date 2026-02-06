@@ -8,7 +8,7 @@ import type { CapacityDataPoint, CapacityMetric, InstanceConfig } from './capaci
 
 const FIRST_INSTANCE_INDEX = 1;
 const KEY_REGEXP = /[^a-zA-Z0-9]/gu;
-const NUM_INTERVALS = 500;
+const NUM_INTERVALS = 400;
 const MS_TO_SECONDS = 1000;
 
 /** Build instance ID map */

@@ -73,24 +73,16 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
       const x = event.clientX - rect.left - LABEL_WIDTH;
       if (x < 0) return;
 
-      // Map cursor position to time, not index
-      const [minTime, maxTime] = getTimeExtent(data);
-      const timeRange = maxTime - minTime;
-      const cursorTime = minTime + (x / chartWidth) * timeRange;
+      // Match bar positioning: barX = i * barWidth + i
+      const barWidth = Math.floor(chartWidth / data.length) - 1;
+      const step = barWidth + 1;
+      const index = Math.floor(x / step);
+      const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
 
-      // Find the data point closest to this time
-      let closestIndex = 0;
-      let closestDiff = Math.abs(data[0].time - cursorTime);
-      for (let i = 1; i < data.length; i += 1) {
-        const diff = Math.abs(data[i].time - cursorTime);
-        if (diff < closestDiff) {
-          closestDiff = diff;
-          closestIndex = i;
-        }
-      }
+      console.log(`cursor x: ${x}, barWidth: ${barWidth}, step: ${step}, index: ${clampedIndex}`);
 
-      setFocusIndex(closestIndex);
-      onFocusChange?.(closestIndex);
+      setFocusIndex(clampedIndex);
+      onFocusChange?.(clampedIndex);
     },
     [containerWidth, data, onFocusChange]
   );
@@ -129,13 +121,11 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
         </div>
 
         {focusIndex !== null && containerWidth > LABEL_WIDTH && (() => {
-          const [minTime, maxTime] = getTimeExtent(data);
-          const timeRange = maxTime - minTime;
-          const focusTime = data[focusIndex].time;
           const chartWidth = containerWidth - LABEL_WIDTH - RIGHT_PADDING;
-          const xPos = timeRange > 0
-            ? LABEL_WIDTH + ((focusTime - minTime) / timeRange) * chartWidth
-            : LABEL_WIDTH;
+          const barWidth = Math.floor(chartWidth / data.length) - 1;
+          const step = barWidth + 1;
+          // Position cursor at the center of the bar
+          const xPos = LABEL_WIDTH + focusIndex * step + barWidth / 2;
           return (
             <div
               className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"

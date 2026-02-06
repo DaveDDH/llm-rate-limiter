@@ -81,7 +81,7 @@ export function TimeseriesPage() {
   }, [selectedDataset]);
 
   return (
-    <div className="w-full m-0 px-3">
+    <div className="w-full m-0 px-0">
       <Card className="shadow-none ring-0">
         <CardHeader>
           <CardTitle className="flex flex-col gap-3 items-center justify-between">
@@ -99,7 +99,7 @@ export function TimeseriesPage() {
             <DatasetSelector value={selectedDataset} onValueChange={setSelectedDataset} />
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-0">
+        <CardContent className="space-y-0 px-0">
           {loading ? (
             <div className="h-[400px] flex items-center justify-center text-muted-foreground">Loading...</div>
           ) : (

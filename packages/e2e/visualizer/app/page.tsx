@@ -1,5 +1,5 @@
-import { Visualizer } from './components/Visualizer';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <Visualizer />;
+  redirect('/timeseries');
 }

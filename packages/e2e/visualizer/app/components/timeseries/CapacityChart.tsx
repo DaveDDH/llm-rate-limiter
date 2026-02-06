@@ -11,12 +11,20 @@ interface CapacityChartProps {
   timeExtent: [number, number];
 }
 
+interface BarLog {
+  i: number;
+  x: number;
+  w: number;
+  blue: { slots: number; h: number };
+  orange: { inFlight: number; h: number };
+  totalSlots: number;
+}
+
 const DEFAULT_HEIGHT = 80;
 
 // Colors
-const BASE_COLOR = '#E8715A';
-const ALLOCATED_COLOR = 'rgba(90, 156, 232, 0.4)'; // Blue
-const USED_COLOR = '#E8715A'; // Orange/red
+const ALLOCATED_COLOR = '#0000FF'; // Pure blue
+const USED_COLOR = '#FFA500'; // Pure orange
 
 interface ChartValues {
   inFlight: number[];
@@ -52,9 +60,6 @@ function renderChart(
   const [minTime, maxTime] = timeExtent;
   const timeRange = maxTime - minTime;
 
-  // Find max value for scaling (slots should be >= inFlight typically)
-  const maxValue = Math.max(...values.inFlight, ...values.slots, 1);
-
   ctx.clearRect(0, 0, width, height);
 
   // Ensure no shadows or strokes
@@ -63,53 +68,41 @@ function renderChart(
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
 
-  if (timeRange === 0) return;
+  if (timeRange === 0 || data.length === 0) return;
 
-  // First pass: Draw slots (allocated) as faded bars
-  if (values.slots.length > 0) {
-    for (let i = 0; i < data.length; i += 1) {
-      const point = data[i];
-      const slotVal = values.slots[i];
+  const barWidth = Math.floor(width / data.length) - 1;
+  console.log(barWidth);
 
-      const xRatio = (point.time - minTime) / timeRange;
-      const x = xRatio * width;
+  const barLog: BarLog[] = [];
 
-      const flooredX = Math.floor(x);
-      let barWidth: number;
-      if (i < data.length - 1) {
-        const nextXRatio = (data[i + 1].time - minTime) / timeRange;
-        barWidth = Math.ceil((nextXRatio - xRatio) * width);
-      } else {
-        barWidth = Math.ceil(width - x);
-      }
-
-      const barHeight = (slotVal / maxValue) * height;
-      ctx.fillStyle = ALLOCATED_COLOR;
-      ctx.fillRect(flooredX, height - barHeight, barWidth, barHeight);
-    }
-  }
-
-  // Second pass: Draw in-flight (used) as solid bars on top
   for (let i = 0; i < data.length; i += 1) {
-    const point = data[i];
+    const totalSlots = values.slots[i] ?? 0;
     const inFlightVal = values.inFlight[i];
+    const barX = i * barWidth + i;
 
-    const xRatio = (point.time - minTime) / timeRange;
-    const x = xRatio * width;
+    // Blue bar is always full height (shows capacity)
+    const blueHeight = totalSlots > 0 ? height : 0;
+    // Orange bar scales relative to this interval's totalSlots
+    const orangeHeight = totalSlots > 0 ? (inFlightVal / totalSlots) * height : 0;
 
-    const flooredX = Math.floor(x);
-    let barWidth: number;
-    if (i < data.length - 1) {
-      const nextXRatio = (data[i + 1].time - minTime) / timeRange;
-      barWidth = Math.ceil((nextXRatio - xRatio) * width);
-    } else {
-      barWidth = Math.ceil(width - x);
-    }
+    // Draw blue (allocated)
+    ctx.fillStyle = ALLOCATED_COLOR;
+    ctx.fillRect(barX, height - blueHeight, barWidth, blueHeight);
 
-    const barHeight = (inFlightVal / maxValue) * height;
+    // Draw orange (used) on top
     ctx.fillStyle = USED_COLOR;
-    ctx.fillRect(flooredX, height - barHeight, barWidth, barHeight);
+    ctx.fillRect(barX, height - orangeHeight, barWidth, orangeHeight);
+
+    barLog.push({
+      i,
+      x: barX,
+      w: barWidth,
+      blue: { slots: totalSlots, h: blueHeight },
+      orange: { inFlight: inFlightVal, h: orangeHeight },
+      totalSlots,
+    });
   }
+  // console.log('bars:', barLog);
 }
 
 function formatValue(value: number): string {
@@ -170,21 +163,6 @@ export function CapacityChart({
 
   return (
     <div className="flex items-stretch border-t border-border pr-2" style={{ minHeight: height }}>
-      <div className="w-40 flex items-center px-3 bg-muted/30 border-r border-border">
-        <div
-          title={metric.label}
-          style={{
-            fontSize: '12px',
-            color: '#555',
-            margin: '4px 0 0',
-            fontFamily: 'monospace',
-            outline: 0,
-            border: 0,
-          }}
-        >
-          {metric.label}
-        </div>
-      </div>
       <div ref={containerRef} className="flex-1 min-w-0 relative">
         <canvas ref={canvasRef} height={height} className="w-full block" />
         <div
