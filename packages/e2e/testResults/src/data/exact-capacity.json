@@ -1,32 +1,32 @@
 {
   "metadata": {
-    "startTime": 1770402241629,
-    "endTime": 1770402242006,
-    "durationMs": 377,
+    "startTime": 1770406680908,
+    "endTime": 1770406681298,
+    "durationMs": 390,
     "instances": {
-      "http://localhost:3001": "inst-1770402241115-cy99r49bf",
-      "http://localhost:3002": "inst-1770402241123-iyr581evo"
+      "http://localhost:3002": "inst-1770406680403-23a4z7moh",
+      "http://localhost:3001": "inst-1770406680393-cn11tytxe"
     }
   },
   "jobs": {
-    "capacity-test-1770402241099-0": {
-      "jobId": "capacity-test-1770402241099-0",
+    "capacity-test-1770406680381-0": {
+      "jobId": "capacity-test-1770406680381-0",
       "jobType": "summary",
-      "sentAt": 1770402241746,
-      "instanceId": "inst-1770402241115-cy99r49bf",
+      "sentAt": 1770406681020,
+      "instanceId": "inst-1770406680393-cn11tytxe",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241765
+          "timestamp": 1770406681041
         },
         {
           "type": "started",
-          "timestamp": 1770402241771,
+          "timestamp": 1770406681047,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241874,
+          "timestamp": 1770406681150,
           "cost": 0.05425
         }
       ],
@@ -47,24 +47,62 @@
         }
       ]
     },
-    "capacity-test-1770402241099-1": {
-      "jobId": "capacity-test-1770402241099-1",
+    "capacity-test-1770406680381-1": {
+      "jobId": "capacity-test-1770406680381-1",
       "jobType": "summary",
-      "sentAt": 1770402241768,
-      "instanceId": "inst-1770402241123-iyr581evo",
+      "sentAt": 1770406681044,
+      "instanceId": "inst-1770406680403-23a4z7moh",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241772
+          "timestamp": 1770406681049
         },
         {
           "type": "started",
-          "timestamp": 1770402241776,
+          "timestamp": 1770406681054,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241878,
+          "timestamp": 1770406681156,
+          "cost": 0.05425
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "openai/gpt-5.2",
+      "totalCost": 0.05425,
+      "queueDurationMs": 5,
+      "processingDurationMs": 102,
+      "totalDurationMs": 107,
+      "usage": [
+        {
+          "modelId": "openai/gpt-5.2",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.05425
+        }
+      ]
+    },
+    "capacity-test-1770406680381-2": {
+      "jobId": "capacity-test-1770406680381-2",
+      "jobType": "summary",
+      "sentAt": 1770406681051,
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770406681052
+        },
+        {
+          "type": "started",
+          "timestamp": 1770406681056,
+          "modelId": "openai/gpt-5.2"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770406681158,
           "cost": 0.05425
         }
       ],
@@ -85,176 +123,24 @@
         }
       ]
     },
-    "capacity-test-1770402241099-2": {
-      "jobId": "capacity-test-1770402241099-2",
+    "capacity-test-1770406680381-3": {
+      "jobId": "capacity-test-1770406680381-3",
       "jobType": "summary",
-      "sentAt": 1770402241774,
-      "instanceId": "inst-1770402241115-cy99r49bf",
+      "sentAt": 1770406681055,
+      "instanceId": "inst-1770406680403-23a4z7moh",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241775
+          "timestamp": 1770406681057
         },
         {
           "type": "started",
-          "timestamp": 1770402241776,
+          "timestamp": 1770406681058,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241877,
-          "cost": 0.05425
-        }
-      ],
-      "status": "completed",
-      "modelUsed": "openai/gpt-5.2",
-      "totalCost": 0.05425,
-      "queueDurationMs": 1,
-      "processingDurationMs": 101,
-      "totalDurationMs": 102,
-      "usage": [
-        {
-          "modelId": "openai/gpt-5.2",
-          "inputTokens": 7000,
-          "cachedTokens": 0,
-          "outputTokens": 3000,
-          "requestCount": 1,
-          "cost": 0.05425
-        }
-      ]
-    },
-    "capacity-test-1770402241099-3": {
-      "jobId": "capacity-test-1770402241099-3",
-      "jobType": "summary",
-      "sentAt": 1770402241776,
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "events": [
-        {
-          "type": "queued",
-          "timestamp": 1770402241778
-        },
-        {
-          "type": "started",
-          "timestamp": 1770402241779,
-          "modelId": "openai/gpt-5.2"
-        },
-        {
-          "type": "completed",
-          "timestamp": 1770402241883,
-          "cost": 0.05425
-        }
-      ],
-      "status": "completed",
-      "modelUsed": "openai/gpt-5.2",
-      "totalCost": 0.05425,
-      "queueDurationMs": 1,
-      "processingDurationMs": 104,
-      "totalDurationMs": 105,
-      "usage": [
-        {
-          "modelId": "openai/gpt-5.2",
-          "inputTokens": 7000,
-          "cachedTokens": 0,
-          "outputTokens": 3000,
-          "requestCount": 1,
-          "cost": 0.05425
-        }
-      ]
-    },
-    "capacity-test-1770402241099-4": {
-      "jobId": "capacity-test-1770402241099-4",
-      "jobType": "summary",
-      "sentAt": 1770402241778,
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "events": [
-        {
-          "type": "queued",
-          "timestamp": 1770402241779
-        },
-        {
-          "type": "started",
-          "timestamp": 1770402241780,
-          "modelId": "openai/gpt-5.2"
-        },
-        {
-          "type": "completed",
-          "timestamp": 1770402241881,
-          "cost": 0.05425
-        }
-      ],
-      "status": "completed",
-      "modelUsed": "openai/gpt-5.2",
-      "totalCost": 0.05425,
-      "queueDurationMs": 1,
-      "processingDurationMs": 101,
-      "totalDurationMs": 102,
-      "usage": [
-        {
-          "modelId": "openai/gpt-5.2",
-          "inputTokens": 7000,
-          "cachedTokens": 0,
-          "outputTokens": 3000,
-          "requestCount": 1,
-          "cost": 0.05425
-        }
-      ]
-    },
-    "capacity-test-1770402241099-5": {
-      "jobId": "capacity-test-1770402241099-5",
-      "jobType": "summary",
-      "sentAt": 1770402241780,
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "events": [
-        {
-          "type": "queued",
-          "timestamp": 1770402241781
-        },
-        {
-          "type": "started",
-          "timestamp": 1770402241782,
-          "modelId": "openai/gpt-5.2"
-        },
-        {
-          "type": "completed",
-          "timestamp": 1770402241884,
-          "cost": 0.05425
-        }
-      ],
-      "status": "completed",
-      "modelUsed": "openai/gpt-5.2",
-      "totalCost": 0.05425,
-      "queueDurationMs": 1,
-      "processingDurationMs": 102,
-      "totalDurationMs": 103,
-      "usage": [
-        {
-          "modelId": "openai/gpt-5.2",
-          "inputTokens": 7000,
-          "cachedTokens": 0,
-          "outputTokens": 3000,
-          "requestCount": 1,
-          "cost": 0.05425
-        }
-      ]
-    },
-    "capacity-test-1770402241099-6": {
-      "jobId": "capacity-test-1770402241099-6",
-      "jobType": "summary",
-      "sentAt": 1770402241781,
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "events": [
-        {
-          "type": "queued",
-          "timestamp": 1770402241782
-        },
-        {
-          "type": "started",
-          "timestamp": 1770402241783,
-          "modelId": "openai/gpt-5.2"
-        },
-        {
-          "type": "completed",
-          "timestamp": 1770402241883,
+          "timestamp": 1770406681158,
           "cost": 0.05425
         }
       ],
@@ -275,24 +161,100 @@
         }
       ]
     },
-    "capacity-test-1770402241099-7": {
-      "jobId": "capacity-test-1770402241099-7",
+    "capacity-test-1770406680381-4": {
+      "jobId": "capacity-test-1770406680381-4",
       "jobType": "summary",
-      "sentAt": 1770402241783,
-      "instanceId": "inst-1770402241123-iyr581evo",
+      "sentAt": 1770406681058,
+      "instanceId": "inst-1770406680393-cn11tytxe",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241783
+          "timestamp": 1770406681059
         },
         {
           "type": "started",
-          "timestamp": 1770402241785,
+          "timestamp": 1770406681060,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241888,
+          "timestamp": 1770406681161,
+          "cost": 0.05425
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "openai/gpt-5.2",
+      "totalCost": 0.05425,
+      "queueDurationMs": 1,
+      "processingDurationMs": 101,
+      "totalDurationMs": 102,
+      "usage": [
+        {
+          "modelId": "openai/gpt-5.2",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.05425
+        }
+      ]
+    },
+    "capacity-test-1770406680381-5": {
+      "jobId": "capacity-test-1770406680381-5",
+      "jobType": "summary",
+      "sentAt": 1770406681059,
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770406681061
+        },
+        {
+          "type": "started",
+          "timestamp": 1770406681062,
+          "modelId": "openai/gpt-5.2"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770406681163,
+          "cost": 0.05425
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "openai/gpt-5.2",
+      "totalCost": 0.05425,
+      "queueDurationMs": 1,
+      "processingDurationMs": 101,
+      "totalDurationMs": 102,
+      "usage": [
+        {
+          "modelId": "openai/gpt-5.2",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.05425
+        }
+      ]
+    },
+    "capacity-test-1770406680381-6": {
+      "jobId": "capacity-test-1770406680381-6",
+      "jobType": "summary",
+      "sentAt": 1770406681061,
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770406681062
+        },
+        {
+          "type": "started",
+          "timestamp": 1770406681064,
+          "modelId": "openai/gpt-5.2"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770406681164,
           "cost": 0.05425
         }
       ],
@@ -300,8 +262,8 @@
       "modelUsed": "openai/gpt-5.2",
       "totalCost": 0.05425,
       "queueDurationMs": 2,
-      "processingDurationMs": 103,
-      "totalDurationMs": 105,
+      "processingDurationMs": 100,
+      "totalDurationMs": 102,
       "usage": [
         {
           "modelId": "openai/gpt-5.2",
@@ -313,24 +275,62 @@
         }
       ]
     },
-    "capacity-test-1770402241099-8": {
-      "jobId": "capacity-test-1770402241099-8",
+    "capacity-test-1770406680381-7": {
+      "jobId": "capacity-test-1770406680381-7",
       "jobType": "summary",
-      "sentAt": 1770402241784,
-      "instanceId": "inst-1770402241115-cy99r49bf",
+      "sentAt": 1770406681063,
+      "instanceId": "inst-1770406680403-23a4z7moh",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241785
+          "timestamp": 1770406681064
         },
         {
           "type": "started",
-          "timestamp": 1770402241786,
+          "timestamp": 1770406681065,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241886,
+          "timestamp": 1770406681164,
+          "cost": 0.05425
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "openai/gpt-5.2",
+      "totalCost": 0.05425,
+      "queueDurationMs": 1,
+      "processingDurationMs": 99,
+      "totalDurationMs": 100,
+      "usage": [
+        {
+          "modelId": "openai/gpt-5.2",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.05425
+        }
+      ]
+    },
+    "capacity-test-1770406680381-8": {
+      "jobId": "capacity-test-1770406680381-8",
+      "jobType": "summary",
+      "sentAt": 1770406681064,
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770406681065
+        },
+        {
+          "type": "started",
+          "timestamp": 1770406681066,
+          "modelId": "openai/gpt-5.2"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770406681166,
           "cost": 0.05425
         }
       ],
@@ -351,62 +351,24 @@
         }
       ]
     },
-    "capacity-test-1770402241099-9": {
-      "jobId": "capacity-test-1770402241099-9",
+    "capacity-test-1770406680381-9": {
+      "jobId": "capacity-test-1770406680381-9",
       "jobType": "summary",
-      "sentAt": 1770402241785,
-      "instanceId": "inst-1770402241123-iyr581evo",
+      "sentAt": 1770406681066,
+      "instanceId": "inst-1770406680403-23a4z7moh",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241786
+          "timestamp": 1770406681067
         },
         {
           "type": "started",
-          "timestamp": 1770402241787,
+          "timestamp": 1770406681068,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241889,
-          "cost": 0.05425
-        }
-      ],
-      "status": "completed",
-      "modelUsed": "openai/gpt-5.2",
-      "totalCost": 0.05425,
-      "queueDurationMs": 1,
-      "processingDurationMs": 102,
-      "totalDurationMs": 103,
-      "usage": [
-        {
-          "modelId": "openai/gpt-5.2",
-          "inputTokens": 7000,
-          "cachedTokens": 0,
-          "outputTokens": 3000,
-          "requestCount": 1,
-          "cost": 0.05425
-        }
-      ]
-    },
-    "capacity-test-1770402241099-10": {
-      "jobId": "capacity-test-1770402241099-10",
-      "jobType": "summary",
-      "sentAt": 1770402241786,
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "events": [
-        {
-          "type": "queued",
-          "timestamp": 1770402241787
-        },
-        {
-          "type": "started",
-          "timestamp": 1770402241788,
-          "modelId": "openai/gpt-5.2"
-        },
-        {
-          "type": "completed",
-          "timestamp": 1770402241888,
+          "timestamp": 1770406681168,
           "cost": 0.05425
         }
       ],
@@ -427,24 +389,100 @@
         }
       ]
     },
-    "capacity-test-1770402241099-11": {
-      "jobId": "capacity-test-1770402241099-11",
+    "capacity-test-1770406680381-10": {
+      "jobId": "capacity-test-1770406680381-10",
       "jobType": "summary",
-      "sentAt": 1770402241788,
-      "instanceId": "inst-1770402241123-iyr581evo",
+      "sentAt": 1770406681068,
+      "instanceId": "inst-1770406680393-cn11tytxe",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241788
+          "timestamp": 1770406681068
         },
         {
           "type": "started",
-          "timestamp": 1770402241789,
+          "timestamp": 1770406681069,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241889,
+          "timestamp": 1770406681170,
+          "cost": 0.05425
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "openai/gpt-5.2",
+      "totalCost": 0.05425,
+      "queueDurationMs": 1,
+      "processingDurationMs": 101,
+      "totalDurationMs": 102,
+      "usage": [
+        {
+          "modelId": "openai/gpt-5.2",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.05425
+        }
+      ]
+    },
+    "capacity-test-1770406680381-11": {
+      "jobId": "capacity-test-1770406680381-11",
+      "jobType": "summary",
+      "sentAt": 1770406681069,
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770406681070
+        },
+        {
+          "type": "started",
+          "timestamp": 1770406681071,
+          "modelId": "openai/gpt-5.2"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770406681172,
+          "cost": 0.05425
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "openai/gpt-5.2",
+      "totalCost": 0.05425,
+      "queueDurationMs": 1,
+      "processingDurationMs": 101,
+      "totalDurationMs": 102,
+      "usage": [
+        {
+          "modelId": "openai/gpt-5.2",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.05425
+        }
+      ]
+    },
+    "capacity-test-1770406680381-12": {
+      "jobId": "capacity-test-1770406680381-12",
+      "jobType": "summary",
+      "sentAt": 1770406681071,
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770406681072
+        },
+        {
+          "type": "started",
+          "timestamp": 1770406681073,
+          "modelId": "openai/gpt-5.2"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770406681173,
           "cost": 0.05425
         }
       ],
@@ -465,24 +503,24 @@
         }
       ]
     },
-    "capacity-test-1770402241099-12": {
-      "jobId": "capacity-test-1770402241099-12",
+    "capacity-test-1770406680381-13": {
+      "jobId": "capacity-test-1770406680381-13",
       "jobType": "summary",
-      "sentAt": 1770402241789,
-      "instanceId": "inst-1770402241115-cy99r49bf",
+      "sentAt": 1770406681072,
+      "instanceId": "inst-1770406680403-23a4z7moh",
       "events": [
         {
           "type": "queued",
-          "timestamp": 1770402241789
+          "timestamp": 1770406681074
         },
         {
           "type": "started",
-          "timestamp": 1770402241790,
+          "timestamp": 1770406681075,
           "modelId": "openai/gpt-5.2"
         },
         {
           "type": "completed",
-          "timestamp": 1770402241890,
+          "timestamp": 1770406681176,
           "cost": 0.05425
         }
       ],
@@ -490,46 +528,8 @@
       "modelUsed": "openai/gpt-5.2",
       "totalCost": 0.05425,
       "queueDurationMs": 1,
-      "processingDurationMs": 100,
-      "totalDurationMs": 101,
-      "usage": [
-        {
-          "modelId": "openai/gpt-5.2",
-          "inputTokens": 7000,
-          "cachedTokens": 0,
-          "outputTokens": 3000,
-          "requestCount": 1,
-          "cost": 0.05425
-        }
-      ]
-    },
-    "capacity-test-1770402241099-13": {
-      "jobId": "capacity-test-1770402241099-13",
-      "jobType": "summary",
-      "sentAt": 1770402241790,
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "events": [
-        {
-          "type": "queued",
-          "timestamp": 1770402241790
-        },
-        {
-          "type": "started",
-          "timestamp": 1770402241791,
-          "modelId": "openai/gpt-5.2"
-        },
-        {
-          "type": "completed",
-          "timestamp": 1770402241893,
-          "cost": 0.05425
-        }
-      ],
-      "status": "completed",
-      "modelUsed": "openai/gpt-5.2",
-      "totalCost": 0.05425,
-      "queueDurationMs": 1,
-      "processingDurationMs": 102,
-      "totalDurationMs": 103,
+      "processingDurationMs": 101,
+      "totalDurationMs": 102,
       "usage": [
         {
           "modelId": "openai/gpt-5.2",
@@ -544,230 +544,230 @@
   },
   "timeline": [
     {
-      "t": 1770402241640,
+      "t": 1770406680915,
       "event": "connected",
-      "instanceId": "inst-1770402241115-cy99r49bf"
+      "instanceId": "inst-1770406680403-23a4z7moh"
     },
     {
-      "t": 1770402241640,
+      "t": 1770406680915,
       "event": "connected",
-      "instanceId": "inst-1770402241123-iyr581evo"
+      "instanceId": "inst-1770406680393-cn11tytxe"
     },
     {
-      "t": 1770402241765,
+      "t": 1770406681041,
       "event": "job:queued",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-0",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-0",
       "jobType": "summary"
     },
     {
-      "t": 1770402241771,
+      "t": 1770406681047,
       "event": "job:started",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-0",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-0",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241772,
+      "t": 1770406681049,
       "event": "job:queued",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-1",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-1",
       "jobType": "summary"
     },
     {
-      "t": 1770402241775,
+      "t": 1770406681052,
       "event": "job:queued",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-2",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-2",
       "jobType": "summary"
     },
     {
-      "t": 1770402241776,
+      "t": 1770406681054,
       "event": "job:started",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-2",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-1",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241776,
+      "t": 1770406681056,
       "event": "job:started",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-1",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-2",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241778,
+      "t": 1770406681057,
       "event": "job:queued",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-3",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-3",
       "jobType": "summary"
     },
     {
-      "t": 1770402241779,
+      "t": 1770406681058,
       "event": "job:started",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-3",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-3",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241779,
+      "t": 1770406681059,
       "event": "job:queued",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-4",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-4",
       "jobType": "summary"
     },
     {
-      "t": 1770402241780,
+      "t": 1770406681060,
       "event": "job:started",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-4",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-4",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241781,
+      "t": 1770406681061,
       "event": "job:queued",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-5",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-5",
       "jobType": "summary"
     },
     {
-      "t": 1770402241782,
-      "event": "job:started",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-5",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2"
-    },
-    {
-      "t": 1770402241782,
+      "t": 1770406681062,
       "event": "job:queued",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-6",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-6",
       "jobType": "summary"
     },
     {
-      "t": 1770402241783,
+      "t": 1770406681062,
       "event": "job:started",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-6",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-5",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241783,
+      "t": 1770406681064,
+      "event": "job:started",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-6",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2"
+    },
+    {
+      "t": 1770406681064,
       "event": "job:queued",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-7",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-7",
       "jobType": "summary"
     },
     {
-      "t": 1770402241785,
+      "t": 1770406681065,
+      "event": "job:started",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-7",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2"
+    },
+    {
+      "t": 1770406681065,
       "event": "job:queued",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-8",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-8",
       "jobType": "summary"
     },
     {
-      "t": 1770402241785,
+      "t": 1770406681066,
       "event": "job:started",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-7",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-8",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241786,
-      "event": "job:started",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-8",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2"
-    },
-    {
-      "t": 1770402241786,
+      "t": 1770406681067,
       "event": "job:queued",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-9",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-9",
       "jobType": "summary"
     },
     {
-      "t": 1770402241787,
+      "t": 1770406681068,
       "event": "job:started",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-9",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-9",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241787,
+      "t": 1770406681068,
       "event": "job:queued",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-10",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-10",
       "jobType": "summary"
     },
     {
-      "t": 1770402241788,
+      "t": 1770406681069,
       "event": "job:started",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-10",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-10",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241788,
+      "t": 1770406681070,
       "event": "job:queued",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-11",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-11",
       "jobType": "summary"
     },
     {
-      "t": 1770402241789,
+      "t": 1770406681071,
       "event": "job:started",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-11",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-11",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241789,
+      "t": 1770406681072,
       "event": "job:queued",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-12",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-12",
       "jobType": "summary"
     },
     {
-      "t": 1770402241790,
+      "t": 1770406681073,
       "event": "job:started",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-12",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-12",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241790,
+      "t": 1770406681074,
       "event": "job:queued",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-13",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-13",
       "jobType": "summary"
     },
     {
-      "t": 1770402241791,
+      "t": 1770406681075,
       "event": "job:started",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-13",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-13",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2"
     },
     {
-      "t": 1770402241874,
+      "t": 1770406681150,
       "event": "job:completed",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-0",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-0",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
@@ -776,22 +776,22 @@
       }
     },
     {
-      "t": 1770402241877,
+      "t": 1770406681156,
       "event": "job:completed",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-2",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-1",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
         "cost": 0.05425,
-        "durationMs": 102
+        "durationMs": 107
       }
     },
     {
-      "t": 1770402241878,
+      "t": 1770406681158,
       "event": "job:completed",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-1",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-2",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
@@ -800,10 +800,22 @@
       }
     },
     {
-      "t": 1770402241881,
+      "t": 1770406681158,
       "event": "job:completed",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-4",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-3",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2",
+      "data": {
+        "cost": 0.05425,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770406681161,
+      "event": "job:completed",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-4",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
@@ -812,10 +824,46 @@
       }
     },
     {
-      "t": 1770402241883,
+      "t": 1770406681163,
       "event": "job:completed",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-6",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-5",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2",
+      "data": {
+        "cost": 0.05425,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770406681164,
+      "event": "job:completed",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-6",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2",
+      "data": {
+        "cost": 0.05425,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770406681164,
+      "event": "job:completed",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-7",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2",
+      "data": {
+        "cost": 0.05425,
+        "durationMs": 100
+      }
+    },
+    {
+      "t": 1770406681166,
+      "event": "job:completed",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-8",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
@@ -824,34 +872,10 @@
       }
     },
     {
-      "t": 1770402241883,
+      "t": 1770406681168,
       "event": "job:completed",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-3",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2",
-      "data": {
-        "cost": 0.05425,
-        "durationMs": 106
-      }
-    },
-    {
-      "t": 1770402241884,
-      "event": "job:completed",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-5",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2",
-      "data": {
-        "cost": 0.05425,
-        "durationMs": 103
-      }
-    },
-    {
-      "t": 1770402241886,
-      "event": "job:completed",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-8",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-9",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
@@ -860,10 +884,34 @@
       }
     },
     {
-      "t": 1770402241888,
+      "t": 1770406681170,
       "event": "job:completed",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-10",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-10",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2",
+      "data": {
+        "cost": 0.05425,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770406681172,
+      "event": "job:completed",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-11",
+      "jobType": "summary",
+      "modelId": "openai/gpt-5.2",
+      "data": {
+        "cost": 0.05425,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770406681173,
+      "event": "job:completed",
+      "instanceId": "inst-1770406680393-cn11tytxe",
+      "jobId": "capacity-test-1770406680381-12",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
@@ -872,72 +920,24 @@
       }
     },
     {
-      "t": 1770402241888,
+      "t": 1770406681176,
       "event": "job:completed",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-7",
+      "instanceId": "inst-1770406680403-23a4z7moh",
+      "jobId": "capacity-test-1770406680381-13",
       "jobType": "summary",
       "modelId": "openai/gpt-5.2",
       "data": {
         "cost": 0.05425,
-        "durationMs": 105
-      }
-    },
-    {
-      "t": 1770402241889,
-      "event": "job:completed",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-9",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2",
-      "data": {
-        "cost": 0.05425,
-        "durationMs": 103
-      }
-    },
-    {
-      "t": 1770402241889,
-      "event": "job:completed",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-11",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2",
-      "data": {
-        "cost": 0.05425,
-        "durationMs": 101
-      }
-    },
-    {
-      "t": 1770402241890,
-      "event": "job:completed",
-      "instanceId": "inst-1770402241115-cy99r49bf",
-      "jobId": "capacity-test-1770402241099-12",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2",
-      "data": {
-        "cost": 0.05425,
-        "durationMs": 101
-      }
-    },
-    {
-      "t": 1770402241893,
-      "event": "job:completed",
-      "instanceId": "inst-1770402241123-iyr581evo",
-      "jobId": "capacity-test-1770402241099-13",
-      "jobType": "summary",
-      "modelId": "openai/gpt-5.2",
-      "data": {
-        "cost": 0.05425,
-        "durationMs": 103
+        "durationMs": 102
       }
     }
   ],
   "snapshots": [
     {
-      "timestamp": 1770402241741,
+      "timestamp": 1770406681016,
       "trigger": "initial",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -1042,223 +1042,7 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            },
-            "openai/gpt-5.2": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241769,
-      "trigger": "job:queued:capacity-test-1770402241099-0",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 1,
-          "activeJobIds": ["capacity-test-1770402241099-0"],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 5,
-              "rpmRemaining": 245,
-              "tpm": 10000,
-              "tpmRemaining": 240000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 1
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -1366,12 +1150,14 @@
       }
     },
     {
-      "timestamp": 1770402241775,
-      "trigger": "job:queued:capacity-test-1770402241099-1",
+      "timestamp": 1770406681045,
+      "trigger": "job:queued:capacity-test-1770406680381-0",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 1,
-          "activeJobIds": ["capacity-test-1770402241099-0"],
+          "activeJobIds": [
+            "capacity-test-1770406680381-0"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 5,
@@ -1474,9 +1260,229 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            },
+            "openai/gpt-5.2": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681052,
+      "trigger": "job:queued:capacity-test-1770406680381-1",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 1,
-          "activeJobIds": ["capacity-test-1770402241099-1"],
+          "activeJobIds": [
+            "capacity-test-1770406680381-0"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 5,
+              "rpmRemaining": 245,
+              "tpm": 10000,
+              "tpmRemaining": 240000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 1
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 5,
@@ -1582,12 +1588,15 @@
       }
     },
     {
-      "timestamp": 1770402241778,
-      "trigger": "job:queued:capacity-test-1770402241099-3",
+      "timestamp": 1770406681055,
+      "trigger": "job:queued:capacity-test-1770406680381-2",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 2,
-          "activeJobIds": ["capacity-test-1770402241099-0", "capacity-test-1770402241099-2"],
+          "activeJobIds": [
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 10,
@@ -1690,225 +1699,11 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 2,
-          "activeJobIds": ["capacity-test-1770402241099-1", "capacity-test-1770402241099-3"],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 10,
-              "rpmRemaining": 240,
-              "tpm": 20000,
-              "tpmRemaining": 230000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 2
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241776,
-      "trigger": "job:queued:capacity-test-1770402241099-2",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 2,
-          "activeJobIds": ["capacity-test-1770402241099-0", "capacity-test-1770402241099-2"],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 10,
-              "rpmRemaining": 240,
-              "tpm": 20000,
-              "tpmRemaining": 230000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 2
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 2,
-          "activeJobIds": ["capacity-test-1770402241099-1", "capacity-test-1770402241099-3"],
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 5,
@@ -2014,27 +1809,26 @@
       }
     },
     {
-      "timestamp": 1770402241780,
-      "trigger": "job:queued:capacity-test-1770402241099-4",
+      "timestamp": 1770406681057,
+      "trigger": "job:queued:capacity-test-1770406680381-3",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 3,
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 2,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2"
           ],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 15,
-              "rpmRemaining": 235,
-              "tpm": 30000,
-              "tpmRemaining": 220000,
+              "rpm": 10,
+              "rpmRemaining": 240,
+              "tpm": 20000,
+              "tpmRemaining": 230000,
               "jobTypes": {
                 "summary": {
                   "slots": 7,
                   "totalSlots": 7,
-                  "inFlight": 3
+                  "inFlight": 2
                 },
                 "VacationPlanning": {
                   "slots": 23,
@@ -2126,9 +1920,12 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 2,
-          "activeJobIds": ["capacity-test-1770402241099-1", "capacity-test-1770402241099-3"],
+          "activeJobIds": [
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 10,
@@ -2234,15 +2031,15 @@
       }
     },
     {
-      "timestamp": 1770402241781,
-      "trigger": "job:queued:capacity-test-1770402241099-5",
+      "timestamp": 1770406681060,
+      "trigger": "job:queued:capacity-test-1770406680381-4",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 3,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -2346,12 +2143,235 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 10,
+              "rpmRemaining": 240,
+              "tpm": 20000,
+              "tpmRemaining": 230000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 2
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681062,
+      "trigger": "job:queued:capacity-test-1770406680381-5",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 3,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 15,
+              "rpmRemaining": 235,
+              "tpm": 30000,
+              "tpmRemaining": 220000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 3
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -2458,16 +2478,16 @@
       }
     },
     {
-      "timestamp": 1770402241783,
-      "trigger": "job:queued:capacity-test-1770402241099-6",
+      "timestamp": 1770406681063,
+      "trigger": "job:queued:capacity-test-1770406680381-6",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 4,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -2571,12 +2591,12 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 3,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5"
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -2683,16 +2703,16 @@
       }
     },
     {
-      "timestamp": 1770402241784,
-      "trigger": "job:queued:capacity-test-1770402241099-7",
+      "timestamp": 1770406681065,
+      "trigger": "job:queued:capacity-test-1770406680381-7",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 4,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -2796,240 +2816,13 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 4,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7"
-          ],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 20,
-              "rpmRemaining": 230,
-              "tpm": 40000,
-              "tpmRemaining": 210000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 4
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241785,
-      "trigger": "job:queued:capacity-test-1770402241099-8",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 5,
-          "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6",
-            "capacity-test-1770402241099-8"
-          ],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 25,
-              "rpmRemaining": 225,
-              "tpm": 50000,
-              "tpmRemaining": 200000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 5
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 4,
-          "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7"
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -3136,17 +2929,17 @@
       }
     },
     {
-      "timestamp": 1770402241787,
-      "trigger": "job:queued:capacity-test-1770402241099-9",
+      "timestamp": 1770406681066,
+      "trigger": "job:queued:capacity-test-1770406680381-8",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 5,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6",
-            "capacity-test-1770402241099-8"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -3250,14 +3043,241 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 20,
+              "rpmRemaining": 230,
+              "tpm": 40000,
+              "tpmRemaining": 210000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 4
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681068,
+      "trigger": "job:queued:capacity-test-1770406680381-9",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 5,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7",
-            "capacity-test-1770402241099-9"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 25,
+              "rpmRemaining": 225,
+              "tpm": 50000,
+              "tpmRemaining": 200000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 5
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -3364,18 +3384,18 @@
       }
     },
     {
-      "timestamp": 1770402241787,
-      "trigger": "job:queued:capacity-test-1770402241099-10",
+      "timestamp": 1770406681069,
+      "trigger": "job:queued:capacity-test-1770406680381-10",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 6,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6",
-            "capacity-test-1770402241099-8",
-            "capacity-test-1770402241099-10"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -3479,14 +3499,14 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 5,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7",
-            "capacity-test-1770402241099-9"
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -3593,18 +3613,18 @@
       }
     },
     {
-      "timestamp": 1770402241789,
-      "trigger": "job:queued:capacity-test-1770402241099-11",
+      "timestamp": 1770406681071,
+      "trigger": "job:queued:capacity-test-1770406680381-11",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 6,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6",
-            "capacity-test-1770402241099-8",
-            "capacity-test-1770402241099-10"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -3708,246 +3728,15 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 6,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7",
-            "capacity-test-1770402241099-9",
-            "capacity-test-1770402241099-11"
-          ],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 30,
-              "rpmRemaining": 220,
-              "tpm": 60000,
-              "tpmRemaining": 190000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 6
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241790,
-      "trigger": "job:queued:capacity-test-1770402241099-12",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 7,
-          "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6",
-            "capacity-test-1770402241099-8",
-            "capacity-test-1770402241099-10",
-            "capacity-test-1770402241099-12"
-          ],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 35,
-              "rpmRemaining": 215,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 6,
-          "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7",
-            "capacity-test-1770402241099-9",
-            "capacity-test-1770402241099-11"
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -4054,19 +3843,19 @@
       }
     },
     {
-      "timestamp": 1770402241790,
-      "trigger": "job:queued:capacity-test-1770402241099-13",
+      "timestamp": 1770406681072,
+      "trigger": "job:queued:capacity-test-1770406680381-12",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 7,
           "activeJobIds": [
-            "capacity-test-1770402241099-0",
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6",
-            "capacity-test-1770402241099-8",
-            "capacity-test-1770402241099-10",
-            "capacity-test-1770402241099-12"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -4170,16 +3959,247 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 6,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 30,
+              "rpmRemaining": 220,
+              "tpm": 60000,
+              "tpmRemaining": 190000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 6
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681075,
+      "trigger": "job:queued:capacity-test-1770406680381-13",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 7,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7",
-            "capacity-test-1770402241099-9",
-            "capacity-test-1770402241099-11",
-            "capacity-test-1770402241099-13"
+            "capacity-test-1770406680381-0",
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 35,
+              "rpmRemaining": 215,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 7,
+          "activeJobIds": [
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -4286,18 +4306,18 @@
       }
     },
     {
-      "timestamp": 1770402241876,
-      "trigger": "job:completed:capacity-test-1770402241099-0",
+      "timestamp": 1770406681152,
+      "trigger": "job:completed:capacity-test-1770406680381-0",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 6,
           "activeJobIds": [
-            "capacity-test-1770402241099-2",
-            "capacity-test-1770402241099-4",
-            "capacity-test-1770402241099-6",
-            "capacity-test-1770402241099-8",
-            "capacity-test-1770402241099-10",
-            "capacity-test-1770402241099-12"
+            "capacity-test-1770406680381-2",
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -4401,16 +4421,16 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 7,
           "activeJobIds": [
-            "capacity-test-1770402241099-1",
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7",
-            "capacity-test-1770402241099-9",
-            "capacity-test-1770402241099-11",
-            "capacity-test-1770402241099-13"
+            "capacity-test-1770406680381-1",
+            "capacity-test-1770406680381-3",
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
           ],
           "models": {
             "openai/gpt-5.2": {
@@ -4517,12 +4537,18 @@
       }
     },
     {
-      "timestamp": 1770402241879,
-      "trigger": "job:completed:capacity-test-1770402241099-2",
+      "timestamp": 1770406681159,
+      "trigger": "job:completed:capacity-test-1770406680381-1",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 2,
-          "activeJobIds": ["capacity-test-1770402241099-10", "capacity-test-1770402241099-12"],
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "capacity-test-1770406680381-4",
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 27,
@@ -4625,20 +4651,19 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 6,
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 5,
           "activeJobIds": [
-            "capacity-test-1770402241099-3",
-            "capacity-test-1770402241099-5",
-            "capacity-test-1770402241099-7",
-            "capacity-test-1770402241099-9",
-            "capacity-test-1770402241099-11",
-            "capacity-test-1770402241099-13"
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
           ],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 31,
-              "rpmRemaining": 219,
+              "rpm": 27,
+              "rpmRemaining": 223,
               "tpm": 70000,
               "tpmRemaining": 180000,
               "jobTypes": {
@@ -4740,12 +4765,17 @@
       }
     },
     {
-      "timestamp": 1770402241888,
-      "trigger": "job:completed:capacity-test-1770402241099-1",
+      "timestamp": 1770406681161,
+      "trigger": "job:completed:capacity-test-1770406680381-2",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 2,
-          "activeJobIds": ["capacity-test-1770402241099-10", "capacity-test-1770402241099-12"],
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 27,
@@ -4848,9 +4878,131 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 1,
-          "activeJobIds": ["capacity-test-1770402241099-13"],
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 27,
+              "rpmRemaining": 223,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681162,
+      "trigger": "job:completed:capacity-test-1770406680381-3",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 23,
@@ -4952,16 +5104,357 @@
               }
             }
           }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 5,
+          "activeJobIds": [
+            "capacity-test-1770406680381-5",
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 27,
+              "rpmRemaining": 223,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
         }
       }
     },
     {
-      "timestamp": 1770402241884,
-      "trigger": "job:completed:capacity-test-1770402241099-4",
+      "timestamp": 1770406681162,
+      "trigger": "job:completed:capacity-test-1770406680381-4",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "capacity-test-1770406680381-6",
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 23,
+              "rpmRemaining": 227,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 27,
+              "rpmRemaining": 223,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681164,
+      "trigger": "job:completed:capacity-test-1770406680381-5",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 19,
@@ -5064,9 +5557,14 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 4,
+          "activeJobIds": [
+            "capacity-test-1770406680381-7",
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 23,
@@ -5172,12 +5670,463 @@
       }
     },
     {
-      "timestamp": 1770402241895,
-      "trigger": "job:completed:capacity-test-1770402241099-6",
+      "timestamp": 1770406681165,
+      "trigger": "job:completed:capacity-test-1770406680381-6",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 19,
+              "rpmRemaining": 231,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 19,
+              "rpmRemaining": 231,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681166,
+      "trigger": "job:completed:capacity-test-1770406680381-7",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "capacity-test-1770406680381-8",
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 19,
+              "rpmRemaining": 231,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 19,
+              "rpmRemaining": 231,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681168,
+      "trigger": "job:completed:capacity-test-1770406680381-8",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "capacity-test-1770406680381-10",
+            "capacity-test-1770406680381-12"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 15,
@@ -5280,13 +6229,17 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "capacity-test-1770406680381-9",
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
+              "rpm": 19,
+              "rpmRemaining": 231,
               "tpm": 70000,
               "tpmRemaining": 180000,
               "jobTypes": {
@@ -5388,16 +6341,18 @@
       }
     },
     {
-      "timestamp": 1770402241895,
-      "trigger": "job:completed:capacity-test-1770402241099-3",
+      "timestamp": 1770406681170,
+      "trigger": "job:completed:capacity-test-1770406680381-9",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "capacity-test-1770406680381-12"
+          ],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
+              "rpm": 11,
+              "rpmRemaining": 239,
               "tpm": 70000,
               "tpmRemaining": 180000,
               "jobTypes": {
@@ -5496,13 +6451,16 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
+              "rpm": 15,
+              "rpmRemaining": 235,
               "tpm": 70000,
               "tpmRemaining": 180000,
               "jobTypes": {
@@ -5604,16 +6562,18 @@
       }
     },
     {
-      "timestamp": 1770402241895,
-      "trigger": "job:completed:capacity-test-1770402241099-12",
+      "timestamp": 1770406681170,
+      "trigger": "job:completed:capacity-test-1770406680381-10",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "capacity-test-1770406680381-12"
+          ],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
+              "rpm": 11,
+              "rpmRemaining": 239,
               "tpm": 70000,
               "tpmRemaining": 180000,
               "jobTypes": {
@@ -5712,13 +6672,16 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "capacity-test-1770406680381-11",
+            "capacity-test-1770406680381-13"
+          ],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
+              "rpm": 15,
+              "rpmRemaining": 235,
               "tpm": 70000,
               "tpmRemaining": 180000,
               "jobTypes": {
@@ -5820,16 +6783,16 @@
       }
     },
     {
-      "timestamp": 1770402241895,
-      "trigger": "job:completed:capacity-test-1770402241099-5",
+      "timestamp": 1770406681174,
+      "trigger": "job:completed:capacity-test-1770406680381-11",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
             "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
+              "rpm": 11,
+              "rpmRemaining": 239,
               "tpm": 70000,
               "tpmRemaining": 180000,
               "jobTypes": {
@@ -5928,225 +6891,11 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241893,
-      "trigger": "job:completed:capacity-test-1770402241099-8",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "capacity-test-1770406680381-13"
+          ],
           "models": {
             "openai/gpt-5.2": {
               "rpm": 11,
@@ -6252,10 +7001,10 @@
       }
     },
     {
-      "timestamp": 1770402241898,
-      "trigger": "job:completed:capacity-test-1770402241099-10",
+      "timestamp": 1770406681175,
+      "trigger": "job:completed:capacity-test-1770406680381-12",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -6360,7 +7109,225 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "capacity-test-1770406680381-13"
+          ],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 11,
+              "rpmRemaining": 239,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770406681176,
+      "trigger": "job:completed:capacity-test-1770406680381-13",
+      "instances": {
+        "inst-1770406680393-cn11tytxe": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "openai/gpt-5.2": {
+              "rpm": 7,
+              "rpmRemaining": 243,
+              "tpm": 70000,
+              "tpmRemaining": 180000,
+              "jobTypes": {
+                "summary": {
+                  "slots": 7,
+                  "totalSlots": 7,
+                  "inFlight": 7
+                },
+                "VacationPlanning": {
+                  "slots": 23,
+                  "totalSlots": 23,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 5,
+                  "totalSlots": 5,
+                  "inFlight": 0
+                }
+              }
+            },
+            "xai/grok-4.1-fast": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 36,
+                  "totalSlots": 36,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 32,
+                  "totalSlots": 32,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 4,
+                  "totalSlots": 4,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 12,
+                  "totalSlots": 12,
+                  "inFlight": 0
+                }
+              }
+            },
+            "deepinfra/gpt-oss-20b": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "summary": {
+                  "slots": 30,
+                  "totalSlots": 30,
+                  "inFlight": 0
+                },
+                "VacationPlanning": {
+                  "slots": 40,
+                  "totalSlots": 40,
+                  "inFlight": 0
+                },
+                "ImageCreation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "BudgetCalculation": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                },
+                "WeatherForecast": {
+                  "slots": 10,
+                  "totalSlots": 10,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -6468,874 +7435,10 @@
       }
     },
     {
-      "timestamp": 1770402241900,
-      "trigger": "job:completed:capacity-test-1770402241099-7",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241901,
-      "trigger": "job:completed:capacity-test-1770402241099-9",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241901,
-      "trigger": "job:completed:capacity-test-1770402241099-11",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241901,
-      "trigger": "job:completed:capacity-test-1770402241099-13",
-      "instances": {
-        "inst-1770402241115-cy99r49bf": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        },
-        "inst-1770402241123-iyr581evo": {
-          "activeJobs": 0,
-          "activeJobIds": [],
-          "models": {
-            "openai/gpt-5.2": {
-              "rpm": 7,
-              "rpmRemaining": 243,
-              "tpm": 70000,
-              "tpmRemaining": 180000,
-              "jobTypes": {
-                "summary": {
-                  "slots": 7,
-                  "totalSlots": 7,
-                  "inFlight": 7
-                },
-                "VacationPlanning": {
-                  "slots": 23,
-                  "totalSlots": 23,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 5,
-                  "totalSlots": 5,
-                  "inFlight": 0
-                }
-              }
-            },
-            "xai/grok-4.1-fast": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 36,
-                  "totalSlots": 36,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 32,
-                  "totalSlots": 32,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 4,
-                  "totalSlots": 4,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 12,
-                  "totalSlots": 12,
-                  "inFlight": 0
-                }
-              }
-            },
-            "deepinfra/gpt-oss-20b": {
-              "rpm": 0,
-              "rpmRemaining": 0,
-              "tpm": 0,
-              "tpmRemaining": 0,
-              "jobTypes": {
-                "summary": {
-                  "slots": 30,
-                  "totalSlots": 30,
-                  "inFlight": 0
-                },
-                "VacationPlanning": {
-                  "slots": 40,
-                  "totalSlots": 40,
-                  "inFlight": 0
-                },
-                "ImageCreation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "BudgetCalculation": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                },
-                "WeatherForecast": {
-                  "slots": 10,
-                  "totalSlots": 10,
-                  "inFlight": 0
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "timestamp": 1770402241993,
+      "timestamp": 1770406681277,
       "trigger": "after-sending-jobs",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -7440,7 +7543,7 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -7548,10 +7651,10 @@
       }
     },
     {
-      "timestamp": 1770402241997,
+      "timestamp": 1770406681286,
       "trigger": "final",
       "instances": {
-        "inst-1770402241115-cy99r49bf": {
+        "inst-1770406680393-cn11tytxe": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -7656,7 +7759,7 @@
             }
           }
         },
-        "inst-1770402241123-iyr581evo": {
+        "inst-1770406680403-23a4z7moh": {
           "activeJobs": 0,
           "activeJobIds": [],
           "models": {
@@ -7768,14 +7871,14 @@
     "totalJobs": 14,
     "completed": 14,
     "failed": 0,
-    "avgDurationMs": 103.07142857142857,
+    "avgDurationMs": 102.71428571428571,
     "byInstance": {
-      "inst-1770402241115-cy99r49bf": {
+      "inst-1770406680393-cn11tytxe": {
         "completed": 7,
         "failed": 0,
         "total": 7
       },
-      "inst-1770402241123-iyr581evo": {
+      "inst-1770406680403-23a4z7moh": {
         "completed": 7,
         "failed": 0,
         "total": 7
