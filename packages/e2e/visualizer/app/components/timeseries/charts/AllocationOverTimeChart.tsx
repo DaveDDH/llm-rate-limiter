@@ -174,9 +174,12 @@ export function AllocationOverTimeChart({
   const firstEnabled = ALL_RESOURCE_TYPES.find((t) => enabledResourceTypes.has(t));
   const [selectedResource, setSelectedResource] = useState<ResourceType>(firstEnabled ?? 'TPM');
 
+  console.log('[AllocationOverTimeChart]', { data, models, enabledResourceTypes, selectedResource });
+
   if (data.length === 0) return null;
 
   const series = buildSeries(selectedResource, models);
+  console.log('[AllocationOverTimeChart] series', series);
 
   return (
     <ChartContainer>

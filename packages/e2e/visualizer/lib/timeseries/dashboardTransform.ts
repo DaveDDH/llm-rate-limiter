@@ -66,8 +66,8 @@ function transformSnapshot(
         const modelKey = modelId.replace(MODEL_KEY_REGEXP, '_');
         point[`${shortId}_${modelKey}_rpm`] = modelState.rpm;
         point[`${shortId}_${modelKey}_rpmCapacity`] = modelState.rpm + modelState.rpmRemaining;
-        point[`${shortId}_${modelKey}_tpm`] = modelState.tpm - modelState.tpmRemaining;
-        point[`${shortId}_${modelKey}_tpmCapacity`] = modelState.tpm;
+        point[`${shortId}_${modelKey}_tpm`] = modelState.tpm;
+        point[`${shortId}_${modelKey}_tpmCapacity`] = modelState.tpm + modelState.tpmRemaining;
         if (modelState.concurrent !== undefined) {
           point[`${shortId}_${modelKey}_concurrent`] = modelState.concurrent;
           const available = modelState.concurrentAvailable ?? 0;
