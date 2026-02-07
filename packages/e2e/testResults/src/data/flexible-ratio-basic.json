@@ -1,0 +1,1472 @@
+{
+  "metadata": {
+    "startTime": 1770490391321,
+    "endTime": 1770490391673,
+    "durationMs": 352,
+    "instances": {
+      "http://localhost:3001": "inst-1770490390793-n129num3v",
+      "http://localhost:3002": "inst-1770490390811-urjyc9ntx"
+    }
+  },
+  "jobs": {
+    "flex-a-1770490390751-0": {
+      "jobId": "flex-a-1770490390751-0",
+      "jobType": "flexJobA",
+      "sentAt": 1770490391427,
+      "instanceId": "inst-1770490390793-n129num3v",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770490391441
+        },
+        {
+          "type": "started",
+          "timestamp": 1770490391446,
+          "modelId": "flex-model"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770490391548,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "flex-model",
+      "totalCost": 0.013,
+      "queueDurationMs": 5,
+      "processingDurationMs": 102,
+      "totalDurationMs": 107,
+      "usage": [
+        {
+          "modelId": "flex-model",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.013
+        }
+      ]
+    },
+    "flex-a-1770490390751-1": {
+      "jobId": "flex-a-1770490390751-1",
+      "jobType": "flexJobA",
+      "sentAt": 1770490391443,
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770490391447
+        },
+        {
+          "type": "started",
+          "timestamp": 1770490391450,
+          "modelId": "flex-model"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770490391550,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "flex-model",
+      "totalCost": 0.013,
+      "queueDurationMs": 3,
+      "processingDurationMs": 100,
+      "totalDurationMs": 103,
+      "usage": [
+        {
+          "modelId": "flex-model",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.013
+        }
+      ]
+    },
+    "flex-b-1770490390751-0": {
+      "jobId": "flex-b-1770490390751-0",
+      "jobType": "flexJobB",
+      "sentAt": 1770490391449,
+      "instanceId": "inst-1770490390793-n129num3v",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770490391450
+        },
+        {
+          "type": "started",
+          "timestamp": 1770490391452,
+          "modelId": "flex-model"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770490391552,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "flex-model",
+      "totalCost": 0.013,
+      "queueDurationMs": 2,
+      "processingDurationMs": 100,
+      "totalDurationMs": 102,
+      "usage": [
+        {
+          "modelId": "flex-model",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.013
+        }
+      ]
+    },
+    "flex-b-1770490390751-1": {
+      "jobId": "flex-b-1770490390751-1",
+      "jobType": "flexJobB",
+      "sentAt": 1770490391453,
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770490391454
+        },
+        {
+          "type": "started",
+          "timestamp": 1770490391454,
+          "modelId": "flex-model"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770490391556,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "flex-model",
+      "totalCost": 0.013,
+      "queueDurationMs": 0,
+      "processingDurationMs": 102,
+      "totalDurationMs": 102,
+      "usage": [
+        {
+          "modelId": "flex-model",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.013
+        }
+      ]
+    },
+    "flex-c-1770490390751-0": {
+      "jobId": "flex-c-1770490390751-0",
+      "jobType": "flexJobC",
+      "sentAt": 1770490391455,
+      "instanceId": "inst-1770490390793-n129num3v",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770490391456
+        },
+        {
+          "type": "started",
+          "timestamp": 1770490391457,
+          "modelId": "flex-model"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770490391557,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "flex-model",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 100,
+      "totalDurationMs": 101,
+      "usage": [
+        {
+          "modelId": "flex-model",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.013
+        }
+      ]
+    },
+    "flex-c-1770490390751-1": {
+      "jobId": "flex-c-1770490390751-1",
+      "jobType": "flexJobC",
+      "sentAt": 1770490391457,
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "events": [
+        {
+          "type": "queued",
+          "timestamp": 1770490391458
+        },
+        {
+          "type": "started",
+          "timestamp": 1770490391459,
+          "modelId": "flex-model"
+        },
+        {
+          "type": "completed",
+          "timestamp": 1770490391559,
+          "cost": 0.013
+        }
+      ],
+      "status": "completed",
+      "modelUsed": "flex-model",
+      "totalCost": 0.013,
+      "queueDurationMs": 1,
+      "processingDurationMs": 100,
+      "totalDurationMs": 101,
+      "usage": [
+        {
+          "modelId": "flex-model",
+          "inputTokens": 7000,
+          "cachedTokens": 0,
+          "outputTokens": 3000,
+          "requestCount": 1,
+          "cost": 0.013
+        }
+      ]
+    }
+  },
+  "timeline": [
+    {
+      "t": 1770490391325,
+      "event": "connected",
+      "instanceId": "inst-1770490390793-n129num3v"
+    },
+    {
+      "t": 1770490391325,
+      "event": "connected",
+      "instanceId": "inst-1770490390811-urjyc9ntx"
+    },
+    {
+      "t": 1770490391441,
+      "event": "job:queued",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-a-1770490390751-0",
+      "jobType": "flexJobA"
+    },
+    {
+      "t": 1770490391446,
+      "event": "job:started",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-a-1770490390751-0",
+      "jobType": "flexJobA",
+      "modelId": "flex-model"
+    },
+    {
+      "t": 1770490391447,
+      "event": "job:queued",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-a-1770490390751-1",
+      "jobType": "flexJobA"
+    },
+    {
+      "t": 1770490391450,
+      "event": "job:started",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-a-1770490390751-1",
+      "jobType": "flexJobA",
+      "modelId": "flex-model"
+    },
+    {
+      "t": 1770490391450,
+      "event": "job:queued",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-b-1770490390751-0",
+      "jobType": "flexJobB"
+    },
+    {
+      "t": 1770490391452,
+      "event": "job:started",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-b-1770490390751-0",
+      "jobType": "flexJobB",
+      "modelId": "flex-model"
+    },
+    {
+      "t": 1770490391454,
+      "event": "job:queued",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-b-1770490390751-1",
+      "jobType": "flexJobB"
+    },
+    {
+      "t": 1770490391454,
+      "event": "job:started",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-b-1770490390751-1",
+      "jobType": "flexJobB",
+      "modelId": "flex-model"
+    },
+    {
+      "t": 1770490391456,
+      "event": "job:queued",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-c-1770490390751-0",
+      "jobType": "flexJobC"
+    },
+    {
+      "t": 1770490391457,
+      "event": "job:started",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-c-1770490390751-0",
+      "jobType": "flexJobC",
+      "modelId": "flex-model"
+    },
+    {
+      "t": 1770490391458,
+      "event": "job:queued",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-c-1770490390751-1",
+      "jobType": "flexJobC"
+    },
+    {
+      "t": 1770490391459,
+      "event": "job:started",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-c-1770490390751-1",
+      "jobType": "flexJobC",
+      "modelId": "flex-model"
+    },
+    {
+      "t": 1770490391548,
+      "event": "job:completed",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-a-1770490390751-0",
+      "jobType": "flexJobA",
+      "modelId": "flex-model",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 107
+      }
+    },
+    {
+      "t": 1770490391550,
+      "event": "job:completed",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-a-1770490390751-1",
+      "jobType": "flexJobA",
+      "modelId": "flex-model",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 103
+      }
+    },
+    {
+      "t": 1770490391552,
+      "event": "job:completed",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-b-1770490390751-0",
+      "jobType": "flexJobB",
+      "modelId": "flex-model",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770490391556,
+      "event": "job:completed",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-b-1770490390751-1",
+      "jobType": "flexJobB",
+      "modelId": "flex-model",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 102
+      }
+    },
+    {
+      "t": 1770490391557,
+      "event": "job:completed",
+      "instanceId": "inst-1770490390793-n129num3v",
+      "jobId": "flex-c-1770490390751-0",
+      "jobType": "flexJobC",
+      "modelId": "flex-model",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    },
+    {
+      "t": 1770490391559,
+      "event": "job:completed",
+      "instanceId": "inst-1770490390811-urjyc9ntx",
+      "jobId": "flex-c-1770490390751-1",
+      "jobType": "flexJobC",
+      "modelId": "flex-model",
+      "data": {
+        "cost": 0.013,
+        "durationMs": 101
+      }
+    }
+  ],
+  "snapshots": [
+    {
+      "timestamp": 1770490391426,
+      "trigger": "initial",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391445,
+      "trigger": "job:queued:flex-a-1770490390751-0",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "flex-a-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 0,
+              "tpmRemaining": 0,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391449,
+      "trigger": "job:queued:flex-a-1770490390751-1",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "flex-a-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "flex-a-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391452,
+      "trigger": "job:queued:flex-b-1770490390751-0",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-a-1770490390751-0",
+            "flex-b-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "flex-a-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 10000,
+              "tpmRemaining": 40000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391455,
+      "trigger": "job:queued:flex-b-1770490390751-1",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-a-1770490390751-0",
+            "flex-b-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-a-1770490390751-1",
+            "flex-b-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391457,
+      "trigger": "job:queued:flex-c-1770490390751-0",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "flex-a-1770490390751-0",
+            "flex-b-1770490390751-0",
+            "flex-c-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-a-1770490390751-1",
+            "flex-b-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 20000,
+              "tpmRemaining": 30000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391459,
+      "trigger": "job:queued:flex-c-1770490390751-1",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "flex-a-1770490390751-0",
+            "flex-b-1770490390751-0",
+            "flex-c-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 3,
+          "activeJobIds": [
+            "flex-a-1770490390751-1",
+            "flex-b-1770490390751-1",
+            "flex-c-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391551,
+      "trigger": "job:completed:flex-a-1770490390751-0",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-b-1770490390751-0",
+            "flex-c-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-b-1770490390751-1",
+            "flex-c-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391554,
+      "trigger": "job:completed:flex-a-1770490390751-1",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-b-1770490390751-0",
+            "flex-c-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-b-1770490390751-1",
+            "flex-c-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391554,
+      "trigger": "job:completed:flex-b-1770490390751-0",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "flex-c-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 2,
+          "activeJobIds": [
+            "flex-b-1770490390751-1",
+            "flex-c-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391557,
+      "trigger": "job:completed:flex-b-1770490390751-1",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "flex-c-1770490390751-0"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 1,
+          "activeJobIds": [
+            "flex-c-1770490390751-1"
+          ],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391563,
+      "trigger": "job:completed:flex-c-1770490390751-0",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391564,
+      "trigger": "job:completed:flex-c-1770490390751-1",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391661,
+      "trigger": "after-sending-jobs",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "timestamp": 1770490391665,
+      "trigger": "final",
+      "instances": {
+        "inst-1770490390793-n129num3v": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        },
+        "inst-1770490390811-urjyc9ntx": {
+          "activeJobs": 0,
+          "activeJobIds": [],
+          "models": {
+            "flex-model": {
+              "rpm": 0,
+              "rpmRemaining": 0,
+              "tpm": 30000,
+              "tpmRemaining": 20000,
+              "jobTypes": {
+                "flexJobA": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobB": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                },
+                "flexJobC": {
+                  "slots": 1,
+                  "totalSlots": 1,
+                  "inFlight": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "summary": {
+    "totalJobs": 6,
+    "completed": 6,
+    "failed": 0,
+    "avgDurationMs": 102.66666666666667,
+    "byInstance": {
+      "inst-1770490390793-n129num3v": {
+        "completed": 3,
+        "failed": 0,
+        "total": 3
+      },
+      "inst-1770490390811-urjyc9ntx": {
+        "completed": 3,
+        "failed": 0,
+        "total": 3
+      }
+    },
+    "byJobType": {
+      "flexJobA": {
+        "completed": 2,
+        "failed": 0,
+        "total": 2
+      },
+      "flexJobB": {
+        "completed": 2,
+        "failed": 0,
+        "total": 2
+      },
+      "flexJobC": {
+        "completed": 2,
+        "failed": 0,
+        "total": 2
+      }
+    },
+    "byModel": {
+      "flex-model": {
+        "completed": 6,
+        "failed": 0,
+        "total": 6
+      }
+    }
+  }
+}
