@@ -2,6 +2,7 @@
  * Internal LLM Rate Limiter class implementation.
  */
 import type {
+  CapacityEstimates,
   InternalJobResult,
   InternalLimiterConfig,
   InternalLimiterInstance,
@@ -14,15 +15,13 @@ import { CapacityWaitQueue } from './capacityWaitQueue.js';
 import { validateConfig } from './configValidation.js';
 import { isDelegationError } from './jobExecutionHelpers.js';
 import {
-  type CapacityEstimates,
   type CountersSet,
   captureWindowStarts,
   getMinTimeUntilCapacity,
   getTimeUntilNextWindowReset,
   hasTimeWindowCapacity,
-  hasTimeWindowCapacityForAmounts,
   releaseTimeWindowReservation,
-  reserveTimeWindowCapacity,
+  tryReserveCapacityAtomic,
 } from './rateLimiterCapacityHelpers.js';
 import { buildLimiterStats, createDelegationResult } from './rateLimiterInitHelpers.js';
 import {
@@ -97,9 +96,9 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     this.tpmCounter = tpmCounter;
     this.tpdCounter = tpdCounter;
   }
-  private async waitForTimeWindowCapacity(): Promise<JobWindowStarts> {
-    const { estimates } = this;
-    const { estimatedNumberOfRequests, estimatedUsedTokens } = estimates;
+  private async waitForTimeWindowCapacity(overrides?: CapacityEstimates): Promise<JobWindowStarts> {
+    const est = overrides ?? this.estimates;
+    const { estimatedNumberOfRequests, estimatedUsedTokens } = est;
     if (estimatedNumberOfRequests === ZERO && estimatedUsedTokens === ZERO) {
       this.log('Skipping capacity wait - estimates are 0');
       return captureWindowStarts(this.counters);
@@ -107,7 +106,7 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     const { promise, resolve } = Promise.withResolvers<JobWindowStarts>();
     let waitCount = ZERO;
     const checkCapacity = (): void => {
-      const windowStarts = this.tryReserveCapacityInternal();
+      const windowStarts = this.tryReserveCapacityInternal(est);
       if (windowStarts !== null) {
         if (waitCount > ZERO) {
           this.log('Capacity available after waiting', { waitCount });
@@ -131,15 +130,8 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     checkCapacity();
     return await promise;
   }
-  private tryReserveCapacityInternal(): JobWindowStarts | null {
-    const { estimates } = this;
-    const { estimatedNumberOfRequests, estimatedUsedTokens } = estimates;
-    if (!hasTimeWindowCapacityForAmounts(this.counters, estimatedNumberOfRequests, estimatedUsedTokens)) {
-      return null;
-    }
-    const windowStarts = captureWindowStarts(this.counters);
-    reserveTimeWindowCapacity(this.counters, this.estimates);
-    return windowStarts;
+  private tryReserveCapacityInternal(est: CapacityEstimates): JobWindowStarts | null {
+    return tryReserveCapacityAtomic(this.counters, est);
   }
   hasCapacity(): boolean {
     if (this.memorySemaphore !== null) {
@@ -149,15 +141,20 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     if (this.concurrencySemaphore !== null && !this.concurrencySemaphore.hasCapacity()) return false;
     return hasTimeWindowCapacity(this.counters);
   }
-  tryReserve(): ReservationContext | null {
+  tryReserve(overrides?: CapacityEstimates): ReservationContext | null {
     if (!this.hasCapacity()) return null;
-    const windowStarts = captureWindowStarts(this.counters);
-    reserveTimeWindowCapacity(this.counters, this.estimates);
+    const est = overrides ?? this.estimates;
+    const windowStarts = tryReserveCapacityAtomic(this.counters, est);
+    if (windowStarts === null) return null;
+    if (!this.tryAcquireSemaphores(est, windowStarts)) return null;
+    return { windowStarts, estimates: est };
+  }
+  private tryAcquireSemaphores(est: CapacityEstimates, windowStarts: JobWindowStarts): boolean {
     if (this.memorySemaphore !== null) {
       const memoryToReserve = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
       if (!this.memorySemaphore.tryAcquire(memoryToReserve)) {
-        releaseTimeWindowReservation(this.counters, this.estimates, windowStarts);
-        return null;
+        releaseTimeWindowReservation(this.counters, est, windowStarts);
+        return false;
       }
     }
     if (this.concurrencySemaphore !== null && !this.concurrencySemaphore.tryAcquire()) {
@@ -165,13 +162,13 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
         const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
         this.memorySemaphore.release(memoryToRelease);
       }
-      releaseTimeWindowReservation(this.counters, this.estimates, windowStarts);
-      return null;
+      releaseTimeWindowReservation(this.counters, est, windowStarts);
+      return false;
     }
-    return { windowStarts };
+    return true;
   }
   releaseReservation(context: ReservationContext): void {
-    releaseTimeWindowReservation(this.counters, this.estimates, context.windowStarts);
+    releaseTimeWindowReservation(this.counters, context.estimates, context.windowStarts);
     if (this.memorySemaphore !== null) {
       const memoryToRelease = this.estimatedUsedMemoryKB > ZERO ? this.estimatedUsedMemoryKB : ONE;
       this.memorySemaphore.release(memoryToRelease);
@@ -179,8 +176,11 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     this.concurrencySemaphore?.release();
     this.notifyCapacityAvailable();
   }
-  async waitForCapacityWithTimeout(maxWaitMS: number): Promise<ReservationContext | null> {
-    return await this.capacityWaitQueue.waitForCapacity(() => this.tryReserve(), maxWaitMS);
+  async waitForCapacityWithTimeout(
+    maxWaitMS: number,
+    overrides?: CapacityEstimates
+  ): Promise<ReservationContext | null> {
+    return await this.capacityWaitQueue.waitForCapacity(() => this.tryReserve(overrides), maxWaitMS);
   }
   async waitForCapacityWithCustomReserve(
     customTryReserve: () => ReservationContext | null,
@@ -207,6 +207,7 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
   }
   async queueJob<T extends InternalJobResult>(job: () => Promise<T> | T): Promise<T> {
     const windowStarts = await this.waitForTimeWindowCapacity();
+    const ctx: ReservationContext = { windowStarts, estimates: this.estimates };
     if (this.memorySemaphore !== null) {
       await this.memorySemaphore.acquire(this.estimatedUsedMemoryKB);
     }
@@ -215,10 +216,10 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     }
     try {
       const result = await job();
-      this.recordUsage(result, windowStarts);
+      this.recordUsage(result, ctx);
       return result;
     } catch (error) {
-      this.handleDelegationError(error, windowStarts);
+      this.handleDelegationError(error, ctx);
       throw error;
     } finally {
       this.releaseResources();
@@ -230,18 +231,18 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
   ): Promise<T> {
     try {
       const result = await job();
-      this.recordUsage(result, context.windowStarts);
+      this.recordUsage(result, context);
       return result;
     } catch (error) {
-      this.handleDelegationError(error, context.windowStarts);
+      this.handleDelegationError(error, context);
       throw error;
     } finally {
       this.releaseResources();
     }
   }
-  private handleDelegationError(error: unknown, windowStarts: JobWindowStarts): void {
+  private handleDelegationError(error: unknown, context: ReservationContext): void {
     if (isDelegationError(error)) {
-      this.recordUsage(createDelegationResult(error.usage), windowStarts);
+      this.recordUsage(createDelegationResult(error.usage), context);
     }
   }
   private releaseResources(): void {
@@ -252,11 +253,11 @@ export class LLMRateLimiterInternal implements InternalLimiterInstance {
     }
     this.notifyCapacityAvailable();
   }
-  private recordUsage(result: InternalJobResult, windowStarts: JobWindowStarts): void {
+  private recordUsage(result: InternalJobResult, context: ReservationContext): void {
     recordActualUsage(result, {
       counters: this.counters,
-      estimates: this.estimates,
-      windowStarts,
+      estimates: context.estimates,
+      windowStarts: context.windowStarts,
       onOverage: this.config.onOverage,
     });
   }

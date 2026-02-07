@@ -15,7 +15,7 @@ This document provides detailed documentation for each e2e test file, including 
 | `capacityPlusOne.test.ts` | [Low](./complexity-low.md#6-capacity-plus-one-test) | [x] | [x] |
 | `fixedRatioIsolation.test.ts` | [Low](./complexity-low.md#7-fixed-ratio-isolation-test) | [x] | [x] |
 | `rateLimitQueuing.test.ts` | [Low](./complexity-low.md#8-rate-limit-queuing-test) | [x] | [x] |
-| `actualUsageRefunds.test.ts` | [Medium](./complexity-medium.md#9-actual-usage-refunds) | [x] | [ ] |
+| `actualUsageRefunds.test.ts` | [Medium](./complexity-medium.md#9-actual-usage-refunds) | [x] | [x] |
 | `actualUsageOverages.test.ts` | [Medium](./complexity-medium.md#10-actual-usage-overages) | [x] | [ ] |
 | `tokenTypeBreakdown.test.ts` | [Medium](./complexity-medium.md#11-token-type-breakdown) | [x] | [ ] |
 | `errorHandling.test.ts` | [Medium](./complexity-medium.md#12-error-handling) | [x] | [ ] |

@@ -221,6 +221,12 @@ export interface JobWindowStarts {
   tpdWindowStart?: number;
 }
 
+/** Estimates used when reserving capacity (tokens and requests per job) */
+export interface CapacityEstimates {
+  estimatedNumberOfRequests: number;
+  estimatedUsedTokens: number;
+}
+
 /**
  * Context returned when capacity is reserved.
  * Must be passed back at release time for window-aware refunds.
@@ -229,6 +235,8 @@ export interface JobWindowStarts {
 export interface ReservationContext {
   /** Window starts at the time capacity was reserved */
   windowStarts: JobWindowStarts;
+  /** Estimates used for this reservation (for accurate release/usage recording) */
+  estimates: CapacityEstimates;
 }
 
 // =============================================================================
@@ -271,8 +279,9 @@ export interface InternalLimiterInstance {
    * Atomically check and reserve capacity.
    * Returns ReservationContext if capacity was reserved, null if no capacity.
    * The context contains window starts for time-aware refunds at release.
+   * @param estimates Optional per-job estimates (falls back to instance defaults if omitted)
    */
-  tryReserve: () => ReservationContext | null;
+  tryReserve: (estimates?: CapacityEstimates) => ReservationContext | null;
   /**
    * Release previously reserved capacity (when job fails before execution).
    * Respects time window boundaries - only refunds if still in same window.
@@ -283,9 +292,13 @@ export interface InternalLimiterInstance {
    * Wait for capacity using a FIFO queue with timeout.
    * Jobs are served in order when capacity becomes available.
    * @param maxWaitMS Maximum time to wait (0 = fail fast, no waiting)
+   * @param estimates Optional per-job estimates (falls back to instance defaults if omitted)
    * @returns Promise resolving to ReservationContext if reserved, null if timed out
    */
-  waitForCapacityWithTimeout: (maxWaitMS: number) => Promise<ReservationContext | null>;
+  waitForCapacityWithTimeout: (
+    maxWaitMS: number,
+    estimates?: CapacityEstimates
+  ) => Promise<ReservationContext | null>;
   /** Get current statistics */
   getStats: () => InternalLimiterStats;
   /** Update rate limits dynamically (for distributed coordination) */

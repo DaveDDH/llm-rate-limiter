@@ -3,7 +3,13 @@
  */
 import type { ResourceEstimationsPerJob } from '../jobTypeTypes.js';
 import type { ActiveJobInfo, AvailabilityChangeReason, JobUsage, UsageEntry } from '../multiModelTypes.js';
-import type { InternalJobResult, InternalLimiterInstance, LogFn, ReservationContext } from '../types.js';
+import type {
+  CapacityEstimates,
+  InternalJobResult,
+  InternalLimiterInstance,
+  LogFn,
+  ReservationContext,
+} from '../types.js';
 import type { AvailabilityTracker } from './availabilityTracker.js';
 import type { BackendOperationContext } from './backendHelpers.js';
 import { addUsageWithCost, calculateJobAdjustment } from './costHelpers.js';
@@ -76,6 +82,17 @@ const createAvailabilityChangeEmitter =
     availabilityTracker?.checkAndEmit(reason, modelId);
   };
 
+const ZERO = 0;
+
+/** Look up per-job-type capacity estimates */
+const getJobTypeEstimates = (resources: ResourceEstimationsPerJob, jobType: string): CapacityEstimates => {
+  const { [jobType]: jt } = resources;
+  return {
+    estimatedNumberOfRequests: jt?.estimatedNumberOfRequests ?? ZERO,
+    estimatedUsedTokens: jt?.estimatedUsedTokens ?? ZERO,
+  };
+};
+
 /** Per-model slot info for debug logging */
 interface ModelSlotInfo {
   allocated: number;
@@ -106,13 +123,14 @@ interface ComposedTryReserveParams {
   modelId: string;
   jt: string;
   log: DebugLogFn;
+  estimates: CapacityEstimates;
 }
 
 /** Build composedTryReserve closure with debug logging */
 const buildComposedTryReserve = (params: ComposedTryReserveParams): (() => ReservationContext | null) => {
-  const { limiter, jtm, modelId, jt, log } = params;
+  const { limiter, jtm, modelId, jt, log, estimates } = params;
   return (): ReservationContext | null => {
-    const ctx = limiter.tryReserve();
+    const ctx = limiter.tryReserve(estimates);
     const logParams: TryReserveLogParams = {
       log,
       modelId,
@@ -138,17 +156,20 @@ const buildComposedTryReserve = (params: ComposedTryReserveParams): (() => Reser
 const buildComposedWaitForModel = (
   params: DelegationContextParams
 ): ((modelId: string, maxWaitMS: number) => Promise<ReservationContext | null>) => {
-  const { getModelLimiter, jobType, jobTypeManager, onLog } = params;
+  const { getModelLimiter, resourceEstimationsPerJob, jobType, jobTypeManager, onLog } = params;
   const log = createDebugLog(onLog, 'Delegation');
   if (jobTypeManager === undefined || jobTypeManager === null || jobType === undefined) {
-    return async (modelId, maxWaitMS) => await getModelLimiter(modelId).waitForCapacityWithTimeout(maxWaitMS);
+    const est = jobType === undefined ? undefined : getJobTypeEstimates(resourceEstimationsPerJob, jobType);
+    return async (modelId, maxWaitMS) =>
+      await getModelLimiter(modelId).waitForCapacityWithTimeout(maxWaitMS, est);
   }
   const jtm = jobTypeManager;
   const jt = jobType;
+  const estimates = getJobTypeEstimates(resourceEstimationsPerJob, jt);
   return async (modelId, maxWaitMS) => {
     const limiter = getModelLimiter(modelId);
     log(`Waiting for ${modelId}/${jt}`, { maxWaitMS });
-    const composedTryReserve = buildComposedTryReserve({ limiter, jtm, modelId, jt, log });
+    const composedTryReserve = buildComposedTryReserve({ limiter, jtm, modelId, jt, log, estimates });
     const result = await limiter.waitForCapacityWithCustomReserve(composedTryReserve, maxWaitMS);
     log(`Wait result for ${modelId}/${jt}`, { reserved: result !== null });
     return result;

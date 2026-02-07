@@ -1,8 +1,10 @@
 /**
  * Capacity checking and reservation helpers for the rate limiter.
  */
-import type { JobWindowStarts } from '../types.js';
+import type { CapacityEstimates, JobWindowStarts } from '../types.js';
 import type { TimeWindowCounter } from './timeWindowCounter.js';
+
+export type { CapacityEstimates };
 
 const ZERO = 0;
 
@@ -12,12 +14,6 @@ export interface CountersSet {
   rpdCounter: TimeWindowCounter | null;
   tpmCounter: TimeWindowCounter | null;
   tpdCounter: TimeWindowCounter | null;
-}
-
-/** Estimates for capacity reservation */
-export interface CapacityEstimates {
-  estimatedNumberOfRequests: number;
-  estimatedUsedTokens: number;
 }
 
 /** Check if time window counters have capacity for specified amounts */
