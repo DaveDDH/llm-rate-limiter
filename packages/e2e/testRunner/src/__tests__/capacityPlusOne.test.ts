@@ -85,6 +85,7 @@ const setupTestData = async (): Promise<TestSetupData> => {
     waitTimeoutMs: WAIT_TIMEOUT_MS,
     proxyRatio: PROXY_RATIO,
     snapshotIntervalMs: SNAPSHOT_INTERVAL_MS,
+    waitForMinuteBoundary: true,
   });
 
   // Sort jobs by when they were sent (sentAt)
