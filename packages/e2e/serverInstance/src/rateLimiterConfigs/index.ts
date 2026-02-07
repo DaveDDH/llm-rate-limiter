@@ -48,5 +48,19 @@ export {
   memCalcZeroMemoryConfig,
 } from './memoryCalcConfigs.js';
 
+export {
+  mediumErrorMemoryConfig,
+  mediumFixedProtectionMultiFixedConfig,
+  mediumFixedProtectionThreeTypeConfig,
+  mediumFixedProtectionTwoTypeConfig,
+  mediumMaxWaitExplicitConfig,
+  mediumMaxWaitPerModelConfig,
+  mediumMaxWaitReleaseConfig,
+  mediumMaxWaitSingleModelConfig,
+  mediumMaxWaitTimeoutConfig,
+  mediumMaxWaitTwoModelConfig,
+  mediumQueueConcurrentConfig,
+} from './mediumTestConfigs.js';
+
 // Re-export registry and helpers from registry file
 export { configPresets, getConfigPreset, isValidPresetName } from './registry.js';

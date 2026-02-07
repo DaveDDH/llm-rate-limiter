@@ -180,6 +180,21 @@ const handleAllocation =
     });
   };
 
+/** Handler for GET /debug/overages */
+const handleOverages =
+  (state: ServerState) =>
+  (_req: Request, res: Response): void => {
+    const { rateLimiter } = getStateComponents(state);
+    const instanceId = rateLimiter.getInstanceId();
+
+    res.status(HTTP_STATUS_OK).json({
+      instanceId,
+      timestamp: Date.now(),
+      overages: state.overageEvents,
+      count: state.overageEvents.length,
+    });
+  };
+
 /** Handler for GET /debug/events (SSE endpoint) */
 const handleEvents =
   (state: ServerState) =>
@@ -223,6 +238,7 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
   router.get('/stats', handleStats(state));
   router.get('/active-jobs', handleActiveJobs(state));
   router.get('/job-history', handleJobHistory(state));
+  router.get('/overages', handleOverages(state));
   router.post('/reset', handleReset(state, resetServer));
   router.get('/allocation', handleAllocation(state));
   router.get('/events', handleEvents(state));

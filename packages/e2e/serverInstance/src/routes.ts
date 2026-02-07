@@ -1,4 +1,4 @@
-import type { JobCallbackContext, JobResult, LLMJobResult } from '@llm-rate-limiter/core';
+import type { JobCallbackContext, JobResult, LLMJobResult, TokenUsageEntry } from '@llm-rate-limiter/core';
 import type { Request, Response, Router } from 'express';
 import { Router as createRouter } from 'express';
 
@@ -51,10 +51,13 @@ interface JobExecutorParams {
   eventEmitter: ServerState['eventEmitter'];
 }
 
+/** Reject callback type from the rate limiter */
+type RejectFn = (usage: TokenUsageEntry, opts?: { delegate?: boolean }) => void;
+
 /** Create the job executor function */
 const createJobExecutor =
   (params: JobExecutorParams) =>
-  async (args: JobExecutorArgs): Promise<JobResult<JobData>> => {
+  async (args: JobExecutorArgs, reject: RejectFn): Promise<JobResult<JobData>> => {
     const { jobId, jobType, payload, tracking, eventEmitter } = params;
     const { modelId } = args;
     // Track when job starts and which model
@@ -66,7 +69,7 @@ const createJobExecutor =
     // Emit job:started event
     eventEmitter.emitJobStarted({ jobId, jobType, modelId });
 
-    return await processJob({ jobId, jobType, payload, modelId });
+    return await processJob({ jobId, jobType, payload, modelId, reject });
   };
 
 /** Parameters for the completion handler */

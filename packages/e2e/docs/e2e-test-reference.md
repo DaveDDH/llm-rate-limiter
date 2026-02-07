@@ -15,14 +15,14 @@ This document provides detailed documentation for each e2e test file, including 
 | `capacityPlusOne.test.ts` | [Low](./complexity-low.md#6-capacity-plus-one-test) | [x] | [x] |
 | `fixedRatioIsolation.test.ts` | [Low](./complexity-low.md#7-fixed-ratio-isolation-test) | [x] | [x] |
 | `rateLimitQueuing.test.ts` | [Low](./complexity-low.md#8-rate-limit-queuing-test) | [x] | [x] |
-| `actualUsageRefunds.test.ts` | [Medium](./complexity-medium.md#9-actual-usage-refunds) | [ ] | [ ] |
-| `actualUsageOverages.test.ts` | [Medium](./complexity-medium.md#10-actual-usage-overages) | [ ] | [ ] |
-| `tokenTypeBreakdown.test.ts` | [Medium](./complexity-medium.md#11-token-type-breakdown) | [ ] | [ ] |
-| `errorHandling.test.ts` | [Medium](./complexity-medium.md#12-error-handling) | [ ] | [ ] |
-| `queueBehavior.test.ts` | [Medium](./complexity-medium.md#13-queue-behavior) | [ ] | [ ] |
-| `maxWaitMsBehavior.test.ts` | [Medium](./complexity-medium.md#14-maxwaitms-behavior) | [ ] | [ ] |
-| `slotsEvolveWithLoad.test.ts` | [Medium](./complexity-medium.md#15-slots-evolve-with-load-test) | [ ] | [ ] |
-| `fixedRatioProtection.test.ts` | [Medium](./complexity-medium.md#16-fixed-ratio-protection) | [ ] | [ ] |
+| `actualUsageRefunds.test.ts` | [Medium](./complexity-medium.md#9-actual-usage-refunds) | [x] | [ ] |
+| `actualUsageOverages.test.ts` | [Medium](./complexity-medium.md#10-actual-usage-overages) | [x] | [ ] |
+| `tokenTypeBreakdown.test.ts` | [Medium](./complexity-medium.md#11-token-type-breakdown) | [x] | [ ] |
+| `errorHandling.test.ts` | [Medium](./complexity-medium.md#12-error-handling) | [x] | [ ] |
+| `queueBehavior.test.ts` | [Medium](./complexity-medium.md#13-queue-behavior) | [x] | [ ] |
+| `maxWaitMsBehavior.test.ts` | [Medium](./complexity-medium.md#14-maxwaitms-behavior) | [x] | [ ] |
+| `slotsEvolveWithLoad.test.ts` | [Medium](./complexity-medium.md#15-slots-evolve-with-load-test) | [x] | [ ] |
+| `fixedRatioProtection.test.ts` | [Medium](./complexity-medium.md#16-fixed-ratio-protection) | [x] | [ ] |
 | `flexibleRatioAdjustment.test.ts` | [Medium-High](./complexity-medium-high.md#17-flexible-ratio-adjustment-test) | [ ] | [ ] |
 | `memoryConstraintEnforcement.test.ts` | [Medium-High](./complexity-medium-high.md#18-memory-constraint-enforcement) | [ ] | [ ] |
 | `modelEscalationBasic.test.ts` | [Medium-High](./complexity-medium-high.md#19-model-escalation---basic) | [ ] | [ ] |

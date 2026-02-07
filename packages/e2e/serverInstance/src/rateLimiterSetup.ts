@@ -33,9 +33,19 @@ const buildMemoryConfig = (presetMemory: MemoryLimitConfig | undefined): MemoryL
   return { ...presetMemory, maxMemoryKB };
 };
 
+/** Overage callback type matching the rate limiter's OverageFn */
+type OverageCallback = (event: {
+  resourceType: string;
+  estimated: number;
+  actual: number;
+  overage: number;
+  timestamp: number;
+}) => void;
+
 export const createRateLimiterInstance = (
   redisUrl: string,
-  configPreset: ConfigPresetName = 'default'
+  configPreset: ConfigPresetName = 'default',
+  onOverage?: OverageCallback
 ): LLMRateLimiterInstance<string> => {
   const config = getConfigPreset(configPreset);
 
@@ -54,6 +64,7 @@ export const createRateLimiterInstance = (
     backend: createRedisBackend(redisUrl),
     onLog: (message, data) => logger.info(message, data),
     onAvailableSlotsChange: noopSlotsChange,
+    onOverage,
   });
 };
 

@@ -58,4 +58,15 @@ export type ConfigPresetName =
   | 'memCalc-distributedWins'
   | 'memCalc-ratios'
   | 'memCalc-zeroMemory'
-  | 'memCalc-freeRatio';
+  | 'memCalc-freeRatio'
+  | 'medium-maxWait-twoModel'
+  | 'medium-maxWait-singleModel'
+  | 'medium-maxWait-explicit'
+  | 'medium-maxWait-timeout'
+  | 'medium-maxWait-release'
+  | 'medium-maxWait-perModel'
+  | 'medium-queue-concurrent'
+  | 'medium-errorMemory'
+  | 'medium-fixedProtection-twoType'
+  | 'medium-fixedProtection-threeType'
+  | 'medium-fixedProtection-multiFixed';

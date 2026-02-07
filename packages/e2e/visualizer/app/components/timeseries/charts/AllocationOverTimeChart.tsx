@@ -30,7 +30,6 @@ interface AllocationOverTimeChartProps {
 }
 
 const CHART_HEIGHT = 320;
-const TOOLTIP_OFFSET = 10;
 const THOUSAND = 1000;
 
 function getResourceSuffix(type: ResourceType): { used: string; capacity: string } | null {
@@ -46,20 +45,30 @@ function getResourceSuffix(type: ResourceType): { used: string; capacity: string
   }
 }
 
-function buildSeries(resourceType: ResourceType, models: string[]): ChartSeries[] {
+function buildSeries(
+  resourceType: ResourceType,
+  models: string[],
+  data: DashboardDataPoint[]
+): ChartSeries[] {
   const suffixes = getResourceSuffix(resourceType);
   if (!suffixes) return [];
 
-  return models.map((model, idx) => ({
-    allocKey: `${model}_${suffixes.capacity}`,
-    usedKey: `${model}_${suffixes.used}`,
-    label: model.replace(/_/gu, '-'),
-    color: MODEL_COLORS[idx % MODEL_COLORS.length],
-  }));
+  return models
+    .map((model, idx) => ({
+      allocKey: `${model}_${suffixes.capacity}`,
+      usedKey: `${model}_${suffixes.used}`,
+      label: model.replace(/_/gu, '-'),
+      color: MODEL_COLORS[idx % MODEL_COLORS.length],
+    }))
+    .filter((s) => data.some((point) => (point[s.usedKey] as number) > 0));
 }
 
-function formatTick(v: number): string {
+function formatValueTick(v: number): string {
   return v >= THOUSAND ? `${(v / THOUSAND).toFixed(0)}k` : String(v);
+}
+
+function formatTimeTick(seconds: number): string {
+  return `${seconds.toFixed(0)}s`;
 }
 
 function ResourceTypeTabs({
@@ -111,13 +120,18 @@ function AllocationAreaChart({ data, series }: { data: DashboardDataPoint[]; ser
     <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
       <AreaChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-        <XAxis dataKey="time" tick={{ fill: '#888', fontSize: 10 }} interval="preserveStartEnd" />
-        <YAxis tick={{ fill: '#888', fontSize: 10 }} tickFormatter={formatTick} />
+        <XAxis
+          dataKey="timeSeconds"
+          type="number"
+          domain={['dataMin', 'dataMax']}
+          tick={{ fill: '#888', fontSize: 10 }}
+          tickFormatter={formatTimeTick}
+        />
+        <YAxis tick={{ fill: '#888', fontSize: 10 }} tickFormatter={formatValueTick} />
         <Tooltip
           contentStyle={TOOLTIP_STYLE}
           labelStyle={{ color: '#eee', fontWeight: 600, marginBottom: '6px' }}
-          position={{ y: CHART_HEIGHT + TOOLTIP_OFFSET }}
-          allowEscapeViewBox={{ x: false, y: true }}
+          labelFormatter={(v) => `${Number(v).toFixed(1)}s`}
         />
         {series.map((s) => (
           <Area
@@ -131,6 +145,7 @@ function AllocationAreaChart({ data, series }: { data: DashboardDataPoint[]; ser
             stroke={s.color}
             strokeWidth={1.5}
             strokeOpacity={0.6}
+            activeDot={false}
           />
         ))}
         {series.map((s) => (
@@ -174,12 +189,9 @@ export function AllocationOverTimeChart({
   const firstEnabled = ALL_RESOURCE_TYPES.find((t) => enabledResourceTypes.has(t));
   const [selectedResource, setSelectedResource] = useState<ResourceType>(firstEnabled ?? 'TPM');
 
-  console.log('[AllocationOverTimeChart]', { data, models, enabledResourceTypes, selectedResource });
-
   if (data.length === 0) return null;
 
-  const series = buildSeries(selectedResource, models);
-  console.log('[AllocationOverTimeChart] series', series);
+  const series = buildSeries(selectedResource, models, data);
 
   return (
     <ChartContainer>

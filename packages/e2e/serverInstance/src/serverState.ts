@@ -7,12 +7,22 @@ import type { ConfigPresetName } from './rateLimiterConfigs.js';
 import { type ServerRateLimiter, createRateLimiterInstance } from './rateLimiterSetup.js';
 import { cleanupRedisKeys } from './redisCleanup.js';
 
+/** Overage event recorded from the rate limiter callback */
+export interface RecordedOverageEvent {
+  resourceType: string;
+  estimated: number;
+  actual: number;
+  overage: number;
+  timestamp: number;
+}
+
 /** Mutable server state */
 export interface ServerState {
   rateLimiter: ServerRateLimiter;
   eventEmitter: DebugEventEmitter;
   jobHistoryTracker: JobHistoryTracker;
   currentConfigPreset: ConfigPresetName;
+  overageEvents: RecordedOverageEvent[];
 }
 
 /** Create initial server state */
@@ -21,11 +31,27 @@ export const createServerState = (
   configPreset: ConfigPresetName = 'default'
 ): ServerState => {
   const jobHistoryTracker = new JobHistoryTracker();
-  const rateLimiter = createRateLimiterInstance(redisUrl, configPreset);
+  const overageEvents: RecordedOverageEvent[] = [];
+  const onOverage = createOverageHandler(overageEvents);
+  const rateLimiter = createRateLimiterInstance(redisUrl, configPreset, onOverage);
   const eventEmitter = new DebugEventEmitter(rateLimiter.getInstanceId());
 
-  return { rateLimiter, eventEmitter, jobHistoryTracker, currentConfigPreset: configPreset };
+  return { rateLimiter, eventEmitter, jobHistoryTracker, currentConfigPreset: configPreset, overageEvents };
 };
+
+const ARRAY_START = 0;
+
+/** Clear all elements from an array in place */
+const clearArray = (arr: unknown[]): void => {
+  arr.splice(ARRAY_START);
+};
+
+/** Create an overage handler that pushes events to the array */
+const createOverageHandler =
+  (events: RecordedOverageEvent[]) =>
+  (event: RecordedOverageEvent): void => {
+    events.push(event);
+  };
 
 /** Result of a reset operation */
 export interface ResetResult {
@@ -85,16 +111,18 @@ export const resetServerState = async (
     logger.info(`Cleaned ${keysDeleted} Redis keys`);
   }
 
-  // Clear job history
+  // Clear job history and overage events
   state.jobHistoryTracker.clear();
-  logger.info('Job history cleared');
+  clearArray(state.overageEvents);
+  logger.info('Job history and overage events cleared');
 
   // Close old SSE connections
   state.eventEmitter.closeAll();
   logger.info('SSE connections closed');
 
-  // Create new rate limiter with specified preset
-  const newRateLimiter = createRateLimiterInstance(redisUrl, presetToUse);
+  // Create new rate limiter with specified preset and overage tracking
+  const onOverage = createOverageHandler(state.overageEvents);
+  const newRateLimiter = createRateLimiterInstance(redisUrl, presetToUse, onOverage);
   await newRateLimiter.start();
   logger.info('New rate limiter started', { configPreset: presetToUse });
 

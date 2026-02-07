@@ -23,7 +23,10 @@ interface AggregatedUtilizationChartsProps {
 
 const CHART_HEIGHT = 260;
 const HUNDRED_PERCENT = 100;
-const TOOLTIP_OFFSET = 10;
+
+function formatTimeTick(seconds: number): string {
+  return `${seconds.toFixed(0)}s`;
+}
 
 function UtilizationLineChart({ data, jobTypes }: AggregatedUtilizationChartsProps) {
   return (
@@ -34,7 +37,13 @@ function UtilizationLineChart({ data, jobTypes }: AggregatedUtilizationChartsPro
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey="time" tick={{ fill: '#888', fontSize: 10 }} interval="preserveStartEnd" />
+          <XAxis
+            dataKey="timeSeconds"
+            type="number"
+            domain={['dataMin', 'dataMax']}
+            tick={{ fill: '#888', fontSize: 10 }}
+            tickFormatter={formatTimeTick}
+          />
           <YAxis
             domain={[0, HUNDRED_PERCENT]}
             tick={{ fill: '#888', fontSize: 10 }}
@@ -44,8 +53,7 @@ function UtilizationLineChart({ data, jobTypes }: AggregatedUtilizationChartsPro
             contentStyle={TOOLTIP_STYLE}
             labelStyle={{ color: '#eee', fontWeight: 600 }}
             formatter={(val) => [`${val}%`]}
-            position={{ y: CHART_HEIGHT + TOOLTIP_OFFSET }}
-            allowEscapeViewBox={{ x: false, y: true }}
+            labelFormatter={(v) => `${Number(v).toFixed(1)}s`}
           />
           {jobTypes.map((jt) => (
             <Line
@@ -73,7 +81,13 @@ function DynamicRatioChart({ data, jobTypes }: AggregatedUtilizationChartsProps)
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <AreaChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey="time" tick={{ fill: '#888', fontSize: 10 }} interval="preserveStartEnd" />
+          <XAxis
+            dataKey="timeSeconds"
+            type="number"
+            domain={['dataMin', 'dataMax']}
+            tick={{ fill: '#888', fontSize: 10 }}
+            tickFormatter={formatTimeTick}
+          />
           <YAxis
             domain={[0, HUNDRED_PERCENT]}
             tick={{ fill: '#888', fontSize: 10 }}
@@ -83,8 +97,7 @@ function DynamicRatioChart({ data, jobTypes }: AggregatedUtilizationChartsProps)
             contentStyle={TOOLTIP_STYLE}
             labelStyle={{ color: '#eee', fontWeight: 600 }}
             formatter={(val) => [`${val}%`]}
-            position={{ y: CHART_HEIGHT + TOOLTIP_OFFSET }}
-            allowEscapeViewBox={{ x: false, y: true }}
+            labelFormatter={(v) => `${Number(v).toFixed(1)}s`}
           />
           {jobTypes.map((jt) => (
             <Area

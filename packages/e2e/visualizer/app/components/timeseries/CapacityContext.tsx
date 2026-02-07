@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import * as d3 from 'd3';
 import type { CapacityDataPoint, InstanceConfig } from '@/lib/timeseries/capacityTypes';
+import * as d3 from 'd3';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { InstanceSection } from './InstanceSection';
 
 interface CapacityContextProps {
@@ -52,13 +53,13 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
 
     const [minTime, maxTime] = getTimeExtent(data);
     const scale = d3.scaleLinear().domain([minTime, maxTime]).range([0, chartWidth]);
-    const axis = d3.axisBottom(scale).ticks(10).tickFormat((d) => `${d}s`);
+    const axis = d3
+      .axisBottom(scale)
+      .ticks(10)
+      .tickFormat((d) => `${d}s`);
 
     d3.select(svg).selectAll('*').remove();
-    d3.select(svg)
-      .append('g')
-      .attr('transform', `translate(${LEFT_MARGIN}, 0)`)
-      .call(axis);
+    d3.select(svg).append('g').attr('transform', `translate(${LEFT_MARGIN}, 0)`).call(axis);
   }, [data, containerWidth]);
 
   const handleMouseMove = useCallback(
@@ -81,8 +82,6 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
       // Clamp data index to valid range, but allow visual position beyond
       const clampedIndex = Math.max(0, Math.min(index, data.length - 1));
 
-      console.log(`cursor x: ${x}, barWidth: ${barWidth}, step: ${step}, index: ${index}, clamped: ${clampedIndex}`);
-
       setFocusIndex(index); // Use unclamped index for cursor position
       onFocusChange?.(clampedIndex); // Use clamped index for data
     },
@@ -96,9 +95,7 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
 
   if (data.length === 0) {
     return (
-      <div className="h-64 flex items-center justify-center text-muted-foreground">
-        No data available
-      </div>
+      <div className="h-64 flex items-center justify-center text-muted-foreground">No data available</div>
     );
   }
 
@@ -122,19 +119,24 @@ export function CapacityContext({ data, instances, onFocusChange }: CapacityCont
           ))}
         </div>
 
-        {focusIndex !== null && containerWidth > LEFT_MARGIN && (() => {
-          const chartWidth = containerWidth - LEFT_MARGIN - RIGHT_PADDING;
-          const barWidth = Math.floor(chartWidth / data.length) - 1;
-          const step = barWidth + 1;
-          // Position cursor at the center of the bar (can be beyond data.length for fill bars)
-          const xPos = Math.min(LEFT_MARGIN + focusIndex * step + barWidth / 2, containerWidth - RIGHT_PADDING);
-          return (
-            <div
-              className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"
-              style={{ left: `${xPos}px` }}
-            />
-          );
-        })()}
+        {focusIndex !== null &&
+          containerWidth > LEFT_MARGIN &&
+          (() => {
+            const chartWidth = containerWidth - LEFT_MARGIN - RIGHT_PADDING;
+            const barWidth = Math.floor(chartWidth / data.length) - 1;
+            const step = barWidth + 1;
+            // Position cursor at the center of the bar (can be beyond data.length for fill bars)
+            const xPos = Math.min(
+              LEFT_MARGIN + focusIndex * step + barWidth / 2,
+              containerWidth - RIGHT_PADDING
+            );
+            return (
+              <div
+                className="absolute top-0 bottom-0 w-px bg-foreground/50 pointer-events-none z-10"
+                style={{ left: `${xPos}px` }}
+              />
+            );
+          })()}
       </div>
 
       <div>

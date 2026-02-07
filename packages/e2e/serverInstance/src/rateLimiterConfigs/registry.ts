@@ -9,6 +9,19 @@ import {
   localRatioZeroAllocConfig,
 } from './localRatioConfigs.js';
 import {
+  mediumErrorMemoryConfig,
+  mediumFixedProtectionMultiFixedConfig,
+  mediumFixedProtectionThreeTypeConfig,
+  mediumFixedProtectionTwoTypeConfig,
+  mediumMaxWaitExplicitConfig,
+  mediumMaxWaitPerModelConfig,
+  mediumMaxWaitReleaseConfig,
+  mediumMaxWaitSingleModelConfig,
+  mediumMaxWaitTimeoutConfig,
+  mediumMaxWaitTwoModelConfig,
+  mediumQueueConcurrentConfig,
+} from './mediumTestConfigs.js';
+import {
   memCalcBasicConfig,
   memCalcDistributedWinsConfig,
   memCalcFreeRatioConfig,
@@ -73,6 +86,17 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'memCalc-ratios': memCalcRatiosConfig,
   'memCalc-zeroMemory': memCalcZeroMemoryConfig,
   'memCalc-freeRatio': memCalcFreeRatioConfig,
+  'medium-maxWait-twoModel': mediumMaxWaitTwoModelConfig,
+  'medium-maxWait-singleModel': mediumMaxWaitSingleModelConfig,
+  'medium-maxWait-explicit': mediumMaxWaitExplicitConfig,
+  'medium-maxWait-timeout': mediumMaxWaitTimeoutConfig,
+  'medium-maxWait-release': mediumMaxWaitReleaseConfig,
+  'medium-maxWait-perModel': mediumMaxWaitPerModelConfig,
+  'medium-queue-concurrent': mediumQueueConcurrentConfig,
+  'medium-errorMemory': mediumErrorMemoryConfig,
+  'medium-fixedProtection-twoType': mediumFixedProtectionTwoTypeConfig,
+  'medium-fixedProtection-threeType': mediumFixedProtectionThreeTypeConfig,
+  'medium-fixedProtection-multiFixed': mediumFixedProtectionMultiFixedConfig,
 };
 
 /** Get a configuration preset by name */

@@ -71,7 +71,6 @@ function renderChart(
   if (timeRange === 0 || data.length === 0) return;
 
   const barWidth = Math.floor(width / data.length) - 1;
-  console.log(barWidth);
 
   const barLog: BarLog[] = [];
 

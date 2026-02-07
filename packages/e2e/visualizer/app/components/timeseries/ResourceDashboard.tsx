@@ -26,6 +26,29 @@ interface ResourceDashboardProps {
   testData: TestData;
 }
 
+interface JobTimeBounds {
+  startSeconds: number;
+  endSeconds: number;
+}
+
+const MS_TO_SECONDS = 1000;
+
+function getJobTimeBounds(testData: TestData): JobTimeBounds | null {
+  const jobs = Object.values(testData.jobs);
+  if (jobs.length === 0) return null;
+
+  const earliest = jobs.reduce((a, b) => (a.sentAt < b.sentAt ? a : b));
+  const latestEndTs = jobs.reduce((max, job) => {
+    const end = job.events[job.events.length - 1]?.timestamp ?? 0;
+    return end > max ? end : max;
+  }, 0);
+
+  return {
+    startSeconds: (earliest.sentAt - testData.metadata.startTime) / MS_TO_SECONDS,
+    endSeconds: (latestEndTs - testData.metadata.startTime) / MS_TO_SECONDS,
+  };
+}
+
 function capitalize(str: string): string {
   return str.length > 0 ? str.charAt(0).toUpperCase() + str.slice(1) : str;
 }
@@ -82,15 +105,45 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
   const config = useMemo(() => getDashboardConfig(testData), [testData]);
   const instances = useMemo(() => getInstances(testData), [testData]);
   const rawData = useMemo(() => transformSnapshotsToDashboardData(testData), [testData]);
-  const chartData = useMemo(
+  const aggregatedData = useMemo(
     () => aggregateChartData(rawData, config.jobTypes, instances, config.models),
     [rawData, config.jobTypes, instances, config.models]
   );
+  const jobTimeBounds = useMemo(() => getJobTimeBounds(testData), [testData]);
+  const chartData = useMemo(() => {
+    if (!jobTimeBounds) return aggregatedData;
+    return aggregatedData.filter(
+      (p) => p.timeSeconds >= jobTimeBounds.startSeconds && p.timeSeconds <= jobTimeBounds.endSeconds
+    );
+  }, [aggregatedData, jobTimeBounds]);
   const enabledResourceTypes = useMemo(() => getEnabledResourceTypes(testData), [testData]);
 
   const instanceCount = Object.keys(testData.metadata.instances).length;
   const jobTypeCount = Object.keys(testData.summary.byJobType).length;
   const resourceDimensionCount = countResourceDimensions(testData);
+
+  // Debug RPM data
+  console.log('[RPM Debug] Total jobs:', Object.keys(testData.jobs).length);
+  console.log('[RPM Debug] Models:', config.models);
+  console.log('[RPM Debug] Instances:', instances.map((i) => i.shortId));
+
+  // Log raw snapshot RPM values per instance/model
+  for (const snapshot of testData.snapshots.slice(0, 5)) {
+    const t = ((snapshot.timestamp - testData.metadata.startTime) / MS_TO_SECONDS).toFixed(2);
+    for (const [fullId, state] of Object.entries(snapshot.instances)) {
+      const shortId = instances.find((i) => i.fullId === fullId)?.shortId ?? fullId;
+      for (const [modelId, modelState] of Object.entries(state.models)) {
+        console.log(`[RPM Debug] t=${t}s ${shortId} ${modelId}: rpm=${modelState.rpm} rpmRemaining=${modelState.rpmRemaining}`);
+      }
+    }
+  }
+
+  // Log peak aggregated RPM from chart data
+  for (const model of config.models) {
+    const peakRpm = Math.max(...chartData.map((p) => (p[`${model}_rpm`] as number) ?? 0));
+    const peakCap = Math.max(...chartData.map((p) => (p[`${model}_rpmCapacity`] as number) ?? 0));
+    console.log(`[RPM Debug] Aggregated peak for ${model}: rpm=${peakRpm}, rpmCapacity=${peakCap}`);
+  }
 
   const jobUsage = computeJobUsage(testData);
   const capacity = extractCapacity(testData);

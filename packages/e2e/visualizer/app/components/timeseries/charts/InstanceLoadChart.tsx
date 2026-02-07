@@ -20,7 +20,10 @@ interface InstanceLoadChartProps {
 }
 
 const CHART_HEIGHT = 220;
-const TOOLTIP_OFFSET = 10;
+
+function formatTimeTick(seconds: number): string {
+  return `${seconds.toFixed(0)}s`;
+}
 
 export function InstanceLoadChart({ data, instances }: InstanceLoadChartProps) {
   if (data.length === 0 || instances.length === 0) return null;
@@ -33,13 +36,18 @@ export function InstanceLoadChart({ data, instances }: InstanceLoadChartProps) {
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey="time" tick={{ fill: '#888', fontSize: 10 }} interval="preserveStartEnd" />
+          <XAxis
+            dataKey="timeSeconds"
+            type="number"
+            domain={['dataMin', 'dataMax']}
+            tick={{ fill: '#888', fontSize: 10 }}
+            tickFormatter={formatTimeTick}
+          />
           <YAxis tick={{ fill: '#888', fontSize: 10 }} />
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
             labelStyle={{ color: '#eee', fontWeight: 600 }}
-            position={{ y: CHART_HEIGHT + TOOLTIP_OFFSET }}
-            allowEscapeViewBox={{ x: false, y: true }}
+            labelFormatter={(v) => `${Number(v).toFixed(1)}s`}
           />
           {instances.map((inst, i) => (
             <Line
