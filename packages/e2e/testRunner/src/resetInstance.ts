@@ -60,6 +60,7 @@ export type ConfigPresetName =
   | 'mh-escalationConcWait5s'
   | 'high-multiResource'
   | 'high-multiModel'
+  | 'high-twoLayerEqual'
   | 'high-twoLayer'
   | 'high-tpmRpmTracking'
   | 'high-timeWindow'

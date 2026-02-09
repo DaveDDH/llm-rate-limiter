@@ -18,13 +18,13 @@ import {
   AFTER_ALL_TIMEOUT_MS,
   BEFORE_ALL_TIMEOUT_MS,
   ESTIMATED_TOKENS,
-  FORTY_K_TOKENS,
   HTTP_ACCEPTED,
   JOB_COMPLETE_TIMEOUT_MS,
   PORT_A,
   PORT_B,
   SHORT_JOB_DURATION_MS,
   TEST_TIMEOUT_MS,
+  TWENTY_K_TOKENS,
   TWO_SLOTS_PER_INSTANCE,
   ZERO_TOKENS,
   fetchStats,
@@ -66,8 +66,8 @@ describe('Distributed Time Windows - Window Reset', () => {
       await waitForJobsComplete(PORT_A, JOB_COMPLETE_TIMEOUT_MS);
       await waitForJobsComplete(PORT_B, JOB_COMPLETE_TIMEOUT_MS);
 
-      // Verify minute N counter shows 40K tokens used
-      await verifyTpmCounter(PORT_A, FORTY_K_TOKENS);
+      // Verify minute N counter shows 20K tokens used locally (2 of 4 jobs on PORT_A)
+      await verifyTpmCounter(PORT_A, TWENTY_K_TOKENS);
 
       // Wait for minute boundary to pass
       await waitForMinuteBoundary();

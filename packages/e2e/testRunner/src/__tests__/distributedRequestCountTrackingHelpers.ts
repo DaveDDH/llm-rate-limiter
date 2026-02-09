@@ -47,6 +47,7 @@ export const TWO_INSTANCES = 2;
 export const REQUEST_COUNT_THREE = 3;
 export const EXPECTED_TPM_EIGHT_K = 8000;
 export const EXPECTED_RPM_THREE = 3;
+export const JOBS_PER_INSTANCE = 5;
 
 // Timeout constants
 export const BEFORE_ALL_TIMEOUT_MS = 60000;

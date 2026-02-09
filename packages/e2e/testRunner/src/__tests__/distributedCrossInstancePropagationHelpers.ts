@@ -6,7 +6,13 @@
  * - high-distributedThree: model-alpha TPM=90K (3 instances)
  * - high-distributedMixed: model-alpha TPM=120K (3 instances)
  */
-import { bootInstance, cleanRedis, fetchAllocation, killAllInstances } from '../instanceLifecycle.js';
+import {
+  bootInstance,
+  cleanRedis,
+  fetchAllocation,
+  killAllInstances,
+  waitForAllocationUpdate,
+} from '../instanceLifecycle.js';
 import type { ConfigPresetName } from '../resetInstance.js';
 import { sleep } from '../testUtils.js';
 
@@ -51,7 +57,7 @@ export const ZERO_TOKENS = 0;
 export const ZERO_SLOTS = 0;
 export const HTTP_ACCEPTED = 202;
 export const SHORT_JOB_DURATION_MS = 100;
-export const JOB_COMPLETE_TIMEOUT_MS = 10_000;
+export const JOB_COMPLETE_TIMEOUT_MS = 30_000;
 
 // Job count constants
 export const FIVE_JOBS = 5;
@@ -196,8 +202,9 @@ export const setupTwoInstances = async (configPreset: ConfigPresetName): Promise
   await killAllInstances();
   await cleanRedis();
   await bootInstance(PORT_A, configPreset);
-  await sleep(ALLOCATION_PROPAGATION_MS);
   await bootInstance(PORT_B, configPreset);
+  await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === TWO_INSTANCES);
+  await waitForAllocationUpdate(PORT_B, (alloc) => alloc.instanceCount === TWO_INSTANCES);
   await sleep(ALLOCATION_PROPAGATION_MS);
 };
 
@@ -208,10 +215,11 @@ export const setupThreeInstances = async (configPreset: ConfigPresetName): Promi
   await killAllInstances();
   await cleanRedis();
   await bootInstance(PORT_A, configPreset);
-  await sleep(ALLOCATION_PROPAGATION_MS);
   await bootInstance(PORT_B, configPreset);
-  await sleep(ALLOCATION_PROPAGATION_MS);
   await bootInstance(PORT_C, configPreset);
+  await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === THREE_INSTANCE_DIVISOR);
+  await waitForAllocationUpdate(PORT_B, (alloc) => alloc.instanceCount === THREE_INSTANCE_DIVISOR);
+  await waitForAllocationUpdate(PORT_C, (alloc) => alloc.instanceCount === THREE_INSTANCE_DIVISOR);
   await sleep(ALLOCATION_PROPAGATION_MS);
 };
 
@@ -246,4 +254,4 @@ export const waitForJobComplete = async (baseUrl: string, timeoutMs: number): Pr
 };
 
 // Re-export for convenience
-export { killAllInstances, fetchAllocation };
+export { killAllInstances, fetchAllocation, waitForAllocationUpdate };

@@ -18,6 +18,7 @@ import {
   highTimeWindowConfig,
   highTpmRpmTrackingConfig,
   highTwoLayerConfig,
+  highTwoLayerEqualConfig,
 } from './highTestConfigs.js';
 import {
   highestAcquireAtomicityConfig,
@@ -153,6 +154,7 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'mh-escalationConcWait5s': mhEscalationConcWait5sConfig,
   'high-multiResource': highMultiResourceConfig,
   'high-multiModel': highMultiModelConfig,
+  'high-twoLayerEqual': highTwoLayerEqualConfig,
   'high-twoLayer': highTwoLayerConfig,
   'high-tpmRpmTracking': highTpmRpmTrackingConfig,
   'high-timeWindow': highTimeWindowConfig,

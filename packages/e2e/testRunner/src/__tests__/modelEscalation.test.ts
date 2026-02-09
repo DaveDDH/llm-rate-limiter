@@ -12,11 +12,11 @@
  * - 100 capacity jobs sent in parallel (saturates both instances' queues)
  * - Minute 0: 7 start per instance (14 total), remaining queued
  * - Escalation job sent at T=500ms, queued behind capacity jobs
- * - Rate slots don't free on job completion (window counter stays at 7/7)
- * - At minute boundaries, window resets but capacity jobs ahead in queue
- *   consume the new rate slots before the escalation job
+ * - At minute boundaries, window resets and capacity jobs ahead in queue
+ *   consume new rate slots (14 per window). Capacity jobs that exceed
+ *   maxWaitMS (~65s) also escalate to xai.
  * - T=~65s: maxWaitMS expires → escalation job moves to xai/grok-4.1-fast
- * - On xai, the escalation job starts immediately (xai queue is empty)
+ * - On xai, the escalation job starts immediately (xai has ample capacity)
  *
  * Configuration:
  * - openai/gpt-5.2: 500,000 TPM, 500 RPM
@@ -43,6 +43,13 @@ import { ZERO_COUNT, createEmptyTestData } from './testHelpers.js';
 const CAPACITY_JOBS = 100;
 const ESCALATION_JOB_COUNT = 1;
 const TOTAL_JOBS = CAPACITY_JOBS + ESCALATION_JOB_COUNT;
+
+// Model identifiers
+const PRIMARY_MODEL = 'openai/gpt-5.2';
+const SECONDARY_MODEL = 'xai/grok-4.1-fast';
+
+// Rate slots per minute across both instances (7 per instance × 2)
+const RATE_SLOTS_PER_MINUTE = 14;
 
 // Duration longer than maxWaitMS default (~65s) to ensure timeout before completion
 const JOB_DURATION_MS = 60000;
@@ -114,12 +121,16 @@ describe('Model Escalation to Secondary', () => {
     expect(completedJobs.length).toBe(TOTAL_JOBS);
   });
 
-  it('should run all capacity jobs on the primary model', () => {
+  it('should run capacity jobs on primary and secondary models', () => {
     const capacityJobs = Object.values(data.jobs).filter((j) => j.jobId.startsWith('escalation-capacity'));
-    const jobsOnPrimary = capacityJobs.filter((j) => j.modelUsed === 'openai/gpt-5.2');
+    const jobsOnPrimary = capacityJobs.filter((j) => j.modelUsed === PRIMARY_MODEL);
+    const jobsOnSecondary = capacityJobs.filter((j) => j.modelUsed === SECONDARY_MODEL);
 
-    // All 100 capacity jobs should complete on openai
-    expect(jobsOnPrimary.length).toBe(CAPACITY_JOBS);
+    // With 14 rate slots/min and ~65s maxWaitMS, first batches run on openai,
+    // remaining escalate to xai after timeout
+    expect(jobsOnPrimary.length).toBeGreaterThanOrEqual(RATE_SLOTS_PER_MINUTE);
+    // All capacity jobs complete on either primary or secondary
+    expect(jobsOnPrimary.length + jobsOnSecondary.length).toBe(CAPACITY_JOBS);
   });
 
   it('should escalate the test job to the secondary model', () => {
@@ -127,6 +138,6 @@ describe('Model Escalation to Secondary', () => {
     expect(testJob).toBeDefined();
 
     // The test job (job 101) should have escalated to xai
-    expect(testJob?.modelUsed).toBe('xai/grok-4.1-fast');
+    expect(testJob?.modelUsed).toBe(SECONDARY_MODEL);
   });
 });

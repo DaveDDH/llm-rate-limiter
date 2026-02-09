@@ -18,6 +18,7 @@ const REQUESTS_FIVE = 5;
 
 // Ratio constants
 const RATIO_FULL = 1.0;
+const RATIO_HALF = 0.5;
 const RATIO_SIXTY = 0.6;
 const RATIO_FORTY = 0.4;
 
@@ -38,6 +39,7 @@ const RPD_1K = 1000;
 const RPD_10K = 10000;
 
 // maxWaitMS
+const MAX_WAIT_ZERO = 0;
 const MAX_WAIT_60S = 60000;
 
 /**
@@ -80,18 +82,45 @@ export const highMultiModelConfig: RateLimiterPreset = {
       estimatedUsedTokens: TOKENS_10K,
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       ratio: { initialValue: RATIO_SIXTY },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_ZERO },
     },
     jobTypeB: {
       estimatedUsedTokens: TOKENS_10K,
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       ratio: { initialValue: RATIO_FORTY },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_ZERO },
     },
   },
 };
 
 /**
- * 24: Two-layer acquire/release (concurrent-based for clear slot tracking).
- * model-alpha: concurrent=10, 1 instance.
+ * 24.1: Two-layer check with equal ratios.
+ * model-alpha: concurrent=10, ratios 0.5/0.5 → 5 slots each.
+ */
+export const highTwoLayerEqualConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': { maxConcurrentRequests: CONCURRENT_10, pricing: standardPricing },
+  },
+  escalationOrder: ['model-alpha'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_HALF },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
+    },
+    jobTypeB: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_HALF },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
+    },
+  },
+};
+
+/**
+ * 24.2: Two-layer acquire/release (concurrent-based for clear slot tracking).
+ * model-alpha: concurrent=10, ratios 0.6/0.4.
  */
 export const highTwoLayerConfig: RateLimiterPreset = {
   models: {

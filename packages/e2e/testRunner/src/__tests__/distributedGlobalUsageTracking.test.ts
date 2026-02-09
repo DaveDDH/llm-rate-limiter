@@ -35,6 +35,7 @@ import {
   TOKENS_5K,
   TOKENS_10K,
   TOKENS_20K,
+  TOKENS_45K,
   TOKENS_50K,
   TWO_INSTANCES,
   TWO_JOBS,
@@ -45,6 +46,7 @@ import {
   setupTwoInstances,
   submitBatchAndVerify,
   submitJobAndWait,
+  waitForAllocationUpdate,
   waitForJobComplete,
 } from './distributedGlobalUsageTrackingHelpers.js';
 
@@ -70,15 +72,20 @@ describe('Distributed Global Usage - 29.1 Multiple Jobs Accumulate Correctly', (
       await submitJobAndWait(INSTANCE_URL_B, 'job-2', TOKENS_3K);
       await submitJobAndWait(INSTANCE_URL_A, 'job-3', TOKENS_2K);
 
+      // Wait for allocation to reflect global usage
+      const isUpdated = (alloc: { pools: Record<string, { tokensPerMinute: number }> }): boolean =>
+        (alloc.pools[MODEL_ID]?.tokensPerMinute ?? TOKENS_50K) < TOKENS_50K;
+      await waitForAllocationUpdate(PORT_A, isUpdated);
+
       // Total usage: 5K + 3K + 2K = 10K
+      // Remaining: 100K - 10K = 90K, 45K per instance
       const allocA = await fetchAllocation(PORT_A);
       const tpmA = allocA.allocation?.pools[MODEL_ID]?.tokensPerMinute;
       const allocB = await fetchAllocation(PORT_B);
       const tpmB = allocB.allocation?.pools[MODEL_ID]?.tokensPerMinute;
 
-      // Remaining: 100K - 10K = 90K, 45K per instance
-      expect(tpmA).toBe(TOKENS_50K - TOKENS_5K - TOKENS_2K);
-      expect(tpmB).toBe(TOKENS_50K - TOKENS_3K);
+      expect(tpmA).toBe(TOKENS_45K);
+      expect(tpmB).toBe(TOKENS_45K);
     },
     TEST_TIMEOUT_MS
   );
@@ -114,6 +121,11 @@ describe('Distributed Global Usage - 29.2 Global Counter Increments', () => {
       await waitForJobComplete(INSTANCE_URL_A, JOB_COMPLETE_TIMEOUT_MS);
       await waitForJobComplete(INSTANCE_URL_B, JOB_COMPLETE_TIMEOUT_MS);
 
+      // Wait for allocation to reflect global usage
+      const isUpdated = (alloc: { pools: Record<string, { tokensPerMinute: number }> }): boolean =>
+        (alloc.pools[MODEL_ID]?.tokensPerMinute ?? TOKENS_50K) < TOKENS_50K;
+      await waitForAllocationUpdate(PORT_A, isUpdated);
+
       // Total: 5 jobs * 10K = 50K tokens used
       // Remaining: 100K - 50K = 50K, 25K per instance
       const allocA = await fetchAllocation(PORT_A);
@@ -143,6 +155,11 @@ describe('Distributed Global Usage - 29.4 Remaining Capacity Decreases', () => {
 
       // Use 10K tokens on instance A
       await submitJobAndWait(INSTANCE_URL_A, 'test-job', TOKENS_10K);
+
+      // Wait for allocation to reflect global usage on instance B
+      const isUpdated = (alloc: { pools: Record<string, { tokensPerMinute: number }> }): boolean =>
+        (alloc.pools[MODEL_ID]?.tokensPerMinute ?? TOKENS_50K) < TOKENS_50K;
+      await waitForAllocationUpdate(PORT_B, isUpdated);
 
       // Remaining: 100K - 10K = 90K, 45K per instance
       const updatedAlloc = await fetchAllocation(PORT_B);
@@ -183,6 +200,11 @@ describe('Distributed Global Usage - 29.6 Remaining Capacity Formula', () => {
 
       await waitForJobComplete(INSTANCE_URL_A, JOB_COMPLETE_TIMEOUT_MS);
       await waitForJobComplete(INSTANCE_URL_B, JOB_COMPLETE_TIMEOUT_MS);
+
+      // Wait for allocation to reflect global usage
+      const isUpdated = (alloc: { pools: Record<string, { tokensPerMinute: number }> }): boolean =>
+        (alloc.pools[MODEL_ID]?.tokensPerMinute ?? TOKENS_50K) < TOKENS_50K;
+      await waitForAllocationUpdate(PORT_A, isUpdated);
 
       // Remaining: 100K - 60K = 40K, 20K per instance
       const allocA = await fetchAllocation(PORT_A);

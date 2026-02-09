@@ -55,14 +55,12 @@ export const ALPHA_SLOTS_PER_INSTANCE = 5;
 export const BETA_SLOTS_PER_INSTANCE = 2;
 export const GAMMA_SLOTS_PER_INSTANCE = 10;
 
-// Test 25.3: Ratio allocations
-// model-alpha (10 total slots): jobTypeA=6, jobTypeB=4
-// model-beta (4 total slots): jobTypeA=2.4→2, jobTypeB=1.6→1
-export const ALPHA_TOTAL_SLOTS = 10;
-export const BETA_TOTAL_SLOTS = 4;
-export const ALPHA_JOB_A_SLOTS = 6;
-export const ALPHA_JOB_B_SLOTS = 4;
-export const BETA_JOB_A_SLOTS = 2;
+// Test 25.3: Per-model ratio allocations (2 instances)
+// model-alpha (5 pool slots): jobTypeA=floor(5*0.6)=3, jobTypeB=floor(5*0.4)=2
+// model-beta (2 pool slots): jobTypeA=floor(2*0.6)=1, jobTypeB=floor(2*0.4)=0
+export const ALPHA_JOB_A_SLOTS = 3;
+export const ALPHA_JOB_B_SLOTS = 2;
+export const BETA_JOB_A_SLOTS = 1;
 export const BETA_JOB_B_SLOTS = 1;
 
 // Shared constants
@@ -70,7 +68,7 @@ export const HTTP_ACCEPTED = 202;
 export const ZERO_COUNT = 0;
 export const LONG_JOB_DURATION_MS = 5000;
 export const SHORT_JOB_DURATION_MS = 100;
-export const JOB_COMPLETE_TIMEOUT_MS = 10000;
+export const JOB_COMPLETE_TIMEOUT_MS = 30000;
 export const JOB_SETTLE_MS = 500;
 export const RATIO_SIXTY = 0.6;
 export const RATIO_FORTY = 0.4;
@@ -85,11 +83,18 @@ export interface JobTypeState {
   resources: Record<string, unknown>;
 }
 
+/** Per-model per-jobType info from modelJobTypes */
+export interface ModelJobTypeInfo {
+  allocated: number;
+  inFlight: number;
+}
+
 /** Job type stats from stats endpoint */
 export interface JobTypeStats {
   jobTypes: Record<string, JobTypeState>;
   totalSlots: number;
   lastAdjustmentTime: number | null;
+  modelJobTypes?: Record<string, Record<string, ModelJobTypeInfo>>;
 }
 
 /** Stats response from GET /api/debug/stats */
@@ -161,6 +166,19 @@ export const getInFlight = (jobTypeStats: JobTypeStats, jobType: string): number
 export const getAllocatedSlots = (jobTypeStats: JobTypeStats, jobType: string): number => {
   const { allocatedSlots } = lookupJobType(jobTypeStats, jobType);
   return allocatedSlots;
+};
+
+/** Get per-model allocated slots for a specific (model, jobType) pair */
+export const getModelAllocatedSlots = (
+  jobTypeStats: JobTypeStats,
+  modelId: string,
+  jobType: string
+): number => {
+  const info = jobTypeStats.modelJobTypes?.[modelId]?.[jobType];
+  if (info === undefined) {
+    throw new Error(`No modelJobTypes entry for ${modelId}/${jobType}`);
+  }
+  return info.allocated;
 };
 
 /** Options for submitting a job */

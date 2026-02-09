@@ -106,27 +106,23 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
     local rpd = 0
 
     if isValidNumber(model.tokensPerMinute) then
-      local baseAllocation = math.floor(model.tokensPerMinute / instanceCount)
       local remaining = math.max(0, model.tokensPerMinute - usage.tpmUsed)
-      tpm = math.max(baseAllocation, math.floor(remaining / instanceCount))
+      tpm = math.floor(remaining / instanceCount)
       dynamicLimits[modelId].tokensPerMinute = tpm
     end
     if isValidNumber(model.requestsPerMinute) then
-      local baseAllocation = math.floor(model.requestsPerMinute / instanceCount)
       local remaining = math.max(0, model.requestsPerMinute - usage.rpmUsed)
-      rpm = math.max(baseAllocation, math.floor(remaining / instanceCount))
+      rpm = math.floor(remaining / instanceCount)
       dynamicLimits[modelId].requestsPerMinute = rpm
     end
     if isValidNumber(model.tokensPerDay) then
-      local baseAllocation = math.floor(model.tokensPerDay / instanceCount)
       local remaining = math.max(0, model.tokensPerDay - usage.tpdUsed)
-      tpd = math.max(baseAllocation, math.floor(remaining / instanceCount))
+      tpd = math.floor(remaining / instanceCount)
       dynamicLimits[modelId].tokensPerDay = tpd
     end
     if isValidNumber(model.requestsPerDay) then
-      local baseAllocation = math.floor(model.requestsPerDay / instanceCount)
       local remaining = math.max(0, model.requestsPerDay - usage.rpdUsed)
-      rpd = math.max(baseAllocation, math.floor(remaining / instanceCount))
+      rpd = math.floor(remaining / instanceCount)
       dynamicLimits[modelId].requestsPerDay = rpd
     end
 
@@ -138,24 +134,32 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
       table.insert(slotCandidates, math.floor(model.maxConcurrentRequests / instanceCount))
     end
 
-    -- TPM-based slots using average estimated tokens
-    if tpm > 0 then
-      table.insert(slotCandidates, math.floor(tpm / avgEstimates.tokens))
+    -- TPM-based slots using average estimated tokens (min 1 if capacity remains)
+    if isValidNumber(model.tokensPerMinute) then
+      local slots = math.floor(tpm / avgEstimates.tokens)
+      if tpm > 0 and slots < 1 then slots = 1 end
+      table.insert(slotCandidates, slots)
     end
 
-    -- RPM-based slots using average estimated requests
-    if rpm > 0 then
-      table.insert(slotCandidates, math.floor(rpm / avgEstimates.requests))
+    -- RPM-based slots using average estimated requests (min 1 if capacity remains)
+    if isValidNumber(model.requestsPerMinute) then
+      local slots = math.floor(rpm / avgEstimates.requests)
+      if rpm > 0 and slots < 1 then slots = 1 end
+      table.insert(slotCandidates, slots)
     end
 
-    -- TPD-based slots
-    if tpd > 0 then
-      table.insert(slotCandidates, math.floor(tpd / avgEstimates.tokens))
+    -- TPD-based slots (min 1 if capacity remains)
+    if isValidNumber(model.tokensPerDay) then
+      local slots = math.floor(tpd / avgEstimates.tokens)
+      if tpd > 0 and slots < 1 then slots = 1 end
+      table.insert(slotCandidates, slots)
     end
 
-    -- RPD-based slots
-    if rpd > 0 then
-      table.insert(slotCandidates, math.floor(rpd / avgEstimates.requests))
+    -- RPD-based slots (min 1 if capacity remains)
+    if isValidNumber(model.requestsPerDay) then
+      local slots = math.floor(rpd / avgEstimates.requests)
+      if rpd > 0 and slots < 1 then slots = 1 end
+      table.insert(slotCandidates, slots)
     end
 
     -- Use minimum of all candidates or fallback to 100

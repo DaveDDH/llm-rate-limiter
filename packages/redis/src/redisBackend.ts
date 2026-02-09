@@ -109,11 +109,12 @@ class RedisBackendImpl {
     if (this.heartbeatInterval !== null) return;
     const { config, keys, redis, registeredInstances } = this;
     const { heartbeatIntervalMs } = config;
-    const { instances } = keys;
+    const { instances, allocations, channel, modelCapacities, jobTypeResources } = keys;
+    const heartbeatKeys = [instances, allocations, channel, modelCapacities, jobTypeResources];
     this.heartbeatInterval = setInterval(() => {
       const now = String(Date.now());
       for (const instId of registeredInstances) {
-        evalScript(redis, HEARTBEAT_SCRIPT, [instances], [instId, now]).catch(ignoreError);
+        evalScript(redis, HEARTBEAT_SCRIPT, heartbeatKeys, [instId, now]).catch(ignoreError);
       }
     }, heartbeatIntervalMs);
   }

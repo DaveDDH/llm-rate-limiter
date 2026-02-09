@@ -20,13 +20,13 @@ import {
   EXPECTED_RPM_THREE,
   EXPECTED_TPM_EIGHT_K,
   HTTP_ACCEPTED,
+  JOBS_PER_INSTANCE,
   JOB_COMPLETE_TIMEOUT_MS,
   PORT_A,
   PORT_B,
   REQUEST_COUNT_THREE,
   RPM_TRACKING_ESTIMATED_TOKENS,
   SHORT_JOB_DURATION_MS,
-  TEN_JOBS,
   TEST_TIMEOUT_MS,
   TPM_RPM_TRACKING_ESTIMATED_TOKENS,
   fetchStats,
@@ -74,11 +74,11 @@ describe('Distributed Request Count Tracking - RPM Separate from TPM', () => {
       const tpmA = getTokensPerMinute(statsA);
       const rpmA = getRequestsPerMinute(statsA);
 
-      // 10 jobs * 8000 tokens = 80,000 tokens
-      expect(tpmA?.current).toBe(TEN_JOBS * EXPECTED_TPM_EIGHT_K);
+      // 5 local jobs * 8000 tokens = 40,000 tokens (PORT_A processes half)
+      expect(tpmA?.current).toBe(JOBS_PER_INSTANCE * EXPECTED_TPM_EIGHT_K);
 
-      // 10 jobs * 3 requests = 30 requests
-      expect(rpmA?.current).toBe(TEN_JOBS * EXPECTED_RPM_THREE);
+      // 5 local jobs * 3 requests = 15 requests (PORT_A processes half)
+      expect(rpmA?.current).toBe(JOBS_PER_INSTANCE * EXPECTED_RPM_THREE);
     },
     TEST_TIMEOUT_MS
   );

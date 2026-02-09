@@ -14,6 +14,7 @@
  */
 import {
   CONFIG_PRESET,
+  CONFIG_PRESET_EQUAL,
   EXPECTED_RUNNING_TEST_ONE,
   INSTANCE_URL,
   INSTANCE_URL_A,
@@ -54,7 +55,7 @@ afterAll(async () => {
  */
 describe('24.1 Two-Layer Check - Local Then Redis', () => {
   beforeAll(async () => {
-    await setupSingleInstance(CONFIG_PRESET);
+    await setupSingleInstance(CONFIG_PRESET_EQUAL);
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should show correct allocated slots for jobTypeA', async () => {

@@ -6,7 +6,13 @@
  * - jobTypeA: estimatedTokens=10K, estimatedRequests=1, ratio=1.0
  * - 2 instances: floor(100K/10K/2) = 5 slots per instance
  */
-import { bootInstance, cleanRedis, fetchAllocation, killAllInstances } from '../instanceLifecycle.js';
+import {
+  bootInstance,
+  cleanRedis,
+  fetchAllocation,
+  killAllInstances,
+  waitForAllocationUpdate,
+} from '../instanceLifecycle.js';
 import type { ConfigPresetName } from '../resetInstance.js';
 import { sleep } from '../testUtils.js';
 
@@ -39,6 +45,7 @@ export const TOKENS_3K = 3000;
 export const TOKENS_2K = 2000;
 export const TOKENS_10K = 10_000;
 export const TOKENS_20K = 20_000;
+export const TOKENS_45K = 45_000;
 export const TOKENS_50K = 50_000;
 export const TOKENS_60K = 60_000;
 export const TOKENS_1K = 1000;
@@ -170,8 +177,9 @@ export const setupTwoInstances = async (configPreset: ConfigPresetName): Promise
   await killAllInstances();
   await cleanRedis();
   await bootInstance(PORT_A, configPreset);
-  await sleep(ALLOCATION_PROPAGATION_MS);
   await bootInstance(PORT_B, configPreset);
+  await waitForAllocationUpdate(PORT_A, (alloc) => alloc.instanceCount === TWO_INSTANCES);
+  await waitForAllocationUpdate(PORT_B, (alloc) => alloc.instanceCount === TWO_INSTANCES);
   await sleep(ALLOCATION_PROPAGATION_MS);
 };
 
@@ -206,4 +214,4 @@ export const waitForJobComplete = async (baseUrl: string, timeoutMs: number): Pr
 };
 
 // Re-export for convenience
-export { killAllInstances, fetchAllocation };
+export { killAllInstances, fetchAllocation, waitForAllocationUpdate };

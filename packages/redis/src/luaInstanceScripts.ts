@@ -62,13 +62,20 @@ return 'OK'
 `;
 
 /**
- * Send heartbeat to update instance's lastHeartbeat.
- * KEYS: [instances]
+ * Send heartbeat, update lastHeartbeat, and recalculate allocations.
+ * Periodic reallocation ensures allocations stay fresh when time windows reset.
+ * KEYS: [instances, allocations, channel, modelCapacities, jobTypeResources]
  * ARGV: [instanceId, timestamp]
  * Returns: "1" (success) or "0" (instance not found)
  */
 export const HEARTBEAT_SCRIPT = `
+${REALLOCATION_LOGIC}
+
 local instancesKey = KEYS[1]
+local allocationsKey = KEYS[2]
+local channel = KEYS[3]
+local modelCapacitiesKey = KEYS[4]
+local jobTypeResourcesKey = KEYS[5]
 local instanceId = ARGV[1]
 local timestamp = tonumber(ARGV[2])
 
@@ -78,6 +85,8 @@ if not instJson then return "0" end
 local inst = cjson.decode(instJson)
 inst.lastHeartbeat = timestamp
 redis.call('HSET', instancesKey, instanceId, cjson.encode(inst))
+
+recalculateAllocations(instancesKey, allocationsKey, channel, modelCapacitiesKey, jobTypeResourcesKey)
 
 return "1"
 `;

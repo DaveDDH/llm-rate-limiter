@@ -80,6 +80,7 @@ export {
   highMultiResourceConfig,
   highMultiModelConfig,
   highTwoLayerConfig,
+  highTwoLayerEqualConfig,
   highTpmRpmTrackingConfig,
   highRpmTrackingConfig,
   highTimeWindowConfig,

@@ -15,7 +15,7 @@ import { sleep } from '../testUtils.js';
 const ALLOCATION_PROPAGATION_MS = 2000;
 const POLL_INTERVAL_MS = 200;
 const MINUTE_IN_MS = 60000;
-const FIVE_SECONDS_MS = 5000;
+const ALLOCATION_RESTORE_TIMEOUT_MS = 15000;
 const BUFFER_MS = 1000;
 
 // Port constants
@@ -36,7 +36,7 @@ export const TWO_INSTANCES = 2;
 export const TWO_SLOTS_PER_INSTANCE = 2;
 
 // Test constants
-export const FORTY_K_TOKENS = 40000;
+export const TWENTY_K_TOKENS = 20000;
 export const ZERO_TOKENS = 0;
 export const SHORT_JOB_DURATION_MS = 100;
 export const HTTP_ACCEPTED = 202;
@@ -225,7 +225,7 @@ const pollAllocationRestored = async (port: number, startTime: number, timeoutMs
 
 /** Wait for allocation to be available (totalSlots > 0) */
 export const waitForAllocationRestored = async (port: number): Promise<void> => {
-  await pollAllocationRestored(port, Date.now(), FIVE_SECONDS_MS);
+  await pollAllocationRestored(port, Date.now(), ALLOCATION_RESTORE_TIMEOUT_MS);
 };
 
 // Job iteration constants

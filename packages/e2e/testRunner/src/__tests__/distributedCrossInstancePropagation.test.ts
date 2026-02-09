@@ -40,7 +40,6 @@ import {
   TPM_100K,
   TWO_INSTANCES,
   TWO_JOBS,
-  ZERO_SLOTS,
   createJobPromises,
   fetchAllocation,
   killAllInstances,
@@ -48,6 +47,7 @@ import {
   setupTwoInstances,
   submitBatchAndVerify,
   submitSequentialJobs,
+  waitForAllocationUpdate,
   waitForJobComplete,
 } from './distributedCrossInstancePropagationHelpers.js';
 
@@ -171,12 +171,15 @@ describe('30.4 Cumulative Overages Progressively Reduce Capacity', () => {
       await submitSequentialJobs(INSTANCE_URL_A, EIGHT_JOBS, TOKENS_12K);
 
       // After 8 jobs @ 12K each = 96K used, remaining: 4K, per instance: 2K
+      const isUpdated = (alloc: { pools: Record<string, { tokensPerMinute: number }> }): boolean =>
+        (alloc.pools[MODEL_ID]?.tokensPerMinute ?? TPM_100K) <= TOKENS_5K;
+      await waitForAllocationUpdate(PORT_B, isUpdated);
       const allocB = await fetchAllocation(PORT_B);
       const tpmB = allocB.allocation?.pools[MODEL_ID]?.tokensPerMinute;
       const slotsB = allocB.allocation?.pools[MODEL_ID]?.totalSlots;
 
       expect(tpmB).toBeLessThanOrEqual(TOKENS_5K);
-      expect(slotsB).toBe(ZERO_SLOTS);
+      expect(slotsB).toBe(MAX_SLOT_AFTER_OVERAGE);
     },
     TEST_TIMEOUT_MS
   );
@@ -223,9 +226,10 @@ describe('30.5 Mixed Usage Patterns Across Instances', () => {
       await waitForJobComplete(INSTANCE_URL_C, JOB_COMPLETE_TIMEOUT_MS);
 
       // Total: 60K + 10K + 30K = 100K, remaining: 20K, per instance: 6.6K
+      // Slots: floor(6.6K / 10K) = 0, but min 1 slot when remaining > 0
       const allocA = await fetchAllocation(PORT_A);
       const slotsA = allocA.allocation?.pools[MODEL_ID]?.totalSlots;
-      expect(slotsA).toBe(ZERO_SLOTS);
+      expect(slotsA).toBe(MAX_SLOT_AFTER_OVERAGE);
     },
     TEST_TIMEOUT_MS
   );

@@ -20,6 +20,8 @@ import {
   ALPHA_JOB_A_SLOTS,
   ALPHA_JOB_B_SLOTS,
   ALPHA_SLOTS_PER_INSTANCE,
+  BETA_JOB_A_SLOTS,
+  BETA_JOB_B_SLOTS,
   BETA_SLOTS_PER_INSTANCE,
   CONFIG_PRESET,
   GAMMA_SLOTS_PER_INSTANCE,
@@ -41,6 +43,7 @@ import {
   getAllocatedSlots,
   getInFlight,
   getJobTypeStats,
+  getModelAllocatedSlots,
   killAllInstances,
   setupTwoInstances,
   submitJob,
@@ -152,19 +155,19 @@ describe('25.3 Same Ratios Applied Per Model', () => {
   it('should show correct ratio allocation for model-alpha', async () => {
     const stats = await fetchStats(INSTANCE_URL_A);
     const jobTypeStats = getJobTypeStats(stats);
-    const jobASlots = getAllocatedSlots(jobTypeStats, JOB_TYPE_A);
-    const jobBSlots = getAllocatedSlots(jobTypeStats, JOB_TYPE_B);
-    expect(jobASlots).toBe(ALPHA_JOB_A_SLOTS);
-    expect(jobBSlots).toBe(ALPHA_JOB_B_SLOTS);
+    expect(getModelAllocatedSlots(jobTypeStats, MODEL_ALPHA, JOB_TYPE_A)).toBe(ALPHA_JOB_A_SLOTS);
+    expect(getModelAllocatedSlots(jobTypeStats, MODEL_ALPHA, JOB_TYPE_B)).toBe(ALPHA_JOB_B_SLOTS);
+    expect(getModelAllocatedSlots(jobTypeStats, MODEL_BETA, JOB_TYPE_A)).toBe(BETA_JOB_A_SLOTS);
+    expect(getModelAllocatedSlots(jobTypeStats, MODEL_BETA, JOB_TYPE_B)).toBe(BETA_JOB_B_SLOTS);
   });
 
   it('should verify both instances have same allocation', async () => {
     const statsA = await fetchStats(INSTANCE_URL_A);
     const statsB = await fetchStats(INSTANCE_URL_B);
-    const jobTypeStatsA = getJobTypeStats(statsA);
-    const jobTypeStatsB = getJobTypeStats(statsB);
+    const jtmA = getJobTypeStats(statsA);
+    const jtmB = getJobTypeStats(statsB);
 
-    expect(getAllocatedSlots(jobTypeStatsA, JOB_TYPE_A)).toBe(getAllocatedSlots(jobTypeStatsB, JOB_TYPE_A));
-    expect(getAllocatedSlots(jobTypeStatsA, JOB_TYPE_B)).toBe(getAllocatedSlots(jobTypeStatsB, JOB_TYPE_B));
+    expect(getAllocatedSlots(jtmA, JOB_TYPE_A)).toBe(getAllocatedSlots(jtmB, JOB_TYPE_A));
+    expect(getAllocatedSlots(jtmA, JOB_TYPE_B)).toBe(getAllocatedSlots(jtmB, JOB_TYPE_B));
   });
 });

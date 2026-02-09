@@ -32,7 +32,7 @@ export interface ModelJobTypeTracker {
   hasCapacity: (params: HasCapacityParams) => boolean;
   /** Acquire a slot for a (model, jobType) pair. windowMs > 0 means rate-based tracking. */
   acquire: (modelId: string, jobTypeId: string, windowMs: number) => void;
-  /** Release a slot for a (model, jobType) pair. hadRefund=true also decrements window counter. */
+  /** Release a slot for a (model, jobType) pair. Always decrements window counter. */
   release: (modelId: string, jobTypeId: string, hadRefund?: boolean) => void;
   /** Get effective inFlight: window counter for rate-based, concurrent count for concurrency-based */
   getInFlight: (params: HasCapacityParams) => number;
@@ -268,11 +268,9 @@ export const createModelJobTypeTracker = (): ModelJobTypeTracker => {
         incrementWindowCounter(counters.windowCounters, modelId, jobTypeId, windowMs);
       }
     },
-    release: (modelId: string, jobTypeId: string, hadRefund?: boolean) => {
+    release: (modelId: string, jobTypeId: string, _hadRefund?: boolean) => {
       releaseInFlight(counters.modelInFlight, modelId, jobTypeId);
-      if (hadRefund === true) {
-        decrementWindowCounter(counters.windowCounters, modelId, jobTypeId);
-      }
+      decrementWindowCounter(counters.windowCounters, modelId, jobTypeId);
     },
     getInFlight: (params) => resolveSlotState(modelPools, counters, params).inFlight,
     getAllocated: (params) =>

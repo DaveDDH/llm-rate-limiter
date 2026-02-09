@@ -19,21 +19,21 @@ import {
   ALPHA_TPM,
   BEFORE_ALL_TIMEOUT_MS,
   BETA_TPM,
-  EIGHTY_K_TOKENS,
+  FIFTY_K_TOKENS,
   JOB_COMPLETE_TIMEOUT_MS,
   MODEL_ALPHA,
   MODEL_BETA,
   PORT_A,
   TEST_TIMEOUT_MS,
-  TWENTY_K_TOKENS,
   TWO_INSTANCES,
+  ZERO_TOKENS,
   fetchAllocation,
   fetchStats,
   getTokensPerMinute,
   killAllInstances,
   setupTwoInstances,
   submitEightJobsToModel,
-  submitTwoJobsToModel,
+  submitFiveJobs,
   waitForJobsComplete,
 } from './distributedMultiModelTrackingHelpers.js';
 
@@ -57,40 +57,41 @@ describe('Distributed Multi-Model Tracking - Independent Tracking', () => {
   it(
     'should track multiple models independently',
     async () => {
-      // Use 80K tokens on model-alpha (8 jobs)
-      await submitEightJobsToModel(PORT_A, MODEL_ALPHA, 'alpha-job');
-
-      // Use 20K tokens on model-beta (2 jobs)
-      await submitTwoJobsToModel(PORT_A, MODEL_BETA, 'beta-job');
+      // Submit 5 jobs (all go to alpha via escalation order, 5 slots per instance)
+      await submitFiveJobs(PORT_A, 'alpha-job');
 
       // Wait for all jobs to complete
       await waitForJobsComplete(PORT_A, JOB_COMPLETE_TIMEOUT_MS);
 
-      // Verify independent tracking
+      // Verify independent tracking: alpha has usage, beta is unaffected
       const stats = await fetchStats(PORT_A);
       const alphaTpm = getTokensPerMinute(stats, MODEL_ALPHA);
       const betaTpm = getTokensPerMinute(stats, MODEL_BETA);
 
-      expect(alphaTpm?.current).toBe(EIGHTY_K_TOKENS);
-      expect(betaTpm?.current).toBe(TWENTY_K_TOKENS);
+      // 5 jobs * 10K = 50K tokens on alpha
+      expect(alphaTpm?.current).toBe(FIFTY_K_TOKENS);
+      // Beta counter is independent (no jobs routed to beta)
+      expect(betaTpm?.current ?? ZERO_TOKENS).toBe(ZERO_TOKENS);
     },
     TEST_TIMEOUT_MS
   );
 
   it('should have independent remaining capacity per model', async () => {
-    // Query allocations on instance B
-    const allocationB = await fetchAllocation(PORT_A);
+    // Query allocations
+    const allocation = await fetchAllocation(PORT_A);
 
     // Verify instance count
-    expect(allocationB.allocation?.instanceCount).toBe(TWO_INSTANCES);
+    expect(allocation.allocation?.instanceCount).toBe(TWO_INSTANCES);
 
     // Verify both models have pool allocations
-    const alphaPool = allocationB.allocation?.pools[MODEL_ALPHA];
-    const betaPool = allocationB.allocation?.pools[MODEL_BETA];
+    const alphaPool = allocation.allocation?.pools[MODEL_ALPHA];
+    const betaPool = allocation.allocation?.pools[MODEL_BETA];
 
     expect(alphaPool).toBeDefined();
     expect(betaPool).toBeDefined();
+    // Alpha has remaining capacity (50K used of 100K)
     expect(alphaPool?.totalSlots).toBeGreaterThan(MIN_SLOTS);
+    // Beta is completely unaffected
     expect(betaPool?.totalSlots).toBeGreaterThan(MIN_SLOTS);
   });
 });
@@ -107,7 +108,7 @@ describe('Distributed Multi-Model Tracking - Capacity Calculation', () => {
   it(
     'should calculate remaining capacity independently per model',
     async () => {
-      // Use capacity on model-alpha only
+      // Use capacity on model-alpha only (all jobs go to alpha via escalation)
       await submitEightJobsToModel(PORT_A, MODEL_ALPHA, 'capacity-alpha');
 
       await waitForJobsComplete(PORT_A, JOB_COMPLETE_TIMEOUT_MS);
@@ -117,7 +118,7 @@ describe('Distributed Multi-Model Tracking - Capacity Calculation', () => {
       const alphaTpm = getTokensPerMinute(stats, MODEL_ALPHA);
       const betaTpm = getTokensPerMinute(stats, MODEL_BETA);
 
-      // model-alpha: (100K - 80K) / 2 instances = 10K per instance
+      // model-alpha: used capacity, remaining should be less than half the total
       expect(alphaTpm?.remaining).toBeLessThan(ALPHA_TPM / TWO_INSTANCES);
 
       // model-beta: (50K - 0) / 2 instances = 25K per instance (unchanged)

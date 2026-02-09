@@ -34,10 +34,8 @@ export const ESTIMATED_TOKENS = 10000;
 export const TWO_INSTANCES = 2;
 
 // Test constants
-export const EIGHTY_K_TOKENS = 80000;
-export const TWENTY_K_TOKENS = 20000;
-export const ALPHA_EXPECTED_REMAINING = 10000;
-export const BETA_EXPECTED_REMAINING = 15000;
+export const FIFTY_K_TOKENS = 50000;
+export const ZERO_TOKENS = 0;
 export const SHORT_JOB_DURATION_MS = 100;
 export const HTTP_ACCEPTED = 202;
 export const JOB_COMPLETE_TIMEOUT_MS = 10000;
@@ -180,8 +178,8 @@ export const waitForJobsComplete = async (port: number, timeoutMs: number): Prom
 };
 
 // Job iteration constants
+const FIVE_JOBS = 5;
 const EIGHT_JOBS = 8;
-const TWO_JOBS = 2;
 const TOKEN_HALF = 5000;
 
 /** Submit a single job and verify acceptance */
@@ -205,6 +203,15 @@ const submitAndVerifyJob = async (
   }
 };
 
+/** Submit 5 jobs (fits exactly in alpha's per-instance slot count) */
+export const submitFiveJobs = async (port: number, prefix: string): Promise<void> => {
+  await Promise.all(
+    Array.from({ length: FIVE_JOBS }, async (_, i) => {
+      await submitAndVerifyJob(port, MODEL_ALPHA, prefix, i);
+    })
+  );
+};
+
 /** Submit 8 jobs to a model */
 export const submitEightJobsToModel = async (
   port: number,
@@ -213,15 +220,6 @@ export const submitEightJobsToModel = async (
 ): Promise<void> => {
   await Promise.all(
     Array.from({ length: EIGHT_JOBS }, async (_, i) => {
-      await submitAndVerifyJob(port, modelId, prefix, i);
-    })
-  );
-};
-
-/** Submit 2 jobs to a model */
-export const submitTwoJobsToModel = async (port: number, modelId: string, prefix: string): Promise<void> => {
-  await Promise.all(
-    Array.from({ length: TWO_JOBS }, async (_, i) => {
       await submitAndVerifyJob(port, modelId, prefix, i);
     })
   );

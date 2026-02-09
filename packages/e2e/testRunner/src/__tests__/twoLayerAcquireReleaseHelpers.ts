@@ -22,7 +22,8 @@ export const INSTANCE_URL = `http://localhost:${INSTANCE_PORT}`;
 export const INSTANCE_URL_A = `http://localhost:${INSTANCE_PORT_A}`;
 export const INSTANCE_URL_B = `http://localhost:${INSTANCE_PORT_B}`;
 
-// Config preset
+// Config presets
+export const CONFIG_PRESET_EQUAL: ConfigPresetName = 'high-twoLayerEqual';
 export const CONFIG_PRESET: ConfigPresetName = 'high-twoLayer';
 
 // Model and job type identifiers
@@ -38,7 +39,7 @@ export const TOTAL_SLOTS_SINGLE = 10;
 export const TOTAL_SLOTS_TWO_INSTANCES = 5;
 
 // Test 24.1: Two-layer check (single instance)
-export const JOB_TYPE_A_SLOTS_SINGLE = 6;
+export const JOB_TYPE_A_SLOTS_SINGLE = 5;
 export const SUBMIT_COUNT_TEST_ONE = 6;
 export const EXPECTED_RUNNING_TEST_ONE = 5;
 export const EXPECTED_QUEUED_TEST_ONE = 1;
