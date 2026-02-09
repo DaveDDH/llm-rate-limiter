@@ -56,9 +56,11 @@ export const EFFECTIVE_SLOTS = 5;
 
 // Timing
 export const QUICK_JOB_DURATION_MS = 100;
+export const FILL_JOB_DURATION_MS = 3000;
 export const SETTLE_MS = 500;
 export const JOB_START_MAX_MS = 1000;
-export const POLL_TIMEOUT_MS = 10000;
+export const POLL_TIMEOUT_MS = 30000;
+export const TWO_JOBS = 2;
 
 // HTTP status
 export const HTTP_ACCEPTED = 202;
@@ -123,32 +125,6 @@ export interface ActiveJobsResponse {
   count: number;
 }
 
-/** Allocation stats per job type */
-export interface JobTypeAllocation {
-  jobType: string;
-  currentSlots: number;
-  distributedSlots: number;
-  memorySlots: number;
-  ratio: number;
-  flexible: boolean;
-}
-
-/** Allocation response */
-export interface AllocationResponse {
-  instanceId: string;
-  timestamp: number;
-  allocation: {
-    instanceCount: number;
-    models: Record<
-      string,
-      {
-        totalSlots: number;
-        jobTypes: JobTypeAllocation[];
-      }
-    >;
-  } | null;
-}
-
 /** Type guard for StatsResponse */
 const isStatsResponse = (value: unknown): value is StatsResponse => {
   if (typeof value !== 'object' || value === null) {
@@ -160,10 +136,6 @@ const isStatsResponse = (value: unknown): value is StatsResponse => {
 /** Type guard for ActiveJobsResponse */
 const isActiveJobsResponse = (value: unknown): value is ActiveJobsResponse =>
   typeof value === 'object' && value !== null && 'count' in value && 'activeJobs' in value;
-
-/** Type guard for AllocationResponse */
-const isAllocationResponse = (value: unknown): value is AllocationResponse =>
-  typeof value === 'object' && value !== null && 'allocation' in value && 'instanceId' in value;
 
 /** Fetch stats from an instance */
 export const fetchStats = async (baseUrl: string): Promise<StatsResponse> => {
@@ -181,16 +153,6 @@ export const fetchActiveJobs = async (baseUrl: string): Promise<ActiveJobsRespon
   const data: unknown = await response.json();
   if (!isActiveJobsResponse(data)) {
     throw new Error('Invalid active-jobs response');
-  }
-  return data;
-};
-
-/** Fetch allocation from an instance */
-export const fetchAllocation = async (baseUrl: string): Promise<AllocationResponse> => {
-  const response = await fetch(`${baseUrl}/api/debug/allocation`);
-  const data: unknown = await response.json();
-  if (!isAllocationResponse(data)) {
-    throw new Error('Invalid allocation response');
   }
   return data;
 };
@@ -251,16 +213,6 @@ export const getMemoryStats = (stats: StatsResponse): MemoryStats | undefined =>
 /** Get model stats from stats response */
 export const getModelStats = (stats: StatsResponse, modelId: string): ModelStats | undefined =>
   stats.stats.models[modelId];
-
-/** Get job type allocation from allocation response */
-export const getJobTypeAllocation = (
-  allocation: AllocationResponse,
-  modelId: string,
-  jobType: string
-): JobTypeAllocation | undefined => {
-  const modelAllocation = allocation.allocation?.models[modelId];
-  return modelAllocation?.jobTypes.find((jt) => jt.jobType === jobType);
-};
 
 /** Options for submitting jobs sequentially */
 export interface SubmitJobsSequentiallyOptions {

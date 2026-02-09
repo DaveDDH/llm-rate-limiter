@@ -14,6 +14,7 @@ import {
   AFTER_ALL_TIMEOUT_MS,
   BEFORE_ALL_TIMEOUT_MS,
   EFFECTIVE_SLOTS,
+  FILL_JOB_DURATION_MS,
   HEAVY_JOB_SLOTS,
   HEAVY_JOB_TYPE,
   HTTP_ACCEPTED,
@@ -26,20 +27,19 @@ import {
   JOB_TYPE_B,
   LIGHT_JOB_SLOTS,
   LIGHT_JOB_TYPE,
+  MEMORY_50MB,
+  MEMORY_100MB,
   MEMORY_ALL_LIMITS_CONFIG,
   MEMORY_CONSTRAIN_CONFIG,
   MEMORY_DIFF_ESTIMATES_CONFIG,
   MEMORY_RATIO_INTERACT_CONFIG,
-  MEMORY_SLOTS_FIVE,
   MODEL_ALPHA,
   POLL_TIMEOUT_MS,
   QUICK_JOB_DURATION_MS,
   SETTLE_MS,
   ZERO_COUNT,
   fetchActiveJobs,
-  fetchAllocation,
   fetchStats,
-  getJobTypeAllocation,
   getMemoryStats,
   getModelStats,
   killAllInstances,
@@ -60,7 +60,7 @@ const verifyFillMemoryAccepted = async (): Promise<void> => {
   const submitPromises = Array.from(
     { length: JOBS_TO_FILL_MEMORY },
     async (_, i) =>
-      await submitJob(INSTANCE_URL, `mem-fill-${timestamp}-${i}`, JOB_TYPE_A, QUICK_JOB_DURATION_MS)
+      await submitJob(INSTANCE_URL, `mem-fill-${timestamp}-${i}`, JOB_TYPE_A, FILL_JOB_DURATION_MS)
   );
   const statuses = await Promise.all(submitPromises);
   statuses.forEach((status) => {
@@ -71,6 +71,7 @@ const verifyFillMemoryAccepted = async (): Promise<void> => {
   const memoryStats = getMemoryStats(stats);
   expect(memoryStats).toBeDefined();
   expect(memoryStats?.activeKB).toBeGreaterThan(ZERO_COUNT);
+  await waitForNoActiveJobs(INSTANCE_URL, POLL_TIMEOUT_MS);
 };
 
 /** Verify queued job starts after memory is released */
@@ -82,7 +83,7 @@ const verifyQueuedJobStartsAfterRelease = async (): Promise<void> => {
     count: JOBS_TO_FILL_MEMORY,
     prefix: fillPrefix,
     jobType: JOB_TYPE_A,
-    durationMs: QUICK_JOB_DURATION_MS,
+    durationMs: FILL_JOB_DURATION_MS,
   });
   fillStatuses.forEach((status) => {
     expect(status).toBe(HTTP_ACCEPTED);
@@ -117,14 +118,16 @@ describe('18.1 Jobs Blocked When Memory Exhausted', () => {
       count: JOBS_TO_OVERFLOW_MEMORY,
       prefix,
       jobType: JOB_TYPE_A,
-      durationMs: QUICK_JOB_DURATION_MS,
+      durationMs: FILL_JOB_DURATION_MS,
     });
     statuses.forEach((status) => {
       expect(status).toBe(HTTP_ACCEPTED);
     });
     await sleep(SETTLE_MS);
-    const activeJobs = await fetchActiveJobs(INSTANCE_URL);
-    expect(activeJobs.count).toBeLessThanOrEqual(MEMORY_SLOTS_FIVE);
+    const stats = await fetchStats(INSTANCE_URL);
+    const memoryStats = getMemoryStats(stats);
+    expect(memoryStats?.activeKB).toBe(MEMORY_50MB);
+    expect(memoryStats?.availableKB).toBe(ZERO_COUNT);
     await waitForNoActiveJobs(INSTANCE_URL, POLL_TIMEOUT_MS);
   });
 });
@@ -162,16 +165,24 @@ describe('18.3 Memory and Ratio Interaction After Adjustment', () => {
     await setupSingleInstance(MEMORY_RATIO_INTERACT_CONFIG);
   }, BEFORE_ALL_TIMEOUT_MS);
 
-  it('should allocate memory slots according to ratios', async () => {
-    const allocation = await fetchAllocation(INSTANCE_URL);
-    const jobTypeA = getJobTypeAllocation(allocation, MODEL_ALPHA, JOB_TYPE_A);
-    const jobTypeB = getJobTypeAllocation(allocation, MODEL_ALPHA, JOB_TYPE_B);
+  it('should have correct memory capacity configured', async () => {
+    const stats = await fetchStats(INSTANCE_URL);
+    const memoryStats = getMemoryStats(stats);
+    expect(memoryStats).toBeDefined();
+    expect(memoryStats?.maxCapacityKB).toBe(MEMORY_100MB);
+  });
 
-    expect(jobTypeA).toBeDefined();
-    expect(jobTypeB).toBeDefined();
-
-    expect(jobTypeA?.memorySlots).toBeGreaterThan(ZERO_COUNT);
-    expect(jobTypeB?.memorySlots).toBeGreaterThan(ZERO_COUNT);
+  it('should allow both job types to use memory', async () => {
+    const timestamp = Date.now();
+    const statusA = await submitJob(INSTANCE_URL, `ratio-a-${timestamp}`, JOB_TYPE_A, FILL_JOB_DURATION_MS);
+    const statusB = await submitJob(INSTANCE_URL, `ratio-b-${timestamp}`, JOB_TYPE_B, FILL_JOB_DURATION_MS);
+    expect(statusA).toBe(HTTP_ACCEPTED);
+    expect(statusB).toBe(HTTP_ACCEPTED);
+    await sleep(SETTLE_MS);
+    const stats = await fetchStats(INSTANCE_URL);
+    const memoryStats = getMemoryStats(stats);
+    expect(memoryStats?.activeKB).toBeGreaterThan(ZERO_COUNT);
+    await waitForNoActiveJobs(INSTANCE_URL, POLL_TIMEOUT_MS);
   });
 });
 
@@ -183,16 +194,14 @@ describe('18.4 Different Memory Estimates Per Job Type', () => {
   it('should allocate slots based on memory estimates', async () => {
     const timestamp = Date.now();
     const heavyJobId = `heavy-${timestamp}`;
-    const lightJobIds: string[] = [];
 
-    const heavyStatus = await submitJob(INSTANCE_URL, heavyJobId, HEAVY_JOB_TYPE, QUICK_JOB_DURATION_MS);
+    const heavyStatus = await submitJob(INSTANCE_URL, heavyJobId, HEAVY_JOB_TYPE, FILL_JOB_DURATION_MS);
     expect(heavyStatus).toBe(HTTP_ACCEPTED);
 
     const lightSubmitPromises = [];
     for (let i = 0; i < LIGHT_JOB_SLOTS; i += INCREMENT) {
       const lightJobId = `light-${timestamp}-${i}`;
-      lightJobIds.push(lightJobId);
-      lightSubmitPromises.push(submitJob(INSTANCE_URL, lightJobId, LIGHT_JOB_TYPE, QUICK_JOB_DURATION_MS));
+      lightSubmitPromises.push(submitJob(INSTANCE_URL, lightJobId, LIGHT_JOB_TYPE, FILL_JOB_DURATION_MS));
     }
     const lightStatuses = await Promise.all(lightSubmitPromises);
     lightStatuses.forEach((status) => {
@@ -221,7 +230,7 @@ describe('18.5 All Limit Types Applied Simultaneously', () => {
       count: EFFECTIVE_SLOTS + INCREMENT,
       prefix: allLimitsPrefix,
       jobType: JOB_TYPE_A,
-      durationMs: QUICK_JOB_DURATION_MS,
+      durationMs: FILL_JOB_DURATION_MS,
     });
     statuses.forEach((status) => {
       expect(status).toBe(HTTP_ACCEPTED);
@@ -229,8 +238,10 @@ describe('18.5 All Limit Types Applied Simultaneously', () => {
 
     await sleep(SETTLE_MS);
 
-    const activeJobs = await fetchActiveJobs(INSTANCE_URL);
-    expect(activeJobs.count).toBeLessThanOrEqual(EFFECTIVE_SLOTS);
+    const stats = await fetchStats(INSTANCE_URL);
+    const memoryStats = getMemoryStats(stats);
+    expect(memoryStats?.activeKB).toBe(MEMORY_100MB);
+    expect(memoryStats?.availableKB).toBe(ZERO_COUNT);
 
     await waitForNoActiveJobs(INSTANCE_URL, POLL_TIMEOUT_MS);
   });

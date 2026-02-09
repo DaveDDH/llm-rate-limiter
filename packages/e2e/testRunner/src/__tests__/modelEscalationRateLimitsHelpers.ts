@@ -30,7 +30,7 @@ export const JOB_TYPE_A = 'jobTypeA';
 
 // Timing
 export const QUICK_JOB_DURATION_MS = 100;
-export const LONG_JOB_DURATION_MS = 60000;
+export const LONG_JOB_DURATION_MS = 3000;
 export const SETTLE_MS = 500;
 export const JOB_COMPLETE_TIMEOUT_MS = 10000;
 

@@ -20,7 +20,6 @@ const RATIO_HALF = 0.5;
 
 // Capacity constants
 const TPM_10K = 10000;
-const TPM_50K = 50000;
 const TPM_100K = 100000;
 const TPM_10M = 10000000;
 const RPM_1 = 1;
@@ -84,12 +83,14 @@ export const mhMemoryRatioInteractConfig: RateLimiterPreset = {
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       estimatedUsedMemoryKB: MEMORY_10MB_KB,
       ratio: { initialValue: RATIO_HALF, flexible: true },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
     },
     jobTypeB: {
       estimatedUsedTokens: TOKENS_10K,
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       estimatedUsedMemoryKB: MEMORY_10MB_KB,
       ratio: { initialValue: RATIO_HALF, flexible: true },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
     },
   },
   memory: { maxMemoryKB: MEMORY_100MB_KB, freeMemoryRatio: FREE_MEMORY_RATIO },
@@ -110,12 +111,14 @@ export const mhMemoryDiffEstimatesConfig: RateLimiterPreset = {
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       estimatedUsedMemoryKB: MEMORY_50MB_ESTIMATE_KB,
       ratio: { initialValue: RATIO_HALF },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
     },
     lightJob: {
       estimatedUsedTokens: TOKENS_10K,
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       estimatedUsedMemoryKB: MEMORY_5MB_KB,
       ratio: { initialValue: RATIO_HALF },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
     },
   },
   memory: { maxMemoryKB: MEMORY_100MB_KB, freeMemoryRatio: FREE_MEMORY_RATIO },
@@ -123,12 +126,12 @@ export const mhMemoryDiffEstimatesConfig: RateLimiterPreset = {
 
 /**
  * 18.5: All limit types applied simultaneously.
- * 1 instance: TPM=50K, RPM=10, concurrent=8, memory=100MB, estimated=20MB.
+ * 1 instance: TPM=10M, RPM=10, concurrent=8, memory=100MB/20MB=5 (most restrictive).
  */
 export const mhMemoryAllLimitsConfig: RateLimiterPreset = {
   models: {
     'model-alpha': {
-      tokensPerMinute: TPM_50K,
+      tokensPerMinute: TPM_10M,
       requestsPerMinute: RPM_10,
       maxConcurrentRequests: CONCURRENT_8,
       pricing: standardPricing,
@@ -141,13 +144,14 @@ export const mhMemoryAllLimitsConfig: RateLimiterPreset = {
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       estimatedUsedMemoryKB: MEMORY_20MB_KB,
       ratio: { initialValue: RATIO_FULL },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
     },
   },
   memory: { maxMemoryKB: MEMORY_100MB_KB, freeMemoryRatio: FREE_MEMORY_RATIO },
 };
 
 /**
- * 19.3/19.4/19.6: Three-model escalation, maxWaitMS=0 on first two.
+ * 19.3/19.4/19.6: Three-model escalation, maxWaitMS=0 on all models.
  */
 export const mhEscalationThreeModelConfig: RateLimiterPreset = {
   models: {
@@ -161,7 +165,11 @@ export const mhEscalationThreeModelConfig: RateLimiterPreset = {
       estimatedUsedTokens: TOKENS_10K,
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       ratio: { initialValue: RATIO_FULL },
-      maxWaitMS: { 'model-alpha': MAX_WAIT_ZERO, 'model-beta': MAX_WAIT_ZERO },
+      maxWaitMS: {
+        'model-alpha': MAX_WAIT_ZERO,
+        'model-beta': MAX_WAIT_ZERO,
+        'model-gamma': MAX_WAIT_ZERO,
+      },
     },
   },
 };
