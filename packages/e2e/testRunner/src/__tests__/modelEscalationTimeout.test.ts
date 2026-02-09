@@ -42,6 +42,7 @@ import {
   submitFillJobsWithSettle,
   submitJob,
   waitForNoActiveJobs,
+  waitForSafeMinuteWindow,
 } from './modelEscalationTimeoutHelpers.js';
 
 afterAll(async () => {
@@ -54,6 +55,7 @@ describe('21.1 Escalation After maxWaitMS Timeout', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should escalate to beta after 5s wait on alpha', async () => {
+    await waitForSafeMinuteWindow();
     const timestamp = Date.now();
     const fillJobId = `timeout-fill-${timestamp}`;
     const waitJobId = `timeout-wait-${timestamp}`;
@@ -87,6 +89,7 @@ describe('21.2 Multiple Timeout Escalations', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should escalate through multiple models with timeouts', async () => {
+    await waitForSafeMinuteWindow();
     const timestamp = Date.now();
     const fillAlphaId = `multi-fill-alpha-${timestamp}`;
     const fillBetaId = `multi-fill-beta-${timestamp}`;
@@ -118,6 +121,7 @@ describe('21.3 Reject After All Timeouts', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should reject after exhausting all models and timeouts', async () => {
+    await waitForSafeMinuteWindow();
     const timestamp = Date.now();
     const fillPrefix = `reject-fill-${timestamp}`;
     await submitFillJobsWithSettle({

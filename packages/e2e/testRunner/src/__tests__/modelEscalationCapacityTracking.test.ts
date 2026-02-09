@@ -35,6 +35,7 @@ import {
   sleep,
   submitJob,
   waitForNoActiveJobs,
+  waitForSafeMinuteWindow,
 } from './modelEscalationCapacityTrackingHelpers.js';
 
 afterAll(async () => {
@@ -47,6 +48,7 @@ describe('22.1 Primary Model Not Charged When Escalating', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should not charge alpha TPM when job escalates to beta', async () => {
+    await waitForSafeMinuteWindow();
     const timestamp = Date.now();
     const fillJobId = `tracking-fill-${timestamp}`;
     const escalateJobId = `tracking-escalate-${timestamp}`;
@@ -79,6 +81,7 @@ describe('22.3 Same Job Not Counted Twice', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should count escalated job only in beta', async () => {
+    await waitForSafeMinuteWindow();
     const timestamp = Date.now();
     const fillJobId = `double-fill-${timestamp}`;
     const escalateJobId = `double-escalate-${timestamp}`;
@@ -108,6 +111,7 @@ describe('22.4 Callback Receives Escalated Model ID', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should record beta as modelUsed in job history', async () => {
+    await waitForSafeMinuteWindow();
     const timestamp = Date.now();
     const fillJobId = `callback-fill-${timestamp}`;
     const escalateJobId = `callback-escalate-${timestamp}`;

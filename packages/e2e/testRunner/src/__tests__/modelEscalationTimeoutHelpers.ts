@@ -10,6 +10,8 @@ import { sleep } from '../testUtils.js';
 // Timing constants
 const ALLOCATION_PROPAGATION_MS = 2000;
 const POLL_INTERVAL_MS = 200;
+const MINUTE_MS = 60000;
+const SAFE_WINDOW_MS = 15000;
 
 // Instance constants
 export const INSTANCE_PORT = 3001;
@@ -198,6 +200,14 @@ export const submitFillJobsWithSettle = async (options: SubmitFillJobsOptions): 
     },
     Promise.resolve([] as string[])
   );
+};
+
+/** Wait until at least SAFE_WINDOW_MS remain in the current TPM minute window */
+export const waitForSafeMinuteWindow = async (): Promise<void> => {
+  const msRemaining = MINUTE_MS - (Date.now() % MINUTE_MS);
+  if (msRemaining < SAFE_WINDOW_MS) {
+    await sleep(msRemaining + SETTLE_MS);
+  }
 };
 
 // Re-export for convenience

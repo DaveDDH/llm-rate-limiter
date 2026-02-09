@@ -10,6 +10,8 @@ import { sleep } from '../testUtils.js';
 // Timing constants
 const ALLOCATION_PROPAGATION_MS = 2000;
 const POLL_INTERVAL_MS = 200;
+const MINUTE_MS = 60000;
+const SAFE_WINDOW_MS = 15000;
 
 // Instance constants
 export const INSTANCE_PORT = 3001;
@@ -208,6 +210,14 @@ export const findJobById = (history: HistoricalJob[], jobId: string): Historical
 /** Get TPM counter for a model */
 export const getTokensPerMinute = (stats: StatsResponse, modelId: string): ModelCounterStats | undefined =>
   stats.stats.models[modelId]?.tokensPerMinute;
+
+/** Wait until at least SAFE_WINDOW_MS remain in the current TPM minute window */
+export const waitForSafeMinuteWindow = async (): Promise<void> => {
+  const msRemaining = MINUTE_MS - (Date.now() % MINUTE_MS);
+  if (msRemaining < SAFE_WINDOW_MS) {
+    await sleep(msRemaining + SETTLE_MS);
+  }
+};
 
 // Re-export for convenience
 export { killAllInstances } from '../instanceLifecycle.js';

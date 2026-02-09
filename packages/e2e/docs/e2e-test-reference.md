@@ -29,12 +29,12 @@ This document provides detailed documentation for each e2e test file, including 
 | `maxWaitMsBehaviorAdditional.test.ts` | [Medium](./complexity-medium.md#14-maxwaitms-behavior) | [x] | [x] |
 | `slotsEvolveWithLoad.test.ts` | [Medium](./complexity-medium.md#15-slots-evolve-with-load-test) | [x] | [x] |
 | `fixedRatioProtection.test.ts` | [Medium](./complexity-medium.md#16-fixed-ratio-protection) | [x] | [x] |
-| `flexibleRatioAdjustment.test.ts` | [Medium-High](./complexity-medium-high.md#17-flexible-ratio-adjustment-test) | [ ] | [ ] |
-| `memoryConstraintEnforcement.test.ts` | [Medium-High](./complexity-medium-high.md#18-memory-constraint-enforcement) | [ ] | [ ] |
-| `modelEscalationBasic.test.ts` | [Medium-High](./complexity-medium-high.md#19-model-escalation---basic) | [ ] | [ ] |
-| `modelEscalationRateLimits.test.ts` | [Medium-High](./complexity-medium-high.md#20-model-escalation---rate-limit-types) | [ ] | [ ] |
-| `modelEscalationTimeout.test.ts` | [Medium-High](./complexity-medium-high.md#21-model-escalation---timeout) | [ ] | [ ] |
-| `modelEscalationCapacityTracking.test.ts` | [Medium-High](./complexity-medium-high.md#22-model-escalation---capacity-tracking) | [ ] | [ ] |
+| `flexibleRatioAdjustment.test.ts` | [Medium-High](./complexity-medium-high.md#17-flexible-ratio-adjustment-test) | [x] | [x] |
+| `memoryConstraintEnforcement.test.ts` | [Medium-High](./complexity-medium-high.md#18-memory-constraint-enforcement) | [x] | [x] |
+| `modelEscalationBasic.test.ts` | [Medium-High](./complexity-medium-high.md#19-model-escalation---basic) | [x] | [x] |
+| `modelEscalationRateLimits.test.ts` | [Medium-High](./complexity-medium-high.md#20-model-escalation---rate-limit-types) | [x] | [x] |
+| `modelEscalationTimeout.test.ts` | [Medium-High](./complexity-medium-high.md#21-model-escalation---timeout) | [x] | [x] |
+| `modelEscalationCapacityTracking.test.ts` | [Medium-High](./complexity-medium-high.md#22-model-escalation---capacity-tracking) | [x] | [x] |
 | `instanceScaling.test.ts` | [High](./complexity-high.md#23-instance-scaling-test) | [ ] | [ ] |
 | `twoLayerAcquireRelease.test.ts` | [High](./complexity-high.md#24-two-layer-acquirerelease) | [ ] | [ ] |
 | `multiModelIndependence.test.ts` | [High](./complexity-high.md#25-multi-model-independence) | [ ] | [ ] |
