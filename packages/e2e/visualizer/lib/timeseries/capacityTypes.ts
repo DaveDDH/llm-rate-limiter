@@ -7,8 +7,10 @@ export interface CapacityMetric {
   key: string;
   /** Display label */
   label: string;
-  /** Usage value key in chart data */
+  /** Usage value key in chart data (running jobs) */
   usageKey: string;
+  /** Queued jobs value key in chart data */
+  queuedKey: string;
   /** Capacity value key in chart data */
   capacityKey: string;
   /** Slots value key in chart data (optional) */

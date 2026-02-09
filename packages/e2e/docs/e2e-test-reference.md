@@ -8,6 +8,7 @@ This document provides detailed documentation for each e2e test file, including 
 |-----------|------------|:-----------:|:-------:|
 | `infrastructureBoot.test.ts` | [Lowest](./complexity-lowest.md) | [x] | [x] |
 | `slotCalculation.test.ts` | [Low](./complexity-low.md#1-pool-slot-calculation) | [x] | [x] |
+| `slotCalculationAdditional.test.ts` | [Low](./complexity-low.md#1-pool-slot-calculation) | [x] | [x] |
 | `localRatioDistribution.test.ts` | [Low](./complexity-low.md#2-local-ratio-distribution) | [x] | [x] |
 | `memorySlotCalculation.test.ts` | [Low](./complexity-low.md#3-memory-slot-calculation) | [x] | [x] |
 | `singleJobOperations.test.ts` | [Low](./complexity-low.md#4-single-job-operations) | [x] | [x] |
@@ -16,11 +17,16 @@ This document provides detailed documentation for each e2e test file, including 
 | `fixedRatioIsolation.test.ts` | [Low](./complexity-low.md#7-fixed-ratio-isolation-test) | [x] | [x] |
 | `rateLimitQueuing.test.ts` | [Low](./complexity-low.md#8-rate-limit-queuing-test) | [x] | [x] |
 | `actualUsageRefunds.test.ts` | [Medium](./complexity-medium.md#9-actual-usage-refunds) | [x] | [x] |
+| `actualUsageRefundsAdditional.test.ts` | [Medium](./complexity-medium.md#9-actual-usage-refunds) | [x] | [x] |
 | `actualUsageOverages.test.ts` | [Medium](./complexity-medium.md#10-actual-usage-overages) | [x] | [ ] |
+| `actualUsageOveragesAdditional.test.ts` | [Medium](./complexity-medium.md#10-actual-usage-overages) | [x] | [ ] |
 | `tokenTypeBreakdown.test.ts` | [Medium](./complexity-medium.md#11-token-type-breakdown) | [x] | [ ] |
 | `errorHandling.test.ts` | [Medium](./complexity-medium.md#12-error-handling) | [x] | [ ] |
+| `errorHandlingAdditional.test.ts` | [Medium](./complexity-medium.md#12-error-handling) | [x] | [ ] |
 | `queueBehavior.test.ts` | [Medium](./complexity-medium.md#13-queue-behavior) | [x] | [ ] |
+| `queueBehaviorAdditional.test.ts` | [Medium](./complexity-medium.md#13-queue-behavior) | [x] | [ ] |
 | `maxWaitMsBehavior.test.ts` | [Medium](./complexity-medium.md#14-maxwaitms-behavior) | [x] | [ ] |
+| `maxWaitMsBehaviorAdditional.test.ts` | [Medium](./complexity-medium.md#14-maxwaitms-behavior) | [x] | [ ] |
 | `slotsEvolveWithLoad.test.ts` | [Medium](./complexity-medium.md#15-slots-evolve-with-load-test) | [x] | [ ] |
 | `fixedRatioProtection.test.ts` | [Medium](./complexity-medium.md#16-fixed-ratio-protection) | [x] | [ ] |
 | `flexibleRatioAdjustment.test.ts` | [Medium-High](./complexity-medium-high.md#17-flexible-ratio-adjustment-test) | [ ] | [ ] |

@@ -16,7 +16,8 @@ interface BarLog {
   x: number;
   w: number;
   blue: { slots: number; h: number };
-  orange: { inFlight: number; h: number };
+  orange: { running: number; h: number };
+  yellow: { queued: number; h: number };
   totalSlots: number;
 }
 
@@ -24,20 +25,27 @@ const DEFAULT_HEIGHT = 80;
 
 // Colors
 const ALLOCATED_COLOR = '#0000FF'; // Pure blue
-const USED_COLOR = '#FFA500'; // Pure orange
+const RUNNING_COLOR = '#FFA500'; // Orange - actively running
+const QUEUED_COLOR = '#22C55E'; // Green - queued/waiting
 
 interface ChartValues {
-  inFlight: number[];
+  running: number[];
+  queued: number[];
   slots: number[];
 }
 
 function getValues(
   data: CapacityDataPoint[],
-  inFlightKey: string,
+  runningKey: string,
+  queuedKey: string,
   slotsKey: string | undefined
 ): ChartValues {
-  const inFlight = data.map((d) => {
-    const v = d[inFlightKey];
+  const running = data.map((d) => {
+    const v = d[runningKey];
+    return typeof v === 'number' ? v : 0;
+  });
+  const queued = data.map((d) => {
+    const v = d[queuedKey];
     return typeof v === 'number' ? v : 0;
   });
   const slots = slotsKey
@@ -46,7 +54,7 @@ function getValues(
         return typeof v === 'number' ? v : 0;
       })
     : [];
-  return { inFlight, slots };
+  return { running, queued, slots };
 }
 
 function renderChart(
@@ -55,7 +63,8 @@ function renderChart(
   values: ChartValues,
   width: number,
   height: number,
-  timeExtent: [number, number]
+  timeExtent: [number, number],
+  metricLabel: string
 ): void {
   const [minTime, maxTime] = timeExtent;
   const timeRange = maxTime - minTime;
@@ -76,28 +85,36 @@ function renderChart(
 
   for (let i = 0; i < data.length; i += 1) {
     const totalSlots = values.slots[i] ?? 0;
-    const inFlightVal = values.inFlight[i];
+    const runningVal = values.running[i];
+    const queuedVal = values.queued[i];
     const barX = i * barWidth + i;
 
     // Blue bar is always full height (shows capacity)
     const blueHeight = totalSlots > 0 ? height : 0;
-    // Orange bar scales relative to this interval's totalSlots
-    const orangeHeight = totalSlots > 0 ? (inFlightVal / totalSlots) * height : 0;
+    // Queued + Running stacked, scaled relative to totalSlots
+    const totalActive = runningVal + queuedVal;
+    const totalActiveH = totalSlots > 0 ? (totalActive / totalSlots) * height : 0;
+    const runningH = totalSlots > 0 ? (runningVal / totalSlots) * height : 0;
 
-    // Draw blue (allocated)
+    // Draw blue (allocated capacity)
     ctx.fillStyle = ALLOCATED_COLOR;
     ctx.fillRect(barX, height - blueHeight, barWidth, blueHeight);
 
-    // Draw orange (used) on top
-    ctx.fillStyle = USED_COLOR;
-    ctx.fillRect(barX, height - orangeHeight, barWidth, orangeHeight);
+    // Draw yellow (queued) - full active height from bottom
+    ctx.fillStyle = QUEUED_COLOR;
+    ctx.fillRect(barX, height - totalActiveH, barWidth, totalActiveH);
+
+    // Draw orange (running) - from bottom up to running height
+    ctx.fillStyle = RUNNING_COLOR;
+    ctx.fillRect(barX, height - runningH, barWidth, runningH);
 
     barLog.push({
       i,
       x: barX,
       w: barWidth,
       blue: { slots: totalSlots, h: blueHeight },
-      orange: { inFlight: inFlightVal, h: orangeHeight },
+      orange: { running: runningVal, h: runningH },
+      yellow: { queued: queuedVal, h: totalActiveH - runningH },
       totalSlots,
     });
   }
@@ -128,7 +145,13 @@ function renderChart(
       extraBarX = extraBarIndex * step;
     }
   }
-  // console.log('bars:', barLog);
+  const last20 = barLog.slice(-20);
+  console.log(`[CapacityChart] ${metricLabel} Last 20 bars:`, last20.map((b) => ({
+    i: b.i,
+    slots: b.blue.slots,
+    running: b.orange.running,
+    queued: b.yellow.queued,
+  })));
 }
 
 function formatValue(value: number): string {
@@ -177,20 +200,22 @@ export function CapacityChart({
     canvas.width = containerWidth;
     canvas.height = height;
 
-    const values = getValues(data, metric.usageKey, metric.slotsKey);
-    renderChart(ctx, data, values, containerWidth, height, timeExtent);
+    const values = getValues(data, metric.usageKey, metric.queuedKey, metric.slotsKey);
+    renderChart(ctx, data, values, containerWidth, height, timeExtent, metric.label);
   }, [data, metric, height, containerWidth, timeExtent]);
 
   // Clamp displayIndex to valid data range (focusIndex can be beyond for fill bars)
   const displayIndex = Math.min(focusIndex ?? data.length - 1, data.length - 1);
   const isPaddingOrFill = (focusIndex ?? 0) >= 400;
 
-  let inFlightVal = 0;
+  let runningVal = 0;
+  let queuedVal = 0;
   let slotsVal: number | null = null;
 
   if (isPaddingOrFill) {
     // For padding/fill bars, show 0 used and last non-zero allocated
-    inFlightVal = 0;
+    runningVal = 0;
+    queuedVal = 0;
     for (let i = 399; i >= 0; i -= 1) {
       const slots = metric.slotsKey ? data[i]?.[metric.slotsKey] : undefined;
       if (typeof slots === 'number' && slots > 0) {
@@ -199,9 +224,11 @@ export function CapacityChart({
       }
     }
   } else {
-    const currentInFlight = data[displayIndex]?.[metric.usageKey];
+    const currentRunning = data[displayIndex]?.[metric.usageKey];
+    const currentQueued = data[displayIndex]?.[metric.queuedKey];
     const currentSlots = metric.slotsKey ? data[displayIndex]?.[metric.slotsKey] : undefined;
-    inFlightVal = typeof currentInFlight === 'number' ? currentInFlight : 0;
+    runningVal = typeof currentRunning === 'number' ? currentRunning : 0;
+    queuedVal = typeof currentQueued === 'number' ? currentQueued : 0;
     slotsVal = typeof currentSlots === 'number' ? currentSlots : null;
   }
 
@@ -213,11 +240,18 @@ export function CapacityChart({
           className="absolute top-1 right-2 text-xs tabular-nums"
           style={{ color: 'white', fontFamily: "'JetBrains Mono', monospace" }}
         >
-          <span style={{ color: 'white', fontWeight: 600 }}>{formatValue(inFlightVal)}</span>
-          <span style={{ color: 'white' }}> used</span>
+          <span style={{ color: RUNNING_COLOR, fontWeight: 600 }}>{formatValue(runningVal)}</span>
+          <span style={{ color: 'white' }}> run</span>
+          {queuedVal > 0 && (
+            <>
+              <span style={{ color: 'white' }}> + </span>
+              <span style={{ color: QUEUED_COLOR, fontWeight: 600 }}>{formatValue(queuedVal)}</span>
+              <span style={{ color: 'white' }}> queue</span>
+            </>
+          )}
           <span style={{ color: 'white' }}> / </span>
           <span style={{ color: 'white' }}>{slotsVal !== null ? formatValue(slotsVal) : '?'}</span>
-          <span style={{ color: 'white' }}> allocated</span>
+          <span style={{ color: 'white' }}> alloc</span>
         </div>
       </div>
     </div>

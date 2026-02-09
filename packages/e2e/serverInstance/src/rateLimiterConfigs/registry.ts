@@ -3,11 +3,52 @@
  */
 import { defaultConfig } from './defaultConfig.js';
 import {
+  highDistributedBasicConfig,
+  highDistributedMixedConfig,
+  highDistributedMultiModelConfig,
+  highDistributedPubSubConfig,
+  highDistributedThreeConfig,
+  highDistributedTimeWindowConfig,
+  highDistributedWaitConfig,
+} from './highDistributedConfigs.js';
+import {
+  highMultiModelConfig,
+  highMultiResourceConfig,
+  highRpmTrackingConfig,
+  highTimeWindowConfig,
+  highTpmRpmTrackingConfig,
+  highTwoLayerConfig,
+} from './highTestConfigs.js';
+import {
+  highestAcquireAtomicityConfig,
+  highestDistributedAcquireConfig,
+  highestDistributedEscalationConfig,
+  highestDistributedWaitQueueConfig,
+  highestEdgeAllFixedConfig,
+  highestEdgeFloorConfig,
+  highestEdgeSingleFlexConfig,
+  highestEdgeZeroSlotsConfig,
+  highestHighConcurrencyConfig,
+  highestJobPriorityConfig,
+  highestMemoryDistributedConfig,
+} from './highestTestConfigs.js';
+import {
   localRatioEqualThreeConfig,
   localRatioThreeTypesConfig,
   localRatioTwoTypesConfig,
   localRatioZeroAllocConfig,
 } from './localRatioConfigs.js';
+import {
+  mhEscalationConcConfig,
+  mhEscalationMultiTimeoutConfig,
+  mhEscalationRpmConfig,
+  mhEscalationThreeModelConfig,
+  mhEscalationTpmConfig,
+  mhMemoryAllLimitsConfig,
+  mhMemoryConstrainConfig,
+  mhMemoryDiffEstimatesConfig,
+  mhMemoryRatioInteractConfig,
+} from './mediumHighConfigs.js';
 import {
   mediumErrorMemoryConfig,
   mediumFixedProtectionMultiFixedConfig,
@@ -97,6 +138,39 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'medium-fixedProtection-twoType': mediumFixedProtectionTwoTypeConfig,
   'medium-fixedProtection-threeType': mediumFixedProtectionThreeTypeConfig,
   'medium-fixedProtection-multiFixed': mediumFixedProtectionMultiFixedConfig,
+  'mh-memoryConstrain': mhMemoryConstrainConfig,
+  'mh-memoryRatioInteract': mhMemoryRatioInteractConfig,
+  'mh-memoryDiffEstimates': mhMemoryDiffEstimatesConfig,
+  'mh-memoryAllLimits': mhMemoryAllLimitsConfig,
+  'mh-escalationThreeModel': mhEscalationThreeModelConfig,
+  'mh-escalationTpm': mhEscalationTpmConfig,
+  'mh-escalationRpm': mhEscalationRpmConfig,
+  'mh-escalationConc': mhEscalationConcConfig,
+  'mh-escalationMultiTimeout': mhEscalationMultiTimeoutConfig,
+  'high-multiResource': highMultiResourceConfig,
+  'high-multiModel': highMultiModelConfig,
+  'high-twoLayer': highTwoLayerConfig,
+  'high-tpmRpmTracking': highTpmRpmTrackingConfig,
+  'high-timeWindow': highTimeWindowConfig,
+  'high-rpmTracking': highRpmTrackingConfig,
+  'high-distributedBasic': highDistributedBasicConfig,
+  'high-distributedThree': highDistributedThreeConfig,
+  'high-distributedMixed': highDistributedMixedConfig,
+  'high-distributedTimeWindow': highDistributedTimeWindowConfig,
+  'high-distributedMultiModel': highDistributedMultiModelConfig,
+  'high-distributedPubSub': highDistributedPubSubConfig,
+  'high-distributedWait': highDistributedWaitConfig,
+  'highest-memoryDistributed': highestMemoryDistributedConfig,
+  'highest-distributedAcquire': highestDistributedAcquireConfig,
+  'highest-acquireAtomicity': highestAcquireAtomicityConfig,
+  'highest-distributedWaitQueue': highestDistributedWaitQueueConfig,
+  'highest-distributedEscalation': highestDistributedEscalationConfig,
+  'highest-jobPriority': highestJobPriorityConfig,
+  'highest-highConcurrency': highestHighConcurrencyConfig,
+  'highest-edgeFloor': highestEdgeFloorConfig,
+  'highest-edgeZeroSlots': highestEdgeZeroSlotsConfig,
+  'highest-edgeAllFixed': highestEdgeAllFixedConfig,
+  'highest-edgeSingleFlex': highestEdgeSingleFlexConfig,
 };
 
 /** Get a configuration preset by name */

@@ -53,8 +53,8 @@ export interface JobTypeManager {
   hasCapacityForModel: (modelId: string, jobTypeId: string) => boolean;
   /** Acquire a per-model slot for a (model, jobType) pair */
   acquireForModel: (modelId: string, jobTypeId: string) => void;
-  /** Release a per-model slot for a (model, jobType) pair */
-  releaseForModel: (modelId: string, jobTypeId: string) => void;
+  /** Release a per-model slot. hadRefund=true also frees the rate window slot (for refund scenarios). */
+  releaseForModel: (modelId: string, jobTypeId: string, hadRefund?: boolean) => void;
   /** Get per-model allocated and inFlight for a (model, jobType) pair */
   getModelJobTypeInfo: (
     modelId: string,

@@ -200,8 +200,8 @@ class JobTypeManagerImpl implements JobTypeManager {
     ).windowMs;
   }
 
-  releaseForModel(modelId: string, jobTypeId: string): void {
-    this.modelState.release(modelId, jobTypeId);
+  releaseForModel(modelId: string, jobTypeId: string, hadRefund?: boolean): void {
+    this.modelState.release(modelId, jobTypeId, hadRefund);
     this.onModelCapacityRelease?.(modelId);
   }
 

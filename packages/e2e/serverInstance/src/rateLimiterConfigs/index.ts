@@ -62,5 +62,50 @@ export {
   mediumQueueConcurrentConfig,
 } from './mediumTestConfigs.js';
 
+export {
+  mhMemoryConstrainConfig,
+  mhMemoryRatioInteractConfig,
+  mhMemoryDiffEstimatesConfig,
+  mhMemoryAllLimitsConfig,
+  mhEscalationThreeModelConfig,
+  mhEscalationTpmConfig,
+  mhEscalationRpmConfig,
+  mhEscalationConcConfig,
+  mhEscalationMultiTimeoutConfig,
+} from './mediumHighConfigs.js';
+
+export {
+  highMultiResourceConfig,
+  highMultiModelConfig,
+  highTwoLayerConfig,
+  highTpmRpmTrackingConfig,
+  highRpmTrackingConfig,
+  highTimeWindowConfig,
+} from './highTestConfigs.js';
+
+export {
+  highDistributedBasicConfig,
+  highDistributedThreeConfig,
+  highDistributedMixedConfig,
+  highDistributedTimeWindowConfig,
+  highDistributedMultiModelConfig,
+  highDistributedPubSubConfig,
+  highDistributedWaitConfig,
+} from './highDistributedConfigs.js';
+
+export {
+  highestMemoryDistributedConfig,
+  highestDistributedAcquireConfig,
+  highestAcquireAtomicityConfig,
+  highestDistributedWaitQueueConfig,
+  highestDistributedEscalationConfig,
+  highestJobPriorityConfig,
+  highestHighConcurrencyConfig,
+  highestEdgeFloorConfig,
+  highestEdgeZeroSlotsConfig,
+  highestEdgeAllFixedConfig,
+  highestEdgeSingleFlexConfig,
+} from './highestTestConfigs.js';
+
 // Re-export registry and helpers from registry file
 export { configPresets, getConfigPreset, isValidPresetName } from './registry.js';

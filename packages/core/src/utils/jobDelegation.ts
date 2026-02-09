@@ -52,8 +52,8 @@ export interface DelegationContext {
     modelId: string,
     maxWaitMS: number
   ) => Promise<ReservationContext | null>;
-  /** Release per-model job type slot (no-op when JTM is not configured) */
-  releaseJobTypeForModel: (modelId: string) => void;
+  /** Release per-model job type slot. hadRefund=true frees rate window slot for refund scenarios. */
+  releaseJobTypeForModel: (modelId: string, hadRefund?: boolean) => void;
 }
 
 /** Execute job on a specific model */
@@ -75,15 +75,13 @@ export const executeOnModel = async <T, Args extends ArgsWithoutModelId = ArgsWi
     },
     emitJobAdjustment: dctx.emitJobAdjustment,
     releaseResources: (result) => {
-      dctx.releaseJobTypeForModel(modelId);
+      const actualTokens = result.usage.input + result.usage.output + result.usage.cached;
+      const hadRefund = actualTokens < reservationContext.estimates.estimatedUsedTokens;
+      dctx.releaseJobTypeForModel(modelId, hadRefund);
       dctx.memoryManager?.release(ctx.jobType);
-      const actual = {
-        requests: result.requestCount,
-        tokens: result.usage.input + result.usage.output + result.usage.cached,
-      };
       releaseBackend(
         dctx.backendCtx(modelId, ctx.jobId, ctx.jobType),
-        actual,
+        { requests: result.requestCount, tokens: actualTokens },
         reservationContext.windowStarts
       );
     },

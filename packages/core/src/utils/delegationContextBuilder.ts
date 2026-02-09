@@ -181,20 +181,21 @@ const buildReleaseJobTypeForModel = (
   jobType: string | undefined,
   jobTypeManager: JobTypeManager | null | undefined,
   onLog: LogFn | undefined
-): ((modelId: string) => void) => {
+): ((modelId: string, hadRefund?: boolean) => void) => {
   if (jobTypeManager === undefined || jobTypeManager === null || jobType === undefined) {
     return () => undefined;
   }
   const jtm = jobTypeManager;
   const jt = jobType;
   const log = createDebugLog(onLog, 'Delegation');
-  return (modelId) => {
+  return (modelId: string, hadRefund?: boolean) => {
     const infoBefore = jtm.getModelJobTypeInfo(modelId, jt);
     log(`releaseForModel ${modelId}/${jt}`, {
       modelInFlightBefore: infoBefore?.inFlight,
       modelAllocated: infoBefore?.allocated,
+      hadRefund,
     });
-    jtm.releaseForModel(modelId, jt);
+    jtm.releaseForModel(modelId, jt, hadRefund);
   };
 };
 

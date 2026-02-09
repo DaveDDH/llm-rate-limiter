@@ -1,10 +1,13 @@
 'use client';
 
+import { aggregateChartData } from '@/lib/timeseries/aggregateData';
+import {
+  getDashboardConfig,
+  getInstances,
+  transformSnapshotsToDashboardData,
+} from '@/lib/timeseries/dashboardTransform';
 import type { TestData } from '@llm-rate-limiter/e2e-test-results';
 import { useMemo } from 'react';
-
-import { aggregateChartData } from '@/lib/timeseries/aggregateData';
-import { getDashboardConfig, getInstances, transformSnapshotsToDashboardData } from '@/lib/timeseries/dashboardTransform';
 
 import { ChartContainer, ResourceGauge, SectionHeader } from './DashboardComponents';
 import { AggregatedJobTypeTable } from './charts/AggregatedJobTypeTable';
@@ -90,9 +93,7 @@ function DashboardHeader({
 }) {
   return (
     <div className="mb-8">
-      <h1 className="text-2xl font-bold text-foreground tracking-tight">
-        Rate Limiter · Job Queue
-      </h1>
+      <h1 className="text-2xl font-bold text-foreground tracking-tight">Rate Limiter · Job Queue</h1>
       <p className="text-xs text-muted-foreground/60 mt-1.5 font-mono">
         Distributed resource orchestration — {instanceCount} instances · {jobTypeCount} job types ·{' '}
         {resourceDimensionCount} resource dimensions
@@ -122,28 +123,21 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
   const jobTypeCount = Object.keys(testData.summary.byJobType).length;
   const resourceDimensionCount = countResourceDimensions(testData);
 
-  // Debug RPM data
-  console.log('[RPM Debug] Total jobs:', Object.keys(testData.jobs).length);
-  console.log('[RPM Debug] Models:', config.models);
-  console.log('[RPM Debug] Instances:', instances.map((i) => i.shortId));
-
-  // Log raw snapshot RPM values per instance/model
-  for (const snapshot of testData.snapshots.slice(0, 5)) {
-    const t = ((snapshot.timestamp - testData.metadata.startTime) / MS_TO_SECONDS).toFixed(2);
-    for (const [fullId, state] of Object.entries(snapshot.instances)) {
-      const shortId = instances.find((i) => i.fullId === fullId)?.shortId ?? fullId;
-      for (const [modelId, modelState] of Object.entries(state.models)) {
-        console.log(`[RPM Debug] t=${t}s ${shortId} ${modelId}: rpm=${modelState.rpm} rpmRemaining=${modelState.rpmRemaining}`);
-      }
-    }
-  }
-
-  // Log peak aggregated RPM from chart data
-  for (const model of config.models) {
-    const peakRpm = Math.max(...chartData.map((p) => (p[`${model}_rpm`] as number) ?? 0));
-    const peakCap = Math.max(...chartData.map((p) => (p[`${model}_rpmCapacity`] as number) ?? 0));
-    console.log(`[RPM Debug] Aggregated peak for ${model}: rpm=${peakRpm}, rpmCapacity=${peakCap}`);
-  }
+  // Log 5 jobs with highest completion timestamps
+  const jobsByCompletion = Object.values(testData.jobs)
+    .map((job) => {
+      const lastEvent = job.events[job.events.length - 1];
+      const completedAt = lastEvent?.timestamp ?? 0;
+      return {
+        id: job.jobId,
+        status: lastEvent?.type,
+        completedAt,
+        relSec: (completedAt - testData.metadata.startTime) / MS_TO_SECONDS,
+      };
+    })
+    .sort((a, b) => b.completedAt - a.completedAt)
+    .slice(0, 5);
+  console.log('[Timing] Top 5 latest-completing jobs:', jobsByCompletion);
 
   const jobUsage = computeJobUsage(testData);
   const capacity = extractCapacity(testData);
@@ -161,7 +155,11 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
       />
 
       <GaugesSection gauges={gauges} jobTypes={realJobTypes} />
-      <AllocationOverTimeChart data={chartData} models={config.models} enabledResourceTypes={enabledResourceTypes} />
+      <AllocationOverTimeChart
+        data={chartData}
+        models={config.models}
+        enabledResourceTypes={enabledResourceTypes}
+      />
       <AggregatedUtilizationCharts data={chartData} jobTypes={config.jobTypes} />
       <InstanceLoadChart data={chartData} instances={instances} />
       <AggregatedJobTypeTable data={chartData} jobTypes={config.jobTypes} />

@@ -6,11 +6,13 @@ This document contains detailed documentation for tests with medium complexity l
 
 ## 9. Actual Usage Refunds
 
-**File:** `actualUsageRefunds.test.ts`
+**Files:** `actualUsageRefunds.test.ts`, `actualUsageRefundsAdditional.test.ts`
 
 **Complexity:** Medium
 
 **Purpose:** Verify unused capacity is refunded correctly when job completes in same window.
+
+**Note:** Tests are split across two files due to the 300-line file limit. The main file contains tests 9.1-9.3, the Additional file contains tests 9.5-9.6.
 
 ### Test Cases
 
@@ -103,11 +105,13 @@ Available before: 9,000 (can't start new job)
 
 ## 10. Actual Usage Overages
 
-**File:** `actualUsageOverages.test.ts`
+**Files:** `actualUsageOverages.test.ts`, `actualUsageOveragesAdditional.test.ts`
 
 **Complexity:** Medium
 
 **Purpose:** Verify overages are added to usage counters for accurate tracking.
+
+**Note:** Tests are split across two files due to the 300-line file limit. The main file contains tests 10.1-10.3, the Additional file contains test 10.5.
 
 ### Test Cases
 
@@ -229,11 +233,13 @@ jobTypeA: estimatedTokens = 10,000
 
 ## 12. Error Handling
 
-**File:** `errorHandling.test.ts`
+**Files:** `errorHandling.test.ts`, `errorHandlingAdditional.test.ts`
 
 **Complexity:** Medium
 
 **Purpose:** Verify error scenarios handle capacity correctly.
+
+**Note:** Tests are split across two files due to the 300-line file limit. The main file contains tests 12.1-12.3, the Additional file contains tests 12.4-12.6.
 
 ### Test Cases
 
@@ -326,11 +332,13 @@ memory limit: 100MB (2 slots max)
 
 ## 13. Queue Behavior
 
-**File:** `queueBehavior.test.ts`
+**Files:** `queueBehavior.test.ts`, `queueBehaviorAdditional.test.ts`
 
 **Complexity:** Medium
 
 **Purpose:** Verify queue operations work correctly.
+
+**Note:** Tests are split across two files due to the 300-line file limit. The main file contains tests 13.1, 13.2, 13.4, the Additional file contains tests 13.3, 13.5.
 
 ### Test Cases
 
@@ -419,11 +427,13 @@ jobDuration = 60000ms (long running)
 
 ## 14. maxWaitMS Behavior
 
-**File:** `maxWaitMsBehavior.test.ts`
+**Files:** `maxWaitMsBehavior.test.ts`, `maxWaitMsBehaviorAdditional.test.ts`
 
 **Complexity:** Medium
 
 **Purpose:** Verify maxWaitMS timeout and delegation behavior.
+
+**Note:** Tests are split across two files due to the 300-line file limit. The main file contains tests 14.2-14.3, the Additional file contains tests 14.4, 14.6-14.7.
 
 ### Test Cases
 

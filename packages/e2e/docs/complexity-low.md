@@ -6,13 +6,15 @@ This document contains detailed documentation for tests with low complexity leve
 
 ## 1. Pool Slot Calculation
 
-**File:** `slotCalculation.test.ts`
+**Files:** `slotCalculation.test.ts`, `slotCalculationAdditional.test.ts`
 
 **Complexity:** Low
 
 **Purpose:** Verify that the pool-based slot calculations work correctly with different model and instance combinations. These tests do NOT queue any jobs - they only verify the initial pool allocation math by querying the allocation endpoint directly.
 
 **Config Presets Used:** Various `slotCalc-*` presets
+
+**Note:** Tests are split across two files due to the 300-line file limit. The Additional file contains tests 1.1, 1.7, 1.8, 1.9, plus multi-model and instance count verification tests.
 
 ### Test Cases
 

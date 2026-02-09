@@ -32,8 +32,8 @@ export interface ModelJobTypeTracker {
   hasCapacity: (params: HasCapacityParams) => boolean;
   /** Acquire a slot for a (model, jobType) pair. windowMs > 0 means rate-based tracking. */
   acquire: (modelId: string, jobTypeId: string, windowMs: number) => void;
-  /** Release a slot for a (model, jobType) pair (decrements inFlight only, not window counter) */
-  release: (modelId: string, jobTypeId: string) => void;
+  /** Release a slot for a (model, jobType) pair. hadRefund=true also decrements window counter. */
+  release: (modelId: string, jobTypeId: string, hadRefund?: boolean) => void;
   /** Get effective inFlight: window counter for rate-based, concurrent count for concurrency-based */
   getInFlight: (params: HasCapacityParams) => number;
   /** Get allocated slots for a (model, jobType) pair */
@@ -119,6 +119,20 @@ const incrementWindowCounter = (
   }
 };
 
+/** Decrement the window counter if still in the same window (mirrors internal limiter refund) */
+const decrementWindowCounter = (
+  counters: Map<string, WindowEntry>,
+  modelId: string,
+  jobTypeId: string
+): void => {
+  const entry = counters.get(windowKey(modelId, jobTypeId));
+  if (entry === undefined) return;
+  if (entry.windowId !== currentWindowId(entry.windowMs)) return;
+  if (entry.count > ZERO) {
+    entry.count -= ONE;
+  }
+};
+
 // =============================================================================
 // Slot calculation wrapper
 // =============================================================================
@@ -196,17 +210,19 @@ const buildSingleModelInfo = (
 // Tracker factory helpers
 // =============================================================================
 
-/** Create release closure for inFlight tracking */
-const createRelease =
-  (modelInFlight: Map<string, Map<string, number>>): ((modelId: string, jobTypeId: string) => void) =>
-  (modelId: string, jobTypeId: string): void => {
-    const inner = modelInFlight.get(modelId);
-    if (inner === undefined) return;
-    const current = inner.get(jobTypeId) ?? ZERO;
-    if (current > ZERO) {
-      inner.set(jobTypeId, current - ONE);
-    }
-  };
+/** Release inFlight count for a (model, jobType) pair */
+const releaseInFlight = (
+  modelInFlight: Map<string, Map<string, number>>,
+  modelId: string,
+  jobTypeId: string
+): void => {
+  const inner = modelInFlight.get(modelId);
+  if (inner === undefined) return;
+  const current = inner.get(jobTypeId) ?? ZERO;
+  if (current > ZERO) {
+    inner.set(jobTypeId, current - ONE);
+  }
+};
 
 /** Create getAllModelJobTypeInfo closure */
 const createGetAllInfo =
@@ -252,7 +268,12 @@ export const createModelJobTypeTracker = (): ModelJobTypeTracker => {
         incrementWindowCounter(counters.windowCounters, modelId, jobTypeId, windowMs);
       }
     },
-    release: createRelease(counters.modelInFlight),
+    release: (modelId: string, jobTypeId: string, hadRefund?: boolean) => {
+      releaseInFlight(counters.modelInFlight, modelId, jobTypeId);
+      if (hadRefund === true) {
+        decrementWindowCounter(counters.windowCounters, modelId, jobTypeId);
+      }
+    },
     getInFlight: (params) => resolveSlotState(modelPools, counters, params).inFlight,
     getAllocated: (params) =>
       getSlotResult(modelPools.get(params.modelId), params.ratio, params.resources, params.minCapacity).slots,
