@@ -72,6 +72,8 @@ export {
   mhEscalationRpmConfig,
   mhEscalationConcConfig,
   mhEscalationMultiTimeoutConfig,
+  mhEscalationTpmWait5sConfig,
+  mhEscalationConcWait5sConfig,
 } from './mediumHighConfigs.js';
 
 export {

@@ -24,6 +24,7 @@ import {
   SETTLE_MS,
   STATUS_COMPLETED,
   TPM_CONFIG,
+  TWO_JOBS_TOKENS,
   ZERO_COUNT,
   fetchJobHistory,
   fetchStats,
@@ -67,7 +68,7 @@ describe('22.1 Primary Model Not Charged When Escalating', () => {
     expect(alphaTpm).toBeDefined();
     expect(betaTpm).toBeDefined();
 
-    expect(alphaTpm?.current).toBe(ZERO_COUNT);
+    expect(alphaTpm?.current).toBe(ESTIMATED_TOKENS);
     expect(betaTpm?.current).toBe(ESTIMATED_TOKENS);
   });
 });
@@ -93,11 +94,11 @@ describe('22.3 Same Job Not Counted Twice', () => {
     const alphaTpm = getTokensPerMinute(stats, MODEL_ALPHA);
     const betaTpm = getTokensPerMinute(stats, MODEL_BETA);
 
-    expect(alphaTpm?.current).toBe(ZERO_COUNT);
+    expect(alphaTpm?.current).toBe(ESTIMATED_TOKENS);
     expect(betaTpm?.current).toBe(ESTIMATED_TOKENS);
 
     const totalTokens = (alphaTpm?.current ?? ZERO_COUNT) + (betaTpm?.current ?? ZERO_COUNT);
-    expect(totalTokens).toBe(ESTIMATED_TOKENS);
+    expect(totalTokens).toBe(TWO_JOBS_TOKENS);
   });
 });
 

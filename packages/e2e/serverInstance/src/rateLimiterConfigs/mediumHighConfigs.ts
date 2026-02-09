@@ -235,8 +235,29 @@ export const mhEscalationConcConfig: RateLimiterPreset = {
 };
 
 /**
- * 21.2/21.3: Multi-timeout escalation.
- * alpha(5s) → beta(3s) → gamma.
+ * 21.1: TPM escalation with 5s wait on alpha.
+ * model-alpha: TPM=10K (1 slot), maxWaitMS=5s. model-beta: TPM=100K.
+ */
+export const mhEscalationTpmWait5sConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-beta': { tokensPerMinute: TPM_100K, pricing: standardPricing },
+  },
+  escalationOrder: ['model-alpha', 'model-beta'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_FULL },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_5S },
+    },
+  },
+};
+
+/**
+ * 21.2/21.3: Multi-timeout escalation (TPM-based).
+ * alpha(5s) → beta(3s) → gamma(0s immediate).
+ * TPM stays consumed after job completion, enabling short fills.
  */
 export const mhEscalationMultiTimeoutConfig: RateLimiterPreset = {
   models: {
@@ -250,7 +271,31 @@ export const mhEscalationMultiTimeoutConfig: RateLimiterPreset = {
       estimatedUsedTokens: TOKENS_10K,
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       ratio: { initialValue: RATIO_FULL },
-      maxWaitMS: { 'model-alpha': MAX_WAIT_5S, 'model-beta': MAX_WAIT_3S },
+      maxWaitMS: {
+        'model-alpha': MAX_WAIT_5S,
+        'model-beta': MAX_WAIT_3S,
+        'model-gamma': MAX_WAIT_ZERO,
+      },
+    },
+  },
+};
+
+/**
+ * 21.4: Concurrent escalation with 5s wait.
+ * model-alpha: concurrent=1, maxWaitMS=5s. model-beta: concurrent=50.
+ */
+export const mhEscalationConcWait5sConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': { maxConcurrentRequests: CONCURRENT_1, pricing: standardPricing },
+    'model-beta': { maxConcurrentRequests: CONCURRENT_50, pricing: standardPricing },
+  },
+  escalationOrder: ['model-alpha', 'model-beta'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_FULL },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_5S },
     },
   },
 };

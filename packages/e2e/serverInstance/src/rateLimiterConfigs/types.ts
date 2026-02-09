@@ -79,6 +79,8 @@ export type ConfigPresetName =
   | 'mh-escalationRpm'
   | 'mh-escalationConc'
   | 'mh-escalationMultiTimeout'
+  | 'mh-escalationTpmWait5s'
+  | 'mh-escalationConcWait5s'
   | 'high-multiResource'
   | 'high-multiModel'
   | 'high-twoLayer'

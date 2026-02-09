@@ -44,6 +44,9 @@ export const HTTP_ACCEPTED = 202;
 // Job status values
 export const STATUS_COMPLETED = 'completed';
 
+// Aggregate token constants
+export const TWO_JOBS_TOKENS = 20000;
+
 // Shared constants
 export const ZERO_COUNT = 0;
 export const BEFORE_ALL_TIMEOUT_MS = 60000;

@@ -40,10 +40,12 @@ import {
 } from './localRatioConfigs.js';
 import {
   mhEscalationConcConfig,
+  mhEscalationConcWait5sConfig,
   mhEscalationMultiTimeoutConfig,
   mhEscalationRpmConfig,
   mhEscalationThreeModelConfig,
   mhEscalationTpmConfig,
+  mhEscalationTpmWait5sConfig,
   mhMemoryAllLimitsConfig,
   mhMemoryConstrainConfig,
   mhMemoryDiffEstimatesConfig,
@@ -147,6 +149,8 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'mh-escalationRpm': mhEscalationRpmConfig,
   'mh-escalationConc': mhEscalationConcConfig,
   'mh-escalationMultiTimeout': mhEscalationMultiTimeoutConfig,
+  'mh-escalationTpmWait5s': mhEscalationTpmWait5sConfig,
+  'mh-escalationConcWait5s': mhEscalationConcWait5sConfig,
   'high-multiResource': highMultiResourceConfig,
   'high-multiModel': highMultiModelConfig,
   'high-twoLayer': highTwoLayerConfig,

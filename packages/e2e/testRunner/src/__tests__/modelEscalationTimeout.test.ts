@@ -12,11 +12,13 @@
 import {
   AFTER_ALL_TIMEOUT_MS,
   BEFORE_ALL_TIMEOUT_MS,
+  CONC_WAIT_CONFIG,
   FILL_JOB_DURATION_MS,
   HTTP_ACCEPTED,
   INSTANCE_URL,
   JOB_COMPLETE_TIMEOUT_MS,
   JOB_TYPE_A,
+  MID_WAIT_FILL_MS,
   MODEL_ALPHA,
   MODEL_BETA,
   MODEL_GAMMA,
@@ -26,7 +28,7 @@ import {
   STATUS_COMPLETED,
   STATUS_FAILED,
   THREE_MODELS,
-  TPM_CONFIG,
+  TPM_WAIT_CONFIG,
   WAIT_MAX_5S,
   WAIT_MAX_8S,
   WAIT_MIN_5S,
@@ -48,7 +50,7 @@ afterAll(async () => {
 
 describe('21.1 Escalation After maxWaitMS Timeout', () => {
   beforeAll(async () => {
-    await setupSingleInstance(TPM_CONFIG);
+    await setupSingleInstance(TPM_WAIT_CONFIG);
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should escalate to beta after 5s wait on alpha', async () => {
@@ -88,16 +90,12 @@ describe('21.2 Multiple Timeout Escalations', () => {
     const timestamp = Date.now();
     const fillAlphaId = `multi-fill-alpha-${timestamp}`;
     const fillBetaId = `multi-fill-beta-${timestamp}`;
-    const fillGammaId = `multi-fill-gamma-${timestamp}`;
     const waitJobId = `multi-wait-${timestamp}`;
 
     await submitJob(INSTANCE_URL, fillAlphaId, JOB_TYPE_A, FILL_JOB_DURATION_MS);
     await sleep(SETTLE_MS);
 
     await submitJob(INSTANCE_URL, fillBetaId, JOB_TYPE_A, FILL_JOB_DURATION_MS);
-    await sleep(SETTLE_MS);
-
-    await submitJob(INSTANCE_URL, fillGammaId, JOB_TYPE_A, FILL_JOB_DURATION_MS);
     await sleep(SETTLE_MS);
 
     const waitStatus = await submitJob(INSTANCE_URL, waitJobId, JOB_TYPE_A, QUICK_JOB_DURATION_MS);
@@ -130,7 +128,6 @@ describe('21.3 Reject After All Timeouts', () => {
       durationMs: FILL_JOB_DURATION_MS,
       settleMs: SETTLE_MS,
     });
-
     const rejectJobId = `reject-timeout-${timestamp}`;
     const queueTime = Date.now();
     const status = await submitJob(INSTANCE_URL, rejectJobId, JOB_TYPE_A, QUICK_JOB_DURATION_MS);
@@ -153,7 +150,7 @@ describe('21.3 Reject After All Timeouts', () => {
 
 describe('21.4 No Escalation When Capacity Available Mid-Wait', () => {
   beforeAll(async () => {
-    await setupSingleInstance(TPM_CONFIG);
+    await setupSingleInstance(CONC_WAIT_CONFIG);
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should use primary when it becomes available during wait', async () => {
@@ -161,7 +158,7 @@ describe('21.4 No Escalation When Capacity Available Mid-Wait', () => {
     const fillJobId = `midwait-fill-${timestamp}`;
     const waitJobId = `midwait-wait-${timestamp}`;
 
-    await submitJob(INSTANCE_URL, fillJobId, JOB_TYPE_A, QUICK_JOB_DURATION_MS);
+    await submitJob(INSTANCE_URL, fillJobId, JOB_TYPE_A, MID_WAIT_FILL_MS);
     await sleep(SETTLE_MS);
 
     const waitStatus = await submitJob(INSTANCE_URL, waitJobId, JOB_TYPE_A, QUICK_JOB_DURATION_MS);

@@ -17,8 +17,9 @@ export const INSTANCE_URL = `http://localhost:${INSTANCE_PORT}`;
 const SINGLE_INSTANCE = 1;
 
 // Config presets
-export const TPM_CONFIG: ConfigPresetName = 'mh-escalationTpm';
+export const TPM_WAIT_CONFIG: ConfigPresetName = 'mh-escalationTpmWait5s';
 export const MULTI_TIMEOUT_CONFIG: ConfigPresetName = 'mh-escalationMultiTimeout';
+export const CONC_WAIT_CONFIG: ConfigPresetName = 'mh-escalationConcWait5s';
 
 // Model IDs
 export const MODEL_ALPHA = 'model-alpha';
@@ -30,9 +31,10 @@ export const JOB_TYPE_A = 'jobTypeA';
 
 // Timing
 export const QUICK_JOB_DURATION_MS = 100;
-export const FILL_JOB_DURATION_MS = 60000;
+export const FILL_JOB_DURATION_MS = 500;
+export const MID_WAIT_FILL_MS = 2000;
 export const SETTLE_MS = 500;
-export const JOB_COMPLETE_TIMEOUT_MS = 70000;
+export const JOB_COMPLETE_TIMEOUT_MS = 30000;
 
 // Timeout expectations
 export const WAIT_5S = 5000;
@@ -55,7 +57,7 @@ export const STATUS_FAILED = 'failed';
 export const ZERO_COUNT = 0;
 export const INCREMENT = 1;
 export const THREE_MODELS = 3;
-export const BEFORE_ALL_TIMEOUT_MS = 80000;
+export const BEFORE_ALL_TIMEOUT_MS = 60000;
 export const AFTER_ALL_TIMEOUT_MS = 30000;
 
 /** Historical job from job history endpoint */
