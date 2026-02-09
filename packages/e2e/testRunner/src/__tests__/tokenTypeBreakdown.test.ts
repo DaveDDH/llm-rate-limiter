@@ -120,7 +120,7 @@ describe('11.3 Cached in Overage', () => {
   it('should record an overage of 2000 tokens', async () => {
     const overages = await fetchOverages(INSTANCE_URL);
     expect(overages.count).toBeGreaterThan(ZERO_COUNT);
-    const tokenOverage = overages.overages.find((o) => o.resourceType === 'tokensPerMinute');
+    const tokenOverage = overages.overages.find((o) => o.resourceType === 'tokens');
     expect(tokenOverage).toBeDefined();
     expect(tokenOverage?.overage).toBe(TEST_11_3_EXPECTED_OVERAGE);
   });

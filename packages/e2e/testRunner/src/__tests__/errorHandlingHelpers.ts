@@ -108,6 +108,7 @@ export interface StatsResponse {
   timestamp: number;
   stats: {
     models: Record<string, ModelStats>;
+    memory?: MemoryStats;
   };
 }
 
@@ -166,9 +167,9 @@ export const getTokensPerMinute = (stats: StatsResponse, modelId: string): Model
 export const getConcurrency = (stats: StatsResponse, modelId: string): ConcurrencyStats | undefined =>
   stats.stats.models[modelId]?.concurrency;
 
-/** Get memory stats for a model */
-export const getMemoryStats = (stats: StatsResponse, modelId: string): MemoryStats | undefined =>
-  stats.stats.models[modelId]?.memory;
+/** Get memory stats (memory is a top-level shared resource, not per-model) */
+export const getMemoryStats = (stats: StatsResponse, _modelId: string): MemoryStats | undefined =>
+  stats.stats.memory;
 
 /** Submit a job that throws without calling reject */
 export const submitThrowJob = async (baseUrl: string, jobId: string, durationMs: number): Promise<number> => {

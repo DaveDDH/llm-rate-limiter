@@ -10,6 +10,7 @@
  */
 import { sleep } from '../testUtils.js';
 import {
+  FIXED_JOB_SETTLE_MS,
   HEAVY_LOAD_JOB_COUNT,
   HTTP_ACCEPTED,
   INSTANCE_URL,
@@ -115,7 +116,7 @@ describe('16.2 Fixed Type Protected Under Heavy Flexible Load', () => {
     await sleep(JOB_START_SHORT_DELAY_MS);
 
     const submitTime = await submitSingleShortJob('fixedType', 'fixed-quick');
-    await sleep(MAX_FIXED_QUEUE_DURATION_MS);
+    await sleep(FIXED_JOB_SETTLE_MS);
 
     const elapsed = Date.now() - submitTime;
     expect(elapsed).toBeLessThan(MAX_FIXED_QUEUE_DURATION_MS);

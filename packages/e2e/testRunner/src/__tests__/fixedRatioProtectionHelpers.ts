@@ -57,7 +57,8 @@ export const LONG_JOB_DURATION_MS = 2000;
 export const SHORT_JOB_DURATION_MS = 100;
 export const JOB_START_DELAY_MS = 500;
 export const JOB_START_SHORT_DELAY_MS = 200;
-export const MAX_FIXED_QUEUE_DURATION_MS = 2000;
+export const FIXED_JOB_SETTLE_MS = 2000;
+export const MAX_FIXED_QUEUE_DURATION_MS = 5000;
 
 // Shared constants
 export const HTTP_ACCEPTED = 202;

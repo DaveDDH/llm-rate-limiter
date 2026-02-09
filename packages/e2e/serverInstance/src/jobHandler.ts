@@ -91,21 +91,21 @@ const simulateProcessingTime = async (jobId: string, durationMs: number): Promis
   }
 };
 
-/** Handle reject usage scenario: call reject then throw */
-const handleRejectUsage = (
+/** Build a result from reject usage (treated as actual usage for counter adjustment) */
+const buildRejectResult = (
   jobId: string,
-  rejectUsage: TokenUsageEntry,
-  reject: RejectFn | undefined
-): never => {
-  if (reject !== undefined) {
-    logger.info(`Job ${jobId} calling reject with usage`, rejectUsage);
-    reject(rejectUsage);
-  }
-  throw new Error(`Job ${jobId} rejected with usage`);
+  jobType: string,
+  rejectUsage: TokenUsageEntry
+): JobResult<JobData> => {
+  logger.info(`Job ${jobId} returning reject usage as actual`, rejectUsage);
+  return {
+    ...rejectUsage,
+    data: { processed: false, jobId, jobType },
+  };
 };
 
 export const processJob = async (params: ProcessJobParams): Promise<JobResult<JobData>> => {
-  const { jobId, jobType, payload, modelId, reject } = params;
+  const { jobId, jobType, payload, modelId } = params;
 
   logger.debug(`Job ${jobId} payload:`, { payload });
   logger.info(`Processing job ${jobId}`, { modelId, jobType, payload });
@@ -113,10 +113,10 @@ export const processJob = async (params: ProcessJobParams): Promise<JobResult<Jo
   const durationMs = getPayloadNumber(payload, 'durationMs') ?? ZERO;
   await simulateProcessingTime(jobId, durationMs);
 
-  // Handle reject scenario: call reject() then throw
+  // Handle reject scenario: return reject usage as actual (adjusts counters like success)
   const rejectUsage = getRejectUsage(payload);
   if (rejectUsage !== null) {
-    handleRejectUsage(jobId, rejectUsage, reject);
+    return buildRejectResult(jobId, jobType, rejectUsage);
   }
 
   // Handle error scenario: throw without reject (no capacity release)

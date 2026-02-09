@@ -27,7 +27,7 @@ export const RELEASE_CONFIG: ConfigPresetName = 'medium-maxWait-release';
 // Job duration constants
 export const QUICK_JOB_DURATION_MS = 100;
 export const FILL_JOB_DURATION_MS = 2000;
-export const LONG_FILL_DURATION_MS = 60000;
+export const LONG_FILL_DURATION_MS = 10000;
 export const MEDIUM_FILL_DURATION_MS = 5000;
 export const RELEASE_FILL_DURATION_MS = 2000;
 

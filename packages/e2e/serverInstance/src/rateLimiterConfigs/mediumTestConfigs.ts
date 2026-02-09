@@ -20,10 +20,10 @@ const RATIO_THIRTY_PERCENT = 0.3;
 
 // Capacity constants
 const TPM_10K = 10000;
-const TPM_100K = 100000;
 const TPM_10M = 10000000;
 const TOKENS_10K = 10000;
 const MAX_CONCURRENT_5 = 5;
+const MAX_CONCURRENT_10 = 10;
 
 // Memory constants
 const MEMORY_MAX_KB = 102400;
@@ -38,6 +38,7 @@ const MAX_WAIT_10S = 10000;
 const MAX_WAIT_30S = 30000;
 const MAX_WAIT_60S = 60000;
 const MAX_WAIT_1S = 1000;
+const MAX_CONCURRENT_1 = 1;
 
 const standardPricing = { input: PRICING_INPUT, cached: PRICING_CACHED, output: PRICING_OUTPUT };
 
@@ -126,7 +127,7 @@ export const mediumMaxWaitTimeoutConfig: RateLimiterPreset = {
  */
 export const mediumMaxWaitReleaseConfig: RateLimiterPreset = {
   models: {
-    'model-alpha': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-alpha': { maxConcurrentRequests: MAX_CONCURRENT_1, pricing: standardPricing },
   },
   escalationOrder: ['model-alpha'],
   resourceEstimations: {
@@ -184,7 +185,7 @@ export const mediumErrorMemoryConfig: RateLimiterPreset = {
  */
 export const mediumFixedProtectionTwoTypeConfig: RateLimiterPreset = {
   models: {
-    'model-alpha': { tokensPerMinute: TPM_100K, pricing: standardPricing },
+    'model-alpha': { maxConcurrentRequests: MAX_CONCURRENT_10, pricing: standardPricing },
   },
   escalationOrder: ['model-alpha'],
   resourceEstimations: {
@@ -207,7 +208,7 @@ export const mediumFixedProtectionTwoTypeConfig: RateLimiterPreset = {
  */
 export const mediumFixedProtectionThreeTypeConfig: RateLimiterPreset = {
   models: {
-    'model-alpha': { tokensPerMinute: TPM_100K, pricing: standardPricing },
+    'model-alpha': { maxConcurrentRequests: MAX_CONCURRENT_10, pricing: standardPricing },
   },
   escalationOrder: ['model-alpha'],
   resourceEstimations: {
@@ -235,7 +236,7 @@ export const mediumFixedProtectionThreeTypeConfig: RateLimiterPreset = {
  */
 export const mediumFixedProtectionMultiFixedConfig: RateLimiterPreset = {
   models: {
-    'model-alpha': { tokensPerMinute: TPM_100K, pricing: standardPricing },
+    'model-alpha': { maxConcurrentRequests: MAX_CONCURRENT_10, pricing: standardPricing },
   },
   escalationOrder: ['model-alpha'],
   resourceEstimations: {
