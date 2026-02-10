@@ -28,6 +28,7 @@ import {
   TWO_INSTANCES,
   fetchAllocation,
   getActiveJobCount,
+  getInFlightCount,
   getModelPoolSlots,
   killAllInstances,
   setupSingleInstance,
@@ -114,8 +115,8 @@ describe('Distributed Acquire Release - Atomicity Under Concurrency', () => {
 
     await sleep(ACTIVE_JOB_SETTLE_MS);
 
-    const activeCount = await getActiveJobCount(PORT_SINGLE);
-    expect(activeCount).toBeLessThanOrEqual(CONCURRENT_100);
+    const inFlight = await getInFlightCount(PORT_SINGLE, JOB_TYPE);
+    expect(inFlight).toBeLessThanOrEqual(CONCURRENT_100);
 
     await waitForActiveJobCount(PORT_SINGLE, ZERO_ACTIVE, BEFORE_ALL_TIMEOUT_MS);
 

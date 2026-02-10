@@ -102,7 +102,10 @@ export type ConfigPresetName =
   | 'highest-distributedEscalation'
   | 'highest-jobPriority'
   | 'highest-highConcurrency'
+  | 'highest-highConcurrencyEscalation'
   | 'highest-edgeFloor'
   | 'highest-edgeZeroSlots'
+  | 'highest-edgeZeroMemory'
+  | 'highest-edgeLargeMemory'
   | 'highest-edgeAllFixed'
   | 'highest-edgeSingleFlex';

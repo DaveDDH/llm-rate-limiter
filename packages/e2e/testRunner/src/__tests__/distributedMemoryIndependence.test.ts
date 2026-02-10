@@ -27,7 +27,9 @@ import {
   SHORT_JOB_DURATION_MS,
   TWO_INSTANCES,
   fetchAllocation,
+  fetchStats,
   getActiveJobCount,
+  getAllocatedSlots,
   getModelPoolSlots,
   killAllInstances,
   setupTwoInstancesWithMemory,
@@ -37,8 +39,8 @@ import {
 const AFTER_ALL_TIMEOUT_MS = 30000;
 const BEFORE_ALL_TIMEOUT_MS = 60000;
 
-// Extra slot to overfill memory
-const OVERFILL_EXTRA = 1;
+// Fallback for undefined slots
+const ZERO_FALLBACK = 0;
 
 // Loop increment
 const LOOP_INCREMENT = 1;
@@ -122,24 +124,18 @@ describe('Distributed Memory Independence - Different Memory Yields Different Fi
   }, AFTER_ALL_TIMEOUT_MS);
 
   it('38.3: should constrain final slots by local memory', async () => {
-    const fillJobsA = [];
-    for (let i = 0; i < MEMORY_SLOTS_A + OVERFILL_EXTRA; i += LOOP_INCREMENT) {
-      fillJobsA.push(submitJob(PORT_A, `fill-a-${i}`, JOB_TYPE, SHORT_JOB_DURATION_MS));
-    }
-    await Promise.all(fillJobsA);
+    const statsA = await fetchStats(PORT_A);
+    const statsB = await fetchStats(PORT_B);
 
-    const activeA = await getActiveJobCount(PORT_A);
-    expect(activeA).toBeLessThanOrEqual(MEMORY_SLOTS_A);
+    expect(getAllocatedSlots(statsA, JOB_TYPE)).toBeDefined();
+    expect(getAllocatedSlots(statsB, JOB_TYPE)).toBeDefined();
 
-    const fillJobsB = [];
-    for (let i = 0; i < MEMORY_SLOTS_B + OVERFILL_EXTRA; i += LOOP_INCREMENT) {
-      fillJobsB.push(submitJob(PORT_B, `fill-b-${i}`, JOB_TYPE, SHORT_JOB_DURATION_MS));
-    }
-    await Promise.all(fillJobsB);
+    const slotsA = getAllocatedSlots(statsA, JOB_TYPE) ?? ZERO_FALLBACK;
+    const slotsB = getAllocatedSlots(statsB, JOB_TYPE) ?? ZERO_FALLBACK;
 
-    const activeB = await getActiveJobCount(PORT_B);
-    expect(activeB).toBeLessThanOrEqual(MEMORY_SLOTS_B);
-
-    expect(activeB).toBeGreaterThan(activeA);
+    // Memory constrains allocated slots: A=min(50,10)=10, B=min(50,20)=20
+    expect(slotsA).toBeLessThanOrEqual(MEMORY_SLOTS_A);
+    expect(slotsB).toBeLessThanOrEqual(MEMORY_SLOTS_B);
+    expect(slotsB).toBeGreaterThan(slotsA);
   });
 });

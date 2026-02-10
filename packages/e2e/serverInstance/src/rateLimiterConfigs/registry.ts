@@ -3,6 +3,14 @@
  */
 import { defaultConfig } from './defaultConfig.js';
 import {
+  highestEdgeAllFixedConfig,
+  highestEdgeFloorConfig,
+  highestEdgeLargeMemoryConfig,
+  highestEdgeSingleFlexConfig,
+  highestEdgeZeroMemoryConfig,
+  highestEdgeZeroSlotsConfig,
+} from './edgeCaseConfigs.js';
+import {
   highDistributedBasicConfig,
   highDistributedMixedConfig,
   highDistributedMultiModelConfig,
@@ -25,11 +33,8 @@ import {
   highestDistributedAcquireConfig,
   highestDistributedEscalationConfig,
   highestDistributedWaitQueueConfig,
-  highestEdgeAllFixedConfig,
-  highestEdgeFloorConfig,
-  highestEdgeSingleFlexConfig,
-  highestEdgeZeroSlotsConfig,
   highestHighConcurrencyConfig,
+  highestHighConcurrencyEscalationConfig,
   highestJobPriorityConfig,
   highestMemoryDistributedConfig,
 } from './highestTestConfigs.js';
@@ -173,8 +178,11 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'highest-distributedEscalation': highestDistributedEscalationConfig,
   'highest-jobPriority': highestJobPriorityConfig,
   'highest-highConcurrency': highestHighConcurrencyConfig,
+  'highest-highConcurrencyEscalation': highestHighConcurrencyEscalationConfig,
   'highest-edgeFloor': highestEdgeFloorConfig,
   'highest-edgeZeroSlots': highestEdgeZeroSlotsConfig,
+  'highest-edgeZeroMemory': highestEdgeZeroMemoryConfig,
+  'highest-edgeLargeMemory': highestEdgeLargeMemoryConfig,
   'highest-edgeAllFixed': highestEdgeAllFixedConfig,
   'highest-edgeSingleFlex': highestEdgeSingleFlexConfig,
 };

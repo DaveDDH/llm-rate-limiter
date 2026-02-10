@@ -133,18 +133,20 @@ const verifyFlexModelPoolOnBothInstances = async (): Promise<void> => {
 };
 
 /**
- * Verify Instance B pool allocation after heavy load on A
+ * Verify both instances have equal pool allocation after heavy load on A.
+ * Remaining capacity is global, so both instances' pools decrease equally.
  */
-const verifyInstanceBPoolAfterHeavyLoad = async (): Promise<void> => {
-  const baselineB = await fetchAllocation(INSTANCE_B_URL);
-  const baselinePoolB = getFlexModelPool(baselineB);
-
+const verifyEqualPoolAfterHeavyLoad = async (): Promise<void> => {
   await runAllocationVerifyHeavyLoad();
 
+  const afterLoadA = await fetchAllocation(INSTANCE_A_URL);
   const afterLoadB = await fetchAllocation(INSTANCE_B_URL);
+  const afterPoolA = getFlexModelPool(afterLoadA);
   const afterPoolB = getFlexModelPool(afterLoadB);
 
-  expect(afterPoolB?.totalSlots).toBeGreaterThanOrEqual(baselinePoolB?.totalSlots ?? ZERO_COUNT);
+  expect(afterPoolA?.totalSlots).toBeGreaterThan(ZERO_COUNT);
+  expect(afterPoolB?.totalSlots).toBeGreaterThan(ZERO_COUNT);
+  expect(afterPoolB?.totalSlots).toBe(afterPoolA?.totalSlots);
 };
 
 describe('Local Ratio Only - Pool Allocation Verification', () => {
@@ -160,8 +162,8 @@ describe('Local Ratio Only - Pool Allocation Verification', () => {
   it('should have pool allocation for flex-model', verifyFlexModelPoolOnBothInstances);
 
   it(
-    'Instance B should maintain pool allocation after Instance A processes heavy load',
-    verifyInstanceBPoolAfterHeavyLoad,
+    'Both instances should have equal pool allocation after heavy load on A',
+    verifyEqualPoolAfterHeavyLoad,
     BEFORE_ALL_TIMEOUT_MS
   );
 });

@@ -8,13 +8,12 @@
  */
 import type { AllocationInfo } from '@llm-rate-limiter/core';
 
-import { bootInstance, cleanRedis, killAllInstances } from '../instanceLifecycle.js';
+import { bootInstance, cleanRedis, killAllInstances, waitForAllocationUpdate } from '../instanceLifecycle.js';
 import type { ConfigPresetName } from '../resetInstance.js';
 import { sleep } from '../testUtils.js';
 
 // Timing constants
-const ALLOCATION_PROPAGATION_MS = 2000;
-const JOB_SETTLE_MS = 500;
+const JOB_SETTLE_MS = 3000;
 
 // Ports for two-instance distributed tests
 export const PORT_A = 4001;
@@ -32,6 +31,7 @@ export const JOB_TYPE_C = 'flexJobC';
 // Pool slot expectations
 export const FIVE_SLOTS = 5;
 export const TWO_INSTANCES = 2;
+export const ZERO_SLOTS = 0;
 
 // Ratio constants
 export const INITIAL_RATIO = 0.33;
@@ -43,6 +43,22 @@ export const HTTP_ACCEPTED = 202;
 // Job duration
 export const SHORT_JOB_DURATION_MS = 100;
 export const MEDIUM_JOB_DURATION_MS = 3000;
+
+/** Job type state from stats */
+interface JobTypeState {
+  currentRatio: number;
+  initialRatio: number;
+  flexible: boolean;
+  inFlight: number;
+  allocatedSlots: number;
+}
+
+/** Job type stats from stats response */
+interface JobTypeStatsData {
+  jobTypes: Record<string, JobTypeState>;
+  totalSlots: number;
+  lastAdjustmentTime: number | null;
+}
 
 /** Allocation response from the debug endpoint */
 export interface AllocationResponse {
@@ -56,12 +72,8 @@ export interface StatsResponse {
   instanceId: string;
   timestamp: number;
   stats: {
-    models: Record<
-      string,
-      {
-        jobTypes?: Record<string, { ratio: number }>;
-      }
-    >;
+    models: Record<string, unknown>;
+    jobTypes?: JobTypeStatsData;
   };
 }
 
@@ -83,9 +95,12 @@ export const fetchStats = async (port: number): Promise<StatsResponse> => {
   return data;
 };
 
-/** Get ratio for a job type from stats */
-export const getJobTypeRatio = (stats: StatsResponse, modelId: string, jobType: string): number | undefined =>
-  stats.stats.models[modelId]?.jobTypes?.[jobType]?.ratio;
+/** Get ratio for a job type from stats (ratios are global, not per-model) */
+export const getJobTypeRatio = (
+  stats: StatsResponse,
+  _modelId: string,
+  jobType: string
+): number | undefined => stats.stats.jobTypes?.jobTypes[jobType]?.currentRatio;
 
 /** Get pool slots for a model */
 export const getModelPoolSlots = (
@@ -99,21 +114,24 @@ export const getModelPoolSlots = (
   return pools[modelId]?.totalSlots;
 };
 
-/** Submit a job with optional payload */
+/** Payload for job submission */
+export interface JobPayload {
+  durationMs: number;
+  actualInputTokens?: number;
+  actualOutputTokens?: number;
+}
+
+/** Submit a job with a payload */
 export const submitJob = async (
   port: number,
   jobId: string,
   jobType: string,
-  durationMs: number
+  payload: JobPayload
 ): Promise<number> => {
   const response = await fetch(`http://localhost:${port}/api/queue-job`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jobId,
-      jobType,
-      payload: { durationMs },
-    }),
+    body: JSON.stringify({ jobId, jobType, payload }),
   });
   return response.status;
 };
@@ -122,11 +140,9 @@ export const submitJob = async (
 export const setupTwoInstances = async (): Promise<void> => {
   await killAllInstances();
   await cleanRedis();
-
   await bootInstance(PORT_A, CONFIG_PRESET);
-  await sleep(ALLOCATION_PROPAGATION_MS);
   await bootInstance(PORT_B, CONFIG_PRESET);
-  await sleep(ALLOCATION_PROPAGATION_MS);
+  await waitForAllocationUpdate(PORT_A, (a) => a.instanceCount === TWO_INSTANCES);
 };
 
 /** Wait for job settle time */

@@ -28,6 +28,7 @@ import {
   RATIO_TOLERANCE,
   SHORT_JOB_DURATION_MS,
   TWO_INSTANCES,
+  ZERO_SLOTS,
   fetchStats,
   getJobTypeRatio,
   getModelPoolSlots,
@@ -42,6 +43,19 @@ const BEFORE_ALL_TIMEOUT_MS = 60000;
 
 const HEAVY_LOAD_COUNT = 20;
 const LIGHT_LOAD_COUNT = 3;
+
+// Reduced count for pool-slot test: total usage must stay under 100K TPM
+// (each job consumes 10K tokens in the time-window counter with no refund)
+const POOL_TEST_LOAD = 5;
+
+// Job payload constants
+const SHORT_JOB = { durationMs: SHORT_JOB_DURATION_MS };
+const ZERO_TOKENS = 0;
+const ZERO_TOKEN_JOB = {
+  durationMs: SHORT_JOB_DURATION_MS,
+  actualInputTokens: ZERO_TOKENS,
+  actualOutputTokens: ZERO_TOKENS,
+};
 
 // Precision for toBeCloseTo comparison
 const CLOSE_TO_PRECISION = 2;
@@ -79,7 +93,7 @@ describe('Distributed Ratio Management - Ratio Changes Not Shared Via Redis', ()
 
     const heavyLoadPromises = [];
     for (let i = 0; i < HEAVY_LOAD_COUNT; i += LOOP_INCREMENT) {
-      heavyLoadPromises.push(submitJob(PORT_A, `heavy-a-${i}`, JOB_TYPE_A, SHORT_JOB_DURATION_MS));
+      heavyLoadPromises.push(submitJob(PORT_A, `heavy-a-${i}`, JOB_TYPE_A, SHORT_JOB));
     }
     const heavyResults = await Promise.all(heavyLoadPromises);
 
@@ -111,13 +125,13 @@ describe('Distributed Ratio Management - Each Instance Has Independent Ratios', 
   it('37.2: should maintain different ratios on each instance based on local load', async () => {
     const jobsAPromises = [];
     for (let i = 0; i < HEAVY_LOAD_COUNT; i += LOOP_INCREMENT) {
-      jobsAPromises.push(submitJob(PORT_A, `load-a-${i}`, JOB_TYPE_A, SHORT_JOB_DURATION_MS));
+      jobsAPromises.push(submitJob(PORT_A, `load-a-${i}`, JOB_TYPE_A, SHORT_JOB));
     }
     await Promise.all(jobsAPromises);
 
     const jobsBPromises = [];
     for (let i = 0; i < HEAVY_LOAD_COUNT; i += LOOP_INCREMENT) {
-      jobsBPromises.push(submitJob(PORT_B, `load-b-${i}`, JOB_TYPE_B, SHORT_JOB_DURATION_MS));
+      jobsBPromises.push(submitJob(PORT_B, `load-b-${i}`, JOB_TYPE_B, SHORT_JOB));
     }
     await Promise.all(jobsBPromises);
 
@@ -151,14 +165,14 @@ describe('Distributed Ratio Management - Pool Allocation Same Despite Different 
 
   it('37.3: should have same pool allocation despite different local ratios', async () => {
     const heavyJobsA = [];
-    for (let i = 0; i < HEAVY_LOAD_COUNT; i += LOOP_INCREMENT) {
-      heavyJobsA.push(submitJob(PORT_A, `heavy-${i}`, JOB_TYPE_A, SHORT_JOB_DURATION_MS));
+    for (let i = 0; i < POOL_TEST_LOAD; i += LOOP_INCREMENT) {
+      heavyJobsA.push(submitJob(PORT_A, `heavy-${i}`, JOB_TYPE_A, SHORT_JOB));
     }
     await Promise.all(heavyJobsA);
 
     const lightJobsB = [];
     for (let i = 0; i < LIGHT_LOAD_COUNT; i += LOOP_INCREMENT) {
-      lightJobsB.push(submitJob(PORT_B, `light-${i}`, JOB_TYPE_B, SHORT_JOB_DURATION_MS));
+      lightJobsB.push(submitJob(PORT_B, `light-${i}`, JOB_TYPE_B, SHORT_JOB));
     }
     await Promise.all(lightJobsB);
 
@@ -170,8 +184,11 @@ describe('Distributed Ratio Management - Pool Allocation Same Despite Different 
     const slotsA = getModelPoolSlots(allocA, MODEL_ID);
     const slotsB = getModelPoolSlots(allocB, MODEL_ID);
 
-    expect(slotsA).toBe(FIVE_SLOTS);
-    expect(slotsB).toBe(FIVE_SLOTS);
+    // Both instances should have equal pool allocation despite different local ratios
+    // (remaining capacity is global, so both decrease equally)
+    expect(slotsA).toBeGreaterThan(ZERO_SLOTS);
+    expect(slotsB).toBeGreaterThan(ZERO_SLOTS);
+    expect(slotsA).toBe(slotsB);
   });
 });
 
@@ -195,7 +212,7 @@ describe('Distributed Ratio Management - Local Ratio Changes Dont Affect Redis',
 
     const triggerJobs = [];
     for (let i = 0; i < HEAVY_LOAD_COUNT; i += LOOP_INCREMENT) {
-      triggerJobs.push(submitJob(PORT_A, `trigger-${i}`, JOB_TYPE_A, SHORT_JOB_DURATION_MS));
+      triggerJobs.push(submitJob(PORT_A, `trigger-${i}`, JOB_TYPE_A, ZERO_TOKEN_JOB));
     }
     await Promise.all(triggerJobs);
 
@@ -210,7 +227,10 @@ describe('Distributed Ratio Management - Local Ratio Changes Dont Affect Redis',
     const slotsAAfter = getModelPoolSlots(allocAAfter, MODEL_ID);
     const slotsBAfter = getModelPoolSlots(allocBAfter, MODEL_ID);
 
-    expect(slotsAAfter).toBe(FIVE_SLOTS);
-    expect(slotsBAfter).toBe(FIVE_SLOTS);
+    // Both instances should have equal pool allocation after heavy load
+    // (capacity consumption affects both equally; ratio changes are local only)
+    expect(slotsAAfter).toBeGreaterThan(ZERO_SLOTS);
+    expect(slotsBAfter).toBeGreaterThan(ZERO_SLOTS);
+    expect(slotsAAfter).toBe(slotsBAfter);
   });
 });

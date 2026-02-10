@@ -10,8 +10,10 @@
  * - 47.4: Very large memory estimate
  *
  * Multiple config presets:
- * - highest-edgeZeroSlots: TPM=15K, 4 instances → 0 slots
+ * - highest-edgeZeroSlots: TPM=15K, 4 instances → 1 slot (min guarantee)
  * - highest-edgeFloor: TPM=20K, ratio=0.1 → floor=0
+ * - highest-edgeZeroMemory: memory=5MB, estimated=10MB → 0 memory slots
+ * - highest-edgeLargeMemory: memory=100MB, estimated=200MB → 0 memory slots
  */
 import {
   AFTER_ALL_TIMEOUT_MS,
@@ -22,13 +24,10 @@ import {
   INSTANCE_URL,
   JOB_COMPLETE_TIMEOUT_MS,
   JOB_TYPE_A,
-  MEMORY_5MB,
-  MEMORY_100MB,
   MODEL_ALPHA,
   ONE_SLOT,
   PORT_A,
   SHORT_JOB_DURATION_MS,
-  ZERO_SLOTS,
   fetchAllocation,
   fetchJobResults,
   findJobResult,
@@ -62,10 +61,10 @@ describe('47.1 Very Large Instance Count', () => {
     expect(response.allocation?.instanceCount).toBe(FOUR_INSTANCES);
   });
 
-  it('should have 0 total slots per instance', async () => {
+  it('should have 1 total slot per instance (min-1-slot guarantee)', async () => {
     const response = await fetchAllocation(PORT_A);
     const slots = getModelSlots(response, MODEL_ALPHA);
-    expect(slots).toBe(ZERO_SLOTS);
+    expect(slots).toBe(ONE_SLOT);
   });
 });
 
@@ -108,12 +107,12 @@ describe('47.2 Floor Rounding Guarantees Minimum Slot', () => {
 /**
  * Test 47.3: Zero Memory Slots
  *
- * Instance memory: 5MB, estimatedMemoryKB=10MB.
- * Memory slots = floor(5 / 10) = 0.
+ * Config maxMemoryKB=5MB (5120KB), estimatedUsedMemoryKB=10MB (10240KB).
+ * Memory slots = floor(5120 / 10240) = 0.
  */
 describe('47.3 Zero Memory Slots', () => {
   beforeAll(async () => {
-    await setupSingleInstance('highest-edgeFloor', { maxMemoryMB: MEMORY_5MB });
+    await setupSingleInstance('highest-edgeZeroMemory');
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should boot instance with limited memory', async () => {
@@ -136,12 +135,12 @@ describe('47.3 Zero Memory Slots', () => {
 /**
  * Test 47.4: Very Large Memory Estimate
  *
- * Instance memory: 100MB, estimatedMemoryKB=200MB.
- * Memory slots = floor(100 / 200) = 0.
+ * Config maxMemoryKB=100MB (102400KB), estimatedUsedMemoryKB=200MB (204800KB).
+ * Memory slots = floor(102400 / 204800) = 0.
  */
 describe('47.4 Very Large Memory Estimate', () => {
   beforeAll(async () => {
-    await setupSingleInstance('highest-edgeFloor', { maxMemoryMB: MEMORY_100MB });
+    await setupSingleInstance('highest-edgeLargeMemory');
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should boot instance with memory constraint', async () => {

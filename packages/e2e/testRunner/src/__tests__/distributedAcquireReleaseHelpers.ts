@@ -13,6 +13,7 @@ import { sleep } from '../testUtils.js';
 
 // Timing constants
 const ALLOCATION_PROPAGATION_MS = 2000;
+const ZERO_FALLBACK = 0;
 const POLL_INTERVAL_MS = 100;
 const ACQUIRE_TIMEOUT_MS = 10000;
 
@@ -148,6 +149,29 @@ export const waitForActiveJobCount = async (
   if (!success) {
     throw new Error(`Timeout waiting for active job count to reach ${expectedCount}`);
   }
+};
+
+/** Stats response (minimal: only fields needed for in-flight check) */
+interface StatsResponse {
+  stats: {
+    jobTypes?: {
+      jobTypes: Record<string, { inFlight: number }>;
+    };
+  };
+}
+
+/** Type guard for StatsResponse */
+const isStatsResponse = (value: unknown): value is StatsResponse =>
+  typeof value === 'object' && value !== null && 'stats' in value;
+
+/** Get in-flight count for a job type from stats */
+export const getInFlightCount = async (port: number, jobType: string): Promise<number> => {
+  const response = await fetch(`http://localhost:${port}/api/debug/stats`);
+  const data: unknown = await response.json();
+  if (!isStatsResponse(data)) {
+    throw new Error('Invalid stats response');
+  }
+  return data.stats.jobTypes?.jobTypes[jobType]?.inFlight ?? ZERO_FALLBACK;
 };
 
 // Re-export for convenience

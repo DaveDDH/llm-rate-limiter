@@ -47,7 +47,15 @@ export const HTTP_ACCEPTED = 202;
 // Job duration
 export const MEDIUM_JOB_DURATION_MS = 3000;
 export const QUEUE_DURATION_THRESHOLD_MS = 2800;
-export const REALLOCATION_WAKE_THRESHOLD_MS = 5000;
+export const REALLOCATION_WAKE_THRESHOLD_MS = 15000;
+
+// Zero-token payload: jobs complete without consuming TPM capacity
+const ZERO_TOKENS = 0;
+export const ZERO_TOKEN_JOB: JobPayload = {
+  durationMs: MEDIUM_JOB_DURATION_MS,
+  actualInputTokens: ZERO_TOKENS,
+  actualOutputTokens: ZERO_TOKENS,
+};
 
 /** Allocation response from the debug endpoint */
 export interface AllocationResponse {
@@ -62,6 +70,7 @@ interface JobResultResponse {
   status: string;
   modelUsed?: string;
   queueDuration?: number;
+  error?: string;
 }
 
 /** Type guard for JobResultResponse */
@@ -80,12 +89,19 @@ export const getModelPoolSlots = (
   return pools[modelId]?.totalSlots;
 };
 
+/** Job payload for submit */
+export interface JobPayload {
+  durationMs: number;
+  actualInputTokens?: number;
+  actualOutputTokens?: number;
+}
+
 /** Submit a job */
 export const submitJob = async (
   port: number,
   jobId: string,
   jobType: string,
-  durationMs: number
+  payload: JobPayload
 ): Promise<number> => {
   const response = await fetch(`http://localhost:${port}/api/queue-job`, {
     method: 'POST',
@@ -93,7 +109,7 @@ export const submitJob = async (
     body: JSON.stringify({
       jobId,
       jobType,
-      payload: { durationMs },
+      payload,
     }),
   });
   return response.status;

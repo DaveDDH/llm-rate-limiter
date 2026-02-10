@@ -19,8 +19,9 @@ export const PORT_A = 4001;
 export const PORT_B = 4002;
 export const PORT_C = 4003;
 
-// Config preset
+// Config presets
 export const CONFIG_PRESET: ConfigPresetName = 'highest-highConcurrency';
+export const CONFIG_PRESET_ESCALATION: ConfigPresetName = 'highest-highConcurrencyEscalation';
 
 // Model identifiers
 export const MODEL_ALPHA = 'model-alpha';
@@ -167,11 +168,11 @@ export const countJobsByModel = (results: JobResult[], modelId: string): number 
 /**
  * Setup two instance test
  */
-export const setupTwoInstanceTest = async (): Promise<void> => {
+export const setupTwoInstanceTest = async (configPreset: ConfigPresetName = CONFIG_PRESET): Promise<void> => {
   await killAllInstances();
   await cleanRedis();
-  await bootInstance(PORT_A, CONFIG_PRESET);
-  await bootInstance(PORT_B, CONFIG_PRESET);
+  await bootInstance(PORT_A, configPreset);
+  await bootInstance(PORT_B, configPreset);
   await sleep(ALLOCATION_PROPAGATION_MS);
 };
 

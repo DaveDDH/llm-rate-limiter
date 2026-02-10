@@ -5,6 +5,7 @@ import { isValidPresetName } from '../rateLimiterConfigs.js';
 import type { ResetOptions, ResetResult, ServerState } from '../serverState.js';
 import type { DebugEventEmitter } from './eventEmitter.js';
 import type { JobHistoryTracker } from './jobHistoryTracker.js';
+import { handleJobResult, handleJobResults } from './jobResultRoutes.js';
 
 const HTTP_STATUS_OK = 200;
 const HTTP_STATUS_BAD_REQUEST = 400;
@@ -238,6 +239,8 @@ export const createDebugRoutes = (deps: DebugRouteDeps): Router => {
   router.get('/stats', handleStats(state));
   router.get('/active-jobs', handleActiveJobs(state));
   router.get('/job-history', handleJobHistory(state));
+  router.get('/job-result/:jobId', handleJobResult(state));
+  router.get('/job-results', handleJobResults(state));
   router.get('/overages', handleOverages(state));
   router.post('/reset', handleReset(state, resetServer));
   router.get('/allocation', handleAllocation(state));

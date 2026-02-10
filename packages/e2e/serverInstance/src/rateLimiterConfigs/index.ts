@@ -104,11 +104,17 @@ export {
   highestDistributedEscalationConfig,
   highestJobPriorityConfig,
   highestHighConcurrencyConfig,
+  highestHighConcurrencyEscalationConfig,
+} from './highestTestConfigs.js';
+
+export {
   highestEdgeFloorConfig,
   highestEdgeZeroSlotsConfig,
+  highestEdgeZeroMemoryConfig,
+  highestEdgeLargeMemoryConfig,
   highestEdgeAllFixedConfig,
   highestEdgeSingleFlexConfig,
-} from './highestTestConfigs.js';
+} from './edgeCaseConfigs.js';
 
 // Re-export registry and helpers from registry file
 export { configPresets, getConfigPreset, isValidPresetName } from './registry.js';

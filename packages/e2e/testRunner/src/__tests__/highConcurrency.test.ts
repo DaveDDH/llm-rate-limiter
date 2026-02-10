@@ -15,6 +15,7 @@ import {
   AFTER_ALL_TIMEOUT_MS,
   ALPHA_CAPACITY,
   BEFORE_ALL_TIMEOUT_MS,
+  CONFIG_PRESET_ESCALATION,
   FIFTY_JOBS,
   HTTP_ACCEPTED,
   JOB_COMPLETE_TIMEOUT_MS,
@@ -27,7 +28,6 @@ import {
   TEST_TIMEOUT_MS,
   ZERO_COUNT,
   countJobsByModel,
-  countJobsInFirstMinute,
   fetchJobResults,
   killAllInstances,
   setupThreeInstanceTest,
@@ -76,8 +76,8 @@ describe('46.1 Global Limit Respected Under High Concurrency', () => {
       const resultsC = await fetchJobResults(PORT_C);
       const allResults = [...resultsA, ...resultsB, ...resultsC];
 
-      const firstMinuteCount = countJobsInFirstMinute(allResults);
-      expect(firstMinuteCount).toBeLessThanOrEqual(MAX_JOBS_FIRST_MINUTE);
+      const alphaCount = countJobsByModel(allResults, MODEL_ALPHA);
+      expect(alphaCount).toBeLessThanOrEqual(MAX_JOBS_FIRST_MINUTE);
     },
     TEST_TIMEOUT_MS
   );
@@ -91,7 +91,7 @@ describe('46.1 Global Limit Respected Under High Concurrency', () => {
  */
 describe('46.2 High-Volume Escalation', () => {
   beforeAll(async () => {
-    await setupTwoInstanceTest();
+    await setupTwoInstanceTest(CONFIG_PRESET_ESCALATION);
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it(

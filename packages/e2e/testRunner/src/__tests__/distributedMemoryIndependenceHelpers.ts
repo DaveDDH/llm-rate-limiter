@@ -41,8 +41,8 @@ export const ESTIMATED_MEMORY_MB = 10;
 export const MEMORY_SLOTS_A = 10;
 export const MEMORY_SLOTS_B = 20;
 
-// Pool slot expectations (from distributed allocation)
-export const DISTRIBUTED_POOL_SLOTS = 100;
+// Pool slot expectations: floor(1M TPM / 10K tokens / 2 instances) = 50
+export const DISTRIBUTED_POOL_SLOTS = 50;
 export const TWO_INSTANCES = 2;
 
 // HTTP status
@@ -121,6 +121,40 @@ export const getActiveJobCount = async (port: number): Promise<number> => {
   }
   return data.count;
 };
+
+/** Job type stats entry from stats response */
+interface JobTypeStatsEntry {
+  allocatedSlots: number;
+  inFlight: number;
+}
+
+/** Stats response from GET /api/debug/stats */
+interface StatsResponse {
+  instanceId: string;
+  stats: {
+    jobTypes?: {
+      jobTypes: Record<string, JobTypeStatsEntry>;
+    };
+  };
+}
+
+/** Type guard for StatsResponse */
+const isStatsResponse = (value: unknown): value is StatsResponse =>
+  typeof value === 'object' && value !== null && 'stats' in value;
+
+/** Fetch stats from an instance */
+export const fetchStats = async (port: number): Promise<StatsResponse> => {
+  const response = await fetch(`http://localhost:${port}/api/debug/stats`);
+  const data: unknown = await response.json();
+  if (!isStatsResponse(data)) {
+    throw new Error('Invalid stats response');
+  }
+  return data;
+};
+
+/** Get allocated slots for a job type (memory-constrained) */
+export const getAllocatedSlots = (stats: StatsResponse, jobType: string): number | undefined =>
+  stats.stats.jobTypes?.jobTypes[jobType]?.allocatedSlots;
 
 // Re-export for convenience
 export { fetchAllocation, killAllInstances } from '../instanceLifecycle.js';

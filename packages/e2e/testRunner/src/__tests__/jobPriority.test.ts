@@ -12,6 +12,7 @@
  * - model-alpha: TPM=10K (1 slot), model-beta: TPM=100K
  * - lowPriority: maxWaitMS=0, critical: maxWaitMS=60s
  */
+import type { JobSubmission } from './jobPriorityHelpers.js';
 import {
   AFTER_ALL_TIMEOUT_MS,
   BEFORE_ALL_TIMEOUT_MS,
@@ -25,6 +26,7 @@ import {
   LONG_JOB_DURATION_MS,
   MODEL_BETA,
   SHORT_JOB_DURATION_MS,
+  ZERO_TOKEN_PAYLOAD,
   fetchJobResults,
   findJobResult,
   killAllInstances,
@@ -55,6 +57,7 @@ describe('45.1a Low Priority Delegates Immediately', () => {
       jobId: fillId,
       jobType: JOB_TYPE_CRITICAL,
       durationMs: LONG_JOB_DURATION_MS,
+      extraPayload: ZERO_TOKEN_PAYLOAD,
     });
     await submitAndExpectAccepted({
       baseUrl: INSTANCE_URL,
@@ -83,12 +86,14 @@ describe('45.1b Critical Job Queues', () => {
       jobId: fillId,
       jobType: JOB_TYPE_CRITICAL,
       durationMs: LONG_JOB_DURATION_MS,
+      extraPayload: ZERO_TOKEN_PAYLOAD,
     });
     await submitAndExpectAccepted({
       baseUrl: INSTANCE_URL,
       jobId: critId,
       jobType: JOB_TYPE_CRITICAL,
       durationMs: SHORT_JOB_DURATION_MS,
+      extraPayload: ZERO_TOKEN_PAYLOAD,
     });
     await waitForJobComplete(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
     const results = await fetchJobResults(INSTANCE_URL);
@@ -96,12 +101,38 @@ describe('45.1b Critical Job Queues', () => {
   });
 });
 
-/**
- * Test 45.2: Mixed Job Types in Same Queue
- *
- * Submit critical job (queued), lowPriority job (delegates),
- * another critical job (queued).
- */
+/** Job IDs for mixed job type test */
+interface MixedJobIds {
+  fill: string;
+  critical1: string;
+  lowPriority: string;
+  critical2: string;
+}
+
+/** Build the mixed job submission list for test 45.2 */
+const buildMixedJobSubmissions = (ids: MixedJobIds): JobSubmission[] => [
+  {
+    jobId: ids.fill,
+    jobType: JOB_TYPE_CRITICAL,
+    durationMs: LONG_JOB_DURATION_MS,
+    extraPayload: ZERO_TOKEN_PAYLOAD,
+  },
+  {
+    jobId: ids.critical1,
+    jobType: JOB_TYPE_CRITICAL,
+    durationMs: SHORT_JOB_DURATION_MS,
+    extraPayload: ZERO_TOKEN_PAYLOAD,
+  },
+  { jobId: ids.lowPriority, jobType: JOB_TYPE_LOW_PRIORITY, durationMs: SHORT_JOB_DURATION_MS },
+  {
+    jobId: ids.critical2,
+    jobType: JOB_TYPE_CRITICAL,
+    durationMs: SHORT_JOB_DURATION_MS,
+    extraPayload: ZERO_TOKEN_PAYLOAD,
+  },
+];
+
+/** Test 45.2: Mixed Job Types in Same Queue */
 describe('45.2 Mixed Job Types in Same Queue', () => {
   const jobIds = {
     fill: `mixed-fill-${Date.now()}`,
@@ -115,12 +146,7 @@ describe('45.2 Mixed Job Types in Same Queue', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should submit all mixed job types', async () => {
-    await submitJobsInOrder(INSTANCE_URL, [
-      { jobId: jobIds.fill, jobType: JOB_TYPE_CRITICAL, durationMs: LONG_JOB_DURATION_MS },
-      { jobId: jobIds.critical1, jobType: JOB_TYPE_CRITICAL, durationMs: SHORT_JOB_DURATION_MS },
-      { jobId: jobIds.lowPriority, jobType: JOB_TYPE_LOW_PRIORITY, durationMs: SHORT_JOB_DURATION_MS },
-      { jobId: jobIds.critical2, jobType: JOB_TYPE_CRITICAL, durationMs: SHORT_JOB_DURATION_MS },
-    ]);
+    await submitJobsInOrder(INSTANCE_URL, buildMixedJobSubmissions(jobIds));
   });
 
   it('should delegate low-priority and queue critical jobs', async () => {

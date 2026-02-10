@@ -17,8 +17,6 @@ const REQUESTS_SINGLE = 1;
 // Ratio constants
 const RATIO_FULL = 1.0;
 const RATIO_HALF = 0.5;
-const RATIO_NINETY = 0.9;
-const RATIO_TEN = 0.1;
 
 // Capacity constants
 const TPM_10K = 10000;
@@ -26,7 +24,6 @@ const TPM_20K = 20000;
 const TPM_50K = 50000;
 const TPM_100K = 100000;
 const TPM_1M = 1000000;
-const TPM_15K = 15000;
 const CONCURRENT_100 = 100;
 const TOKENS_10K = 10000;
 const TOKENS_1K = 1000;
@@ -185,82 +182,22 @@ export const highestHighConcurrencyConfig: RateLimiterPreset = {
 };
 
 /**
- * 47.2: Floor rounding edge case.
- * TPM=20K, jobTypeA ratio=0.1, jobTypeB ratio=0.9.
+ * 46.2: High-volume escalation.
+ * model-alpha: TPM=10K (5 slots/instance × 2 = 10 total), model-beta: TPM=1M.
+ * maxWaitMS=0 → immediate escalation when alpha full.
  */
-export const highestEdgeFloorConfig: RateLimiterPreset = {
+export const highestHighConcurrencyEscalationConfig: RateLimiterPreset = {
   models: {
-    'model-alpha': { tokensPerMinute: TPM_20K, pricing: standardPricing },
+    'model-alpha': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-beta': { tokensPerMinute: TPM_1M, pricing: standardPricing },
   },
-  escalationOrder: ['model-alpha'],
+  escalationOrder: ['model-alpha', 'model-beta'],
   resourceEstimations: {
     jobTypeA: {
-      estimatedUsedTokens: TOKENS_10K,
-      estimatedNumberOfRequests: REQUESTS_SINGLE,
-      ratio: { initialValue: RATIO_TEN },
-      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
-    },
-    jobTypeB: {
-      estimatedUsedTokens: TOKENS_10K,
-      estimatedNumberOfRequests: REQUESTS_SINGLE,
-      ratio: { initialValue: RATIO_NINETY },
-    },
-  },
-};
-
-/**
- * 47: Edge case - zero slots after division.
- * TPM=15K, tokens=10K, 4 instances → 0 slots each.
- */
-export const highestEdgeZeroSlotsConfig: RateLimiterPreset = {
-  models: {
-    'model-alpha': { tokensPerMinute: TPM_15K, pricing: standardPricing },
-  },
-  escalationOrder: ['model-alpha'],
-  resourceEstimations: {
-    jobTypeA: {
-      estimatedUsedTokens: TOKENS_10K,
+      estimatedUsedTokens: TOKENS_1K,
       estimatedNumberOfRequests: REQUESTS_SINGLE,
       ratio: { initialValue: RATIO_FULL },
-    },
-  },
-};
-
-/**
- * 47.7: Only fixed job types (no adjustment possible).
- */
-export const highestEdgeAllFixedConfig: RateLimiterPreset = {
-  models: {
-    'model-alpha': { tokensPerMinute: TPM_100K, pricing: standardPricing },
-  },
-  escalationOrder: ['model-alpha'],
-  resourceEstimations: {
-    fixedA: {
-      estimatedUsedTokens: TOKENS_10K,
-      estimatedNumberOfRequests: REQUESTS_SINGLE,
-      ratio: { initialValue: RATIO_HALF, flexible: false },
-    },
-    fixedB: {
-      estimatedUsedTokens: TOKENS_10K,
-      estimatedNumberOfRequests: REQUESTS_SINGLE,
-      ratio: { initialValue: RATIO_HALF, flexible: false },
-    },
-  },
-};
-
-/**
- * 47.8: Single flexible job type (no self-transfer).
- */
-export const highestEdgeSingleFlexConfig: RateLimiterPreset = {
-  models: {
-    'model-alpha': { tokensPerMinute: TPM_100K, pricing: standardPricing },
-  },
-  escalationOrder: ['model-alpha'],
-  resourceEstimations: {
-    flexibleOnly: {
-      estimatedUsedTokens: TOKENS_10K,
-      estimatedNumberOfRequests: REQUESTS_SINGLE,
-      ratio: { initialValue: RATIO_FULL, flexible: true },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_ZERO },
     },
   },
 };

@@ -37,6 +37,7 @@ This document provides detailed documentation for each e2e test file, including 
 | `modelEscalationCapacityTracking.test.ts` | [Medium-High](./complexity-medium-high.md#22-model-escalation---capacity-tracking) | [x] | [x] |
 | `instanceScaling.test.ts` | [High](./complexity-high.md#23-instance-scaling-test) | [ ] | [ ] |
 | `twoLayerAcquireRelease.test.ts` | [High](./complexity-high.md#24-two-layer-acquirerelease) | [ ] | [ ] |
+| `twoLayerAcquireReleaseAdditional.test.ts` | [High](./complexity-high.md#24-two-layer-acquirerelease) | [ ] | [ ] |
 | `multiModelIndependence.test.ts` | [High](./complexity-high.md#25-multi-model-independence) | [ ] | [ ] |
 | `multiResourceAdjustment.test.ts` | [High](./complexity-high.md#26-multi-resource-adjustment) | [ ] | [ ] |
 | `timeWindowHandling.test.ts` | [High](./complexity-high.md#27-time-window-handling) | [ ] | [ ] |
@@ -62,6 +63,7 @@ This document provides detailed documentation for each e2e test file, including 
 | `jobPriority.test.ts` | [Highest](./complexity-highest.md#45-job-priority) | [ ] | [ ] |
 | `highConcurrency.test.ts` | [Highest](./complexity-highest.md#46-high-concurrency) | [ ] | [ ] |
 | `edgeCases.test.ts` | [Highest](./complexity-highest.md#47-edge-cases) | [ ] | [ ] |
+| `edgeCasesAdditional.test.ts` | [Highest](./complexity-highest.md#47-edge-cases) | [ ] | [ ] |
 
 ## Detailed Documentation by Complexity
 

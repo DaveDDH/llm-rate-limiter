@@ -39,6 +39,13 @@ export const DELEGATION_TOLERANCE_MS = 200;
 // HTTP status
 export const HTTP_ACCEPTED = 202;
 
+// Zero-token payload: prevents TPM exhaustion on fill jobs
+const ZERO_TOKENS = 0;
+export const ZERO_TOKEN_PAYLOAD: Record<string, unknown> = {
+  actualInputTokens: ZERO_TOKENS,
+  actualOutputTokens: ZERO_TOKENS,
+};
+
 // Shared constants
 export const ZERO_COUNT = 0;
 export const ONE_SLOT = 1;
@@ -173,6 +180,7 @@ export interface JobSubmission {
   jobId: string;
   jobType: string;
   durationMs: number;
+  extraPayload?: Record<string, unknown>;
 }
 
 /**
@@ -186,6 +194,7 @@ export const submitJobsInOrder = async (baseUrl: string, jobs: JobSubmission[]):
       jobId: job.jobId,
       jobType: job.jobType,
       durationMs: job.durationMs,
+      extraPayload: job.extraPayload,
     });
   }, Promise.resolve());
 };

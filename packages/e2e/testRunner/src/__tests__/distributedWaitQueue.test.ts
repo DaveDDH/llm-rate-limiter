@@ -16,7 +16,6 @@
 import {
   HTTP_ACCEPTED,
   JOB_TYPE,
-  MEDIUM_JOB_DURATION_MS,
   MODEL_ID,
   ONE_INSTANCE,
   ONE_SLOT,
@@ -26,6 +25,7 @@ import {
   REALLOCATION_WAKE_THRESHOLD_MS,
   TWO_INSTANCES,
   TWO_SLOTS,
+  ZERO_TOKEN_JOB,
   fetchAllocation,
   getModelPoolSlots,
   killAllInstances,
@@ -74,16 +74,16 @@ describe('Distributed Wait Queue - Wait Queue Per Instance', () => {
     async () => {
       await verifyTwoInstanceAllocation();
 
-      const statusJob1 = await submitJob(PORT_A, 'job-1', JOB_TYPE, MEDIUM_JOB_DURATION_MS);
+      const statusJob1 = await submitJob(PORT_A, 'job-1', JOB_TYPE, ZERO_TOKEN_JOB);
       expect(statusJob1).toBe(HTTP_ACCEPTED);
 
-      const statusJob2 = await submitJob(PORT_A, 'job-2', JOB_TYPE, MEDIUM_JOB_DURATION_MS);
+      const statusJob2 = await submitJob(PORT_A, 'job-2', JOB_TYPE, ZERO_TOKEN_JOB);
       expect(statusJob2).toBe(HTTP_ACCEPTED);
 
-      const statusJob3 = await submitJob(PORT_B, 'job-3', JOB_TYPE, MEDIUM_JOB_DURATION_MS);
+      const statusJob3 = await submitJob(PORT_B, 'job-3', JOB_TYPE, ZERO_TOKEN_JOB);
       expect(statusJob3).toBe(HTTP_ACCEPTED);
 
-      const statusJob4 = await submitJob(PORT_B, 'job-4', JOB_TYPE, MEDIUM_JOB_DURATION_MS);
+      const statusJob4 = await submitJob(PORT_B, 'job-4', JOB_TYPE, ZERO_TOKEN_JOB);
       expect(statusJob4).toBe(HTTP_ACCEPTED);
 
       const resultJob1 = await waitForJobResult(PORT_A, 'job-1');
@@ -124,13 +124,13 @@ describe('Distributed Wait Queue - Backend Allocation Change Wakes Queue', () =>
       expect(allocA.allocation?.instanceCount).toBe(TWO_INSTANCES);
       expect(allocB.allocation?.instanceCount).toBe(TWO_INSTANCES);
 
-      const statusJob1 = await submitJob(PORT_A, 'fill-1', JOB_TYPE, MEDIUM_JOB_DURATION_MS);
-      const statusJob2 = await submitJob(PORT_A, 'fill-2', JOB_TYPE, MEDIUM_JOB_DURATION_MS);
+      const statusJob1 = await submitJob(PORT_A, 'fill-1', JOB_TYPE, ZERO_TOKEN_JOB);
+      const statusJob2 = await submitJob(PORT_A, 'fill-2', JOB_TYPE, ZERO_TOKEN_JOB);
 
       expect(statusJob1).toBe(HTTP_ACCEPTED);
       expect(statusJob2).toBe(HTTP_ACCEPTED);
 
-      const statusJobQueued = await submitJob(PORT_A, 'queued-job', JOB_TYPE, MEDIUM_JOB_DURATION_MS);
+      const statusJobQueued = await submitJob(PORT_A, 'queued-job', JOB_TYPE, ZERO_TOKEN_JOB);
       expect(statusJobQueued).toBe(HTTP_ACCEPTED);
 
       await killInstanceBAndWaitForReallocation();
