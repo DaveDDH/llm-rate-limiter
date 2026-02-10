@@ -845,7 +845,7 @@ jobTypeA: estimatedTokens = 10,000
 
 | What We Check | Expected Result |
 |---------------|-----------------|
-| Minute N counter | 40,000 tokens |
+| Minute N local counter (PORT_A) | 20,000 tokens (2 local jobs x 10K) |
 | Minute N+1 counter | 0 tokens (fresh window) |
 | Both instances receive full allocation | true |
 | Per-instance TPM in minute N+1 | 25,000 each |
@@ -933,8 +933,8 @@ jobTypeA: estimatedTokens = 10,000, estimatedRequests = 2
 
 | What We Check | Expected Result |
 |---------------|-----------------|
-| Global TPM counter | 80,000 tokens (10 x 8,000) |
-| Global RPM counter | 30 requests (10 x 3) |
+| Local TPM counter (PORT_A) | 40,000 tokens (5 local jobs x 8,000) |
+| Local RPM counter (PORT_A) | 15 requests (5 local jobs x 3) |
 | Remaining TPM | 20,000 tokens |
 | Remaining RPM | 20 requests |
 
@@ -997,17 +997,17 @@ model-alpha: TPM = 100,000
 model-beta: TPM = 50,000
 jobType: estimatedTokens = 10,000
 instances: 2
+escalationOrder: [model-alpha, model-beta]
 ```
 
 **Scenario:**
-1. Use 80,000 tokens on model-alpha (instance A)
-2. Use 20,000 tokens on model-beta (instance A)
-3. Query allocations on instance B
+1. Submit 5 jobs (all go to model-alpha via escalation order, fits 5 slots per instance)
+2. Verify independent tracking: alpha has usage, beta is unaffected
 
 | What We Check | Expected Result |
 |---------------|-----------------|
-| model-alpha remaining | (100,000 - 80,000) / 2 = 10,000 per instance |
-| model-beta remaining | (50,000 - 20,000) / 2 = 15,000 per instance |
+| model-alpha local TPM counter | 50,000 tokens (5 jobs x 10K) |
+| model-beta local TPM counter | 0 tokens (no jobs routed to beta) |
 | model-alpha usage does not affect model-beta | true |
 
 ---
@@ -1032,7 +1032,9 @@ Total: 2 × 7 = 14 rate slots per minute window
 - 100 capacity jobs sent in parallel (saturates both instances' queues)
 - Minute 0: 7 start per instance (14 total), remaining queued
 - Escalation job sent at T=500ms, queued behind capacity jobs
-- Rate slots don't free on job completion (window counter stays at 7/7)
+- At minute boundaries, window resets and capacity jobs ahead in queue
+  consume new rate slots (14 per window). Capacity jobs that exceed
+  maxWaitMS (~65s) also escalate to xai.
 - T=~65s: maxWaitMS expires → escalation job moves to xai/grok-4.1-fast
 
 **Configuration:**
@@ -1048,7 +1050,8 @@ Total: 2 × 7 = 14 rate slots per minute window
 | Job count | 101 jobs sent |
 | Completions | All 101 jobs complete |
 | Failures | No jobs rejected |
-| Capacity jobs model | All 100 run on openai/gpt-5.2 |
+| Capacity jobs on primary | >= 14 (at least one minute window of rate slots) |
+| Capacity jobs on primary + secondary | 100 (all complete on either model) |
 | Test job model | Escalates to xai/grok-4.1-fast |
 
 ---
@@ -1066,22 +1069,25 @@ Total: 2 × 7 = 14 rate slots per minute window
 **Per-model-per-jobType capacity for "summary":**
 ```
 openai: floor(250K × 0.3 / 10K) = 7 rate slots/instance/min (14 total)
-xai: concurrency-limited at floor(109 pool × 0.3) = 32/instance (64 total)
-deepinfra: concurrency-limited at floor(100 pool × 0.3) = 30/instance (60 total)
+xai: 36 JTM slots/instance (72 total)
+deepinfra: 30 JTM slots/instance (60 total)
 ```
 
 **Mechanism:**
-- 100 openai-fill + 800 xai-fill capacity jobs sent to saturate all queues
-- Escalation job sent at T=500ms
-- Times out on openai (~65s), then times out on xai (~65s)
-- Escalates to deepinfra/gpt-oss-20b
+- 110 capacity jobs sent in parallel with 70s duration
+- Minute 0: 14 start on openai, rest queued
+- T=~65s: queued jobs timeout on openai, overflow to xai (72 start)
+- Remaining ~10 jobs queue on xai behind the 72 running
+- Escalation job sent at T=500ms, queued behind all capacity jobs
+- T=~125s: escalation job's xai maxWaitMS expires; xai jobs still
+  running (70s > 60s maxWaitMS), so escalation job escalates to deepinfra
 
 ### Test Cases
 
 | What We Check | Expected Result |
 |---------------|-----------------|
-| Job count | 901 jobs sent |
-| Completions | All 901 jobs complete |
+| Job count | 111 jobs sent |
+| Completions | All 111 jobs complete |
 | Failures | No jobs rejected |
 | Models used | All three models (openai, xai, deepinfra) |
 | Test job model | Escalates to deepinfra/gpt-oss-20b |
