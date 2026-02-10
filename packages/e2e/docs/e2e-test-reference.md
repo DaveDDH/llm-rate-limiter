@@ -35,35 +35,35 @@ This document provides detailed documentation for each e2e test file, including 
 | `modelEscalationRateLimits.test.ts` | [Medium-High](./complexity-medium-high.md#20-model-escalation---rate-limit-types) | [x] | [x] |
 | `modelEscalationTimeout.test.ts` | [Medium-High](./complexity-medium-high.md#21-model-escalation---timeout) | [x] | [x] |
 | `modelEscalationCapacityTracking.test.ts` | [Medium-High](./complexity-medium-high.md#22-model-escalation---capacity-tracking) | [x] | [x] |
-| `instanceScaling.test.ts` | [High](./complexity-high.md#23-instance-scaling-test) | [ ] | [ ] |
-| `twoLayerAcquireRelease.test.ts` | [High](./complexity-high.md#24-two-layer-acquirerelease) | [ ] | [ ] |
-| `twoLayerAcquireReleaseAdditional.test.ts` | [High](./complexity-high.md#24-two-layer-acquirerelease) | [ ] | [ ] |
-| `multiModelIndependence.test.ts` | [High](./complexity-high.md#25-multi-model-independence) | [ ] | [ ] |
-| `multiResourceAdjustment.test.ts` | [High](./complexity-high.md#26-multi-resource-adjustment) | [ ] | [ ] |
-| `timeWindowHandling.test.ts` | [High](./complexity-high.md#27-time-window-handling) | [ ] | [ ] |
-| `distributedInstanceScaling.test.ts` | [High](./complexity-high.md#28-distributed---instance-scaling) | [ ] | [ ] |
-| `distributedGlobalUsageTracking.test.ts` | [High](./complexity-high.md#29-distributed---global-usage-tracking) | [ ] | [ ] |
-| `distributedCrossInstancePropagation.test.ts` | [High](./complexity-high.md#30-distributed---cross-instance-propagation) | [ ] | [ ] |
-| `distributedPubSub.test.ts` | [High](./complexity-high.md#31-distributed---pubsub) | [ ] | [ ] |
-| `distributedDynamicLimits.test.ts` | [High](./complexity-high.md#32-distributed---dynamic-limits) | [ ] | [ ] |
-| `distributedTimeWindows.test.ts` | [High](./complexity-high.md#33-distributed---time-windows) | [ ] | [ ] |
-| `distributedRequestCountTracking.test.ts` | [High](./complexity-high.md#34-distributed---request-count-tracking) | [ ] | [ ] |
-| `distributedMultiModelTracking.test.ts` | [High](./complexity-high.md#35-distributed---multi-model-tracking) | [ ] | [ ] |
-| `modelEscalation.test.ts` | [High](./complexity-high.md#48-model-escalation-test-legacy) | [ ] | [ ] |
-| `modelEscalationToThird.test.ts` | [High](./complexity-high.md#49-model-escalation-to-third-model-test-legacy) | [ ] | [ ] |
-| `localRatioOnly.test.ts` | [Highest](./complexity-highest.md#36-local-ratio-only-test) | [ ] | [ ] |
-| `distributedRatioManagement.test.ts` | [Highest](./complexity-highest.md#37-distributed---ratio-management) | [ ] | [ ] |
-| `distributedMemoryIndependence.test.ts` | [Highest](./complexity-highest.md#38-distributed---memory-independence) | [ ] | [ ] |
-| `distributedAcquireRelease.test.ts` | [Highest](./complexity-highest.md#39-distributed---acquirerelease) | [ ] | [ ] |
-| `distributedWaitQueue.test.ts` | [Highest](./complexity-highest.md#40-distributed---wait-queue) | [ ] | [ ] |
-| `distributedEscalation.test.ts` | [Highest](./complexity-highest.md#41-distributed---escalation) | [ ] | [ ] |
-| `distributedGracefulDegradation.test.ts` | [Highest](./complexity-highest.md#42-distributed---graceful-degradation) | [ ] | [ ] |
-| `redisKeyManagement.test.ts` | [Highest](./complexity-highest.md#43-redis-key-management) | [ ] | [ ] |
-| `zeroActualUsage.test.ts` | [Highest](./complexity-highest.md#44-zero-actual-usage) | [ ] | [ ] |
-| `jobPriority.test.ts` | [Highest](./complexity-highest.md#45-job-priority) | [ ] | [ ] |
-| `highConcurrency.test.ts` | [Highest](./complexity-highest.md#46-high-concurrency) | [ ] | [ ] |
-| `edgeCases.test.ts` | [Highest](./complexity-highest.md#47-edge-cases) | [ ] | [ ] |
-| `edgeCasesAdditional.test.ts` | [Highest](./complexity-highest.md#47-edge-cases) | [ ] | [ ] |
+| `instanceScaling.test.ts` | [High](./complexity-high.md#23-instance-scaling-test) | [x] | [x] |
+| `twoLayerAcquireRelease.test.ts` | [High](./complexity-high.md#24-two-layer-acquirerelease) | [x] | [x] |
+| `twoLayerAcquireReleaseAdditional.test.ts` | [High](./complexity-high.md#24-two-layer-acquirerelease) | [x] | [x] |
+| `multiModelIndependence.test.ts` | [High](./complexity-high.md#25-multi-model-independence) | [x] | [x] |
+| `multiResourceAdjustment.test.ts` | [High](./complexity-high.md#26-multi-resource-adjustment) | [x] | [x] |
+| `timeWindowHandling.test.ts` | [High](./complexity-high.md#27-time-window-handling) | [x] | [x] |
+| `distributedInstanceScaling.test.ts` | [High](./complexity-high.md#28-distributed---instance-scaling) | [x] | [x] |
+| `distributedGlobalUsageTracking.test.ts` | [High](./complexity-high.md#29-distributed---global-usage-tracking) | [x] | [x] |
+| `distributedCrossInstancePropagation.test.ts` | [High](./complexity-high.md#30-distributed---cross-instance-propagation) | [x] | [x] |
+| `distributedPubSub.test.ts` | [High](./complexity-high.md#31-distributed---pubsub) | [x] | [x] |
+| `distributedDynamicLimits.test.ts` | [High](./complexity-high.md#32-distributed---dynamic-limits) | [x] | [x] |
+| `distributedTimeWindows.test.ts` | [High](./complexity-high.md#33-distributed---time-windows) | [x] | [x] |
+| `distributedRequestCountTracking.test.ts` | [High](./complexity-high.md#34-distributed---request-count-tracking) | [x] | [x] |
+| `distributedMultiModelTracking.test.ts` | [High](./complexity-high.md#35-distributed---multi-model-tracking) | [x] | [x] |
+| `modelEscalation.test.ts` | [High](./complexity-high.md#48-model-escalation-test-legacy) | [x] | [x] |
+| `modelEscalationToThird.test.ts` | [High](./complexity-high.md#49-model-escalation-to-third-model-test-legacy) | [x] | [x] |
+| `localRatioOnly.test.ts` | [Highest](./complexity-highest.md#36-local-ratio-only-test) | [x] | [x] |
+| `distributedRatioManagement.test.ts` | [Highest](./complexity-highest.md#37-distributed---ratio-management) | [x] | [x] |
+| `distributedMemoryIndependence.test.ts` | [Highest](./complexity-highest.md#38-distributed---memory-independence) | [x] | [x] |
+| `distributedAcquireRelease.test.ts` | [Highest](./complexity-highest.md#39-distributed---acquirerelease) | [x] | [x] |
+| `distributedWaitQueue.test.ts` | [Highest](./complexity-highest.md#40-distributed---wait-queue) | [x] | [x] |
+| `distributedEscalation.test.ts` | [Highest](./complexity-highest.md#41-distributed---escalation) | [x] | [x] |
+| `distributedGracefulDegradation.test.ts` | [Highest](./complexity-highest.md#42-distributed---graceful-degradation) | [x] | [x] |
+| `redisKeyManagement.test.ts` | [Highest](./complexity-highest.md#43-redis-key-management) | [x] | [x] |
+| `zeroActualUsage.test.ts` | [Highest](./complexity-highest.md#44-zero-actual-usage) | [x] | [x] |
+| `jobPriority.test.ts` | [Highest](./complexity-highest.md#45-job-priority) | [x] | [x] |
+| `highConcurrency.test.ts` | [Highest](./complexity-highest.md#46-high-concurrency) | [x] | [x] |
+| `edgeCases.test.ts` | [Highest](./complexity-highest.md#47-edge-cases) | [x] | [x] |
+| `edgeCasesAdditional.test.ts` | [Highest](./complexity-highest.md#47-edge-cases) | [x] | [x] |
 
 ## Detailed Documentation by Complexity
 
