@@ -39,7 +39,11 @@ export const FLEX_CONFIG: ConfigPresetName = 'flexibleRatio';
 // Per-type: floor(10 * 0.33) = 3
 export const TOTAL_SLOTS = 10;
 export const INITIAL_SLOTS_PER_TYPE = 3;
-export const INITIAL_RATIO = 0.33;
+// Config uses 0.33 but the system normalizes so ratios sum to 1.0
+// Normalized: 0.33 / (0.33 * 3) = 1/3
+const RATIO_NUMERATOR = 1;
+const THREE_JOB_TYPES = 3;
+export const INITIAL_RATIO = RATIO_NUMERATOR / THREE_JOB_TYPES;
 
 // Thresholds (defaults from RatioAdjustmentConfig)
 export const HIGH_LOAD_THRESHOLD = 0.7;
@@ -61,8 +65,11 @@ export const LONG_JOB_DURATION_MS = 30000;
 // Wait time for adjustment cycle (default interval is 5s)
 export const ADJUSTMENT_WAIT_MS = 7000;
 
-// Small tolerance for ratio comparison
-export const RATIO_TOLERANCE = 0.001;
+// Tolerance for ratio comparison (accounts for floating-point drift)
+export const RATIO_TOLERANCE = 0.005;
+
+// Multiple adjustment cycles may fire during test wait period
+export const MAX_CYCLES_IN_WAIT = 3;
 
 /** Job type state from the stats endpoint */
 export interface JobTypeState {

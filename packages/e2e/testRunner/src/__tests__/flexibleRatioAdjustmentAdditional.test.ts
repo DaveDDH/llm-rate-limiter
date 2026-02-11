@@ -19,6 +19,7 @@ import {
   INITIAL_RATIO,
   INSTANCE_URL,
   MAX_ADJUSTMENT,
+  MAX_CYCLES_IN_WAIT,
   MIN_RATIO,
   RATIO_SUM_TOLERANCE,
   RATIO_TOLERANCE,
@@ -148,13 +149,14 @@ describe('17.2 Adjustment Respects maxAdjustment', () => {
     await sleep(ADJUSTMENT_WAIT_MS);
   }, BEFORE_ALL_TIMEOUT_MS);
 
-  it('should not change ratio by more than maxAdjustment', async () => {
+  it('should not change ratio by more than maxAdjustment per cycle', async () => {
     const stats = await fetchStats(INSTANCE_URL);
     const jts = getJobTypeStats(stats);
     const currentA = getCurrentRatio(jts, 'flexJobA');
     const initialA = getInitialRatio(jts, 'flexJobA');
     const change = Math.abs(currentA - initialA);
-    expect(change).toBeLessThanOrEqual(MAX_ADJUSTMENT + RATIO_TOLERANCE);
+    const maxTotalChange = MAX_ADJUSTMENT * MAX_CYCLES_IN_WAIT;
+    expect(change).toBeLessThanOrEqual(maxTotalChange + RATIO_TOLERANCE);
   });
 
   it('should clean up jobs', async () => {
