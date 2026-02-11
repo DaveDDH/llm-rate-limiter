@@ -10,6 +10,7 @@
  */
 import {
   DISTRIBUTED_SLOTS_ZERO_MEMORY,
+  EXPECTED_FREE_RATIO_SLOTS,
   EXPECTED_JOB_TYPE_A_MEMORY_SLOTS,
   EXPECTED_JOB_TYPE_A_RATIO_SLOTS,
   EXPECTED_JOB_TYPE_B_MEMORY_SLOTS,
@@ -162,6 +163,6 @@ describe('3.6 freeMemoryRatio Respected', () => {
     const slots = getJobTypeAllocatedSlots(stats, 'jobTypeA');
     // With freeMemoryRatio = 0.8, only 80% of memory is usable
     // 100MB × 0.8 = 80MB → floor(80MB / 10MB) = 8 slots
-    expect(slots).toBeGreaterThan(ZERO_SLOTS);
+    expect(slots).toBe(EXPECTED_FREE_RATIO_SLOTS);
   });
 });

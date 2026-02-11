@@ -1,17 +1,19 @@
 /**
  * Configuration preset registry and helper functions.
  */
-import { defaultConfig } from './defaultConfig.js';
+import { capacityPlusOneConfig, defaultConfig } from './defaultConfig.js';
 import {
   highestEdgeAllFixedConfig,
   highestEdgeFloorConfig,
   highestEdgeLargeMemoryConfig,
   highestEdgeSingleFlexConfig,
+  highestEdgeZeroFloorDivConfig,
   highestEdgeZeroMemoryConfig,
   highestEdgeZeroSlotsConfig,
 } from './edgeCaseConfigs.js';
 import {
   highDistributedBasicConfig,
+  highDistributedDailyLimitConfig,
   highDistributedMixedConfig,
   highDistributedMultiModelConfig,
   highDistributedPubSubConfig,
@@ -22,6 +24,7 @@ import {
 import {
   highMultiModelConfig,
   highMultiResourceConfig,
+  highMultiResourceMixedOverageConfig,
   highRpmTrackingConfig,
   highTimeWindowConfig,
   highTpmRpmTrackingConfig,
@@ -37,6 +40,7 @@ import {
   highestHighConcurrencyEscalationConfig,
   highestJobPriorityConfig,
   highestMemoryDistributedConfig,
+  highestMemoryDistributedLowTpmConfig,
 } from './highestTestConfigs.js';
 import {
   localRatioEqualThreeConfig,
@@ -46,7 +50,6 @@ import {
 } from './localRatioConfigs.js';
 import {
   mhEscalationConcConfig,
-  mhEscalationConcWait5sConfig,
   mhEscalationMultiTimeoutConfig,
   mhEscalationRpmConfig,
   mhEscalationThreeModelConfig,
@@ -57,6 +60,9 @@ import {
   mhMemoryDiffEstimatesConfig,
   mhMemoryRatioInteractConfig,
 } from './mediumHighConfigs.js';
+import { mhEscalationConcWait5sConfig } from './mediumHighEscalationConfigs.js';
+import { mediumMaxWaitDefaultConfig } from './mediumMaxWaitDefaultConfig.js';
+import { mediumRefundPartialRequestConfig } from './mediumRefundConfig.js';
 import {
   mediumErrorMemoryConfig,
   mediumFixedProtectionMultiFixedConfig,
@@ -78,6 +84,7 @@ import {
   memCalcRatiosConfig,
   memCalcZeroMemoryConfig,
 } from './memoryCalcConfigs.js';
+import { slotCalcTpmSingleConfig } from './slotCalcInstanceScalingConfig.js';
 import {
   slotCalcConcurrentConfig,
   slotCalcMultiModelConfig,
@@ -92,7 +99,6 @@ import {
   slotCalcRpmLimitingConfig,
   slotCalcTpdConfig,
   slotCalcTpdRpdConfig,
-  slotCalcTpmSingleConfig,
   slotCalcUnevenRatiosConfig,
   slotCalcZeroSlotsConfig,
 } from './slotCalcRatioConfigs.js';
@@ -107,6 +113,7 @@ import type { ConfigPresetName, RateLimiterPreset } from './types.js';
 /** Registry of all configuration presets */
 export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   default: defaultConfig,
+  capacityPlusOne: capacityPlusOneConfig,
   slotCalculation: slotCalculationConfig,
   fixedRatio: fixedRatioConfig,
   flexibleRatio: flexibleRatioConfig,
@@ -141,6 +148,7 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'medium-maxWait-timeout': mediumMaxWaitTimeoutConfig,
   'medium-maxWait-release': mediumMaxWaitReleaseConfig,
   'medium-maxWait-perModel': mediumMaxWaitPerModelConfig,
+  'medium-maxWait-default': mediumMaxWaitDefaultConfig,
   'medium-queue-concurrent': mediumQueueConcurrentConfig,
   'medium-errorMemory': mediumErrorMemoryConfig,
   'medium-fixedProtection-twoType': mediumFixedProtectionTwoTypeConfig,
@@ -168,6 +176,7 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'high-distributedThree': highDistributedThreeConfig,
   'high-distributedMixed': highDistributedMixedConfig,
   'high-distributedTimeWindow': highDistributedTimeWindowConfig,
+  'high-distributedDailyLimit': highDistributedDailyLimitConfig,
   'high-distributedMultiModel': highDistributedMultiModelConfig,
   'high-distributedPubSub': highDistributedPubSubConfig,
   'high-distributedWait': highDistributedWaitConfig,
@@ -185,6 +194,10 @@ export const configPresets: Record<ConfigPresetName, RateLimiterPreset> = {
   'highest-edgeLargeMemory': highestEdgeLargeMemoryConfig,
   'highest-edgeAllFixed': highestEdgeAllFixedConfig,
   'highest-edgeSingleFlex': highestEdgeSingleFlexConfig,
+  'high-multiResource-mixedOverage': highMultiResourceMixedOverageConfig,
+  'medium-refund-partialRequest': mediumRefundPartialRequestConfig,
+  'highest-edgeZeroFloorDiv': highestEdgeZeroFloorDivConfig,
+  'highest-memoryDistributed-lowTPM': highestMemoryDistributedLowTpmConfig,
 };
 
 /** Get a configuration preset by name */

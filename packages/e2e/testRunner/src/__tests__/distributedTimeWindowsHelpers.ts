@@ -35,6 +35,9 @@ export const ESTIMATED_TOKENS = 10000;
 export const TWO_INSTANCES = 2;
 export const TWO_SLOTS_PER_INSTANCE = 2;
 
+// Initial TPM per instance: 50K / 2 = 25K
+export const INITIAL_TPM_PER_INSTANCE = 25_000;
+
 // Test constants
 export const TWENTY_K_TOKENS = 20000;
 export const ZERO_TOKENS = 0;
@@ -265,4 +268,4 @@ export const verifyTpmCounter = async (port: number, expectedTokens: number): Pr
 };
 
 // Re-export for convenience
-export { killAllInstances } from '../instanceLifecycle.js';
+export { fetchAllocation, killAllInstances } from '../instanceLifecycle.js';

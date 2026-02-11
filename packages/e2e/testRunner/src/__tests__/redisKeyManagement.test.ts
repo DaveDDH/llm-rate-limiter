@@ -19,12 +19,14 @@ import {
   BEFORE_ALL_TIMEOUT_MS,
   CONFIG_PRESET,
   HTTP_ACCEPTED,
+  INSTANCE_PORT,
   INSTANCE_URL,
   JOB_COMPLETE_TIMEOUT_MS,
   JOB_TYPE,
   SHORT_JOB_DURATION_MS,
   THREE_MINUTES_MS,
   TTL_BUFFER_MS,
+  fetchAllocation,
   killAllInstances,
   setupSingleInstance,
   sleep,
@@ -65,8 +67,14 @@ describe('43.1 Redis Key TTL Auto-Cleanup', () => {
       expect(status).toBe(HTTP_ACCEPTED);
       await waitForJobComplete(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
 
+      // Assert allocation exists before TTL expiration (key is active)
+      const beforeAlloc = await fetchAllocation(INSTANCE_PORT);
+      expect(beforeAlloc.allocation).toBeDefined();
+      expect(beforeAlloc.allocation?.pools).toBeDefined();
+
       await sleep(THREE_MINUTES_MS + TTL_BUFFER_MS);
 
+      // After TTL: instance re-registers and allocation is refreshed
       const newJobId = `ttl-test-after-${Date.now()}`;
       const newStatus = await submitJob({
         baseUrl: INSTANCE_URL,
@@ -76,6 +84,10 @@ describe('43.1 Redis Key TTL Auto-Cleanup', () => {
       });
       expect(newStatus).toBe(HTTP_ACCEPTED);
       await waitForJobComplete(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
+
+      // Allocation is still valid after TTL cycle (re-registered)
+      const afterAlloc = await fetchAllocation(INSTANCE_PORT);
+      expect(afterAlloc.allocation).toBeDefined();
     },
     TEST_TIMEOUT_MS
   );

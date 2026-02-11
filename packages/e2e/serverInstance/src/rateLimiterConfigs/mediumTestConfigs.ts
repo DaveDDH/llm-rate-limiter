@@ -48,8 +48,12 @@ const standardPricing = { input: PRICING_INPUT, cached: PRICING_CACHED, output: 
  */
 export const mediumMaxWaitTwoModelConfig: RateLimiterPreset = {
   models: {
-    'model-primary': { tokensPerMinute: TPM_10K, pricing: standardPricing },
-    'model-secondary': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-primary': {
+      tokensPerMinute: TPM_10K,
+      maxConcurrentRequests: MAX_CONCURRENT_1,
+      pricing: standardPricing,
+    },
+    'model-secondary': { maxConcurrentRequests: MAX_CONCURRENT_10, pricing: standardPricing },
   },
   escalationOrder: ['model-primary', 'model-secondary'],
   resourceEstimations: {
@@ -68,7 +72,11 @@ export const mediumMaxWaitTwoModelConfig: RateLimiterPreset = {
  */
 export const mediumMaxWaitSingleModelConfig: RateLimiterPreset = {
   models: {
-    'model-only': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-only': {
+      tokensPerMinute: TPM_10K,
+      maxConcurrentRequests: MAX_CONCURRENT_1,
+      pricing: standardPricing,
+    },
   },
   escalationOrder: ['model-only'],
   resourceEstimations: {
@@ -83,12 +91,16 @@ export const mediumMaxWaitSingleModelConfig: RateLimiterPreset = {
 
 /**
  * Explicit maxWaitMS=5000 for model-alpha, escalation to model-beta.
- * 1 instance: floor(10K/10K/1) = 1 slot per model.
+ * model-alpha: 1 slot (bottleneck), model-beta: 10 concurrent (fallback).
  */
 export const mediumMaxWaitExplicitConfig: RateLimiterPreset = {
   models: {
-    'model-alpha': { tokensPerMinute: TPM_10K, pricing: standardPricing },
-    'model-beta': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-alpha': {
+      tokensPerMinute: TPM_10K,
+      maxConcurrentRequests: MAX_CONCURRENT_1,
+      pricing: standardPricing,
+    },
+    'model-beta': { maxConcurrentRequests: MAX_CONCURRENT_10, pricing: standardPricing },
   },
   escalationOrder: ['model-alpha', 'model-beta'],
   resourceEstimations: {
@@ -107,8 +119,12 @@ export const mediumMaxWaitExplicitConfig: RateLimiterPreset = {
  */
 export const mediumMaxWaitTimeoutConfig: RateLimiterPreset = {
   models: {
-    'model-alpha': { tokensPerMinute: TPM_10K, pricing: standardPricing },
-    'model-beta': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-alpha': {
+      tokensPerMinute: TPM_10K,
+      maxConcurrentRequests: MAX_CONCURRENT_1,
+      pricing: standardPricing,
+    },
+    'model-beta': { maxConcurrentRequests: MAX_CONCURRENT_10, pricing: standardPricing },
   },
   escalationOrder: ['model-alpha', 'model-beta'],
   resourceEstimations: {
@@ -264,9 +280,17 @@ export const mediumFixedProtectionMultiFixedConfig: RateLimiterPreset = {
  */
 export const mediumMaxWaitPerModelConfig: RateLimiterPreset = {
   models: {
-    'model-fast': { tokensPerMinute: TPM_10K, pricing: standardPricing },
-    'model-slow': { tokensPerMinute: TPM_10K, pricing: standardPricing },
-    'model-fallback': { tokensPerMinute: TPM_10K, pricing: standardPricing },
+    'model-fast': {
+      tokensPerMinute: TPM_10K,
+      maxConcurrentRequests: MAX_CONCURRENT_1,
+      pricing: standardPricing,
+    },
+    'model-slow': {
+      tokensPerMinute: TPM_10K,
+      maxConcurrentRequests: MAX_CONCURRENT_1,
+      pricing: standardPricing,
+    },
+    'model-fallback': { maxConcurrentRequests: MAX_CONCURRENT_10, pricing: standardPricing },
   },
   escalationOrder: ['model-fast', 'model-slow', 'model-fallback'],
   resourceEstimations: {

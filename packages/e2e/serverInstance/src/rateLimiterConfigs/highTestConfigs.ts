@@ -67,6 +67,32 @@ export const highMultiResourceConfig: RateLimiterPreset = {
 };
 
 /**
+ * 26.2: Mixed refund and overage across resources.
+ * Same as highMultiResource but estimatedRequests=1 (not 5).
+ * Actual tokens=6K → refund (10K-6K=4K tokens).
+ * Actual requests=3 → overage (3>1 estimated).
+ */
+export const highMultiResourceMixedOverageConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': {
+      tokensPerMinute: TPM_100K,
+      requestsPerMinute: RPM_500,
+      tokensPerDay: TPD_1M,
+      requestsPerDay: RPD_10K,
+      pricing: standardPricing,
+    },
+  },
+  escalationOrder: ['model-alpha'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_FULL },
+    },
+  },
+};
+
+/**
  * 25: Multi-model independence.
  * model-alpha: TPM=100K, model-beta: TPM=50K, model-gamma: concurrent=20.
  */

@@ -1,7 +1,8 @@
 /**
  * Test suite: Actual Usage Refunds - Additional Tests (Test 9 continued)
  *
- * Tests 9.5-9.6:
+ * Tests 9.4-9.6:
+ * - 9.4: Cross-window no refund (timing-sensitive)
  * - 9.5: Multiple refunds accumulate correctly
  * - 9.6: Refund enables blocked job by freeing capacity
  *
@@ -14,6 +15,7 @@ import { sleep } from '../testUtils.js';
 import {
   ACCUMULATED_TOTAL,
   CONFIG_PRESET,
+  ESTIMATED_TOKENS,
   FULL_TPM,
   HTTP_ACCEPTED,
   INSTANCE_URL,
@@ -29,15 +31,26 @@ import {
   MODEL_ID,
   SHORT_JOB_DURATION_MS,
   fetchStats,
+  getSecondsIntoMinute,
   getTokensPerMinute,
   killAllInstances,
   setupSingleInstance,
   submitJob,
   waitForJobComplete,
+  waitForMinuteBoundary,
 } from './actualUsageRefundsHelpers.js';
 
 const BEFORE_ALL_TIMEOUT_MS = 60000;
 const AFTER_ALL_TIMEOUT_MS = 30000;
+const CROSS_WINDOW_TEST_TIMEOUT_MS = 120000;
+
+// Cross-window test (9.4) constants
+const CROSS_WINDOW_ACTUAL_INPUT = 3000;
+const CROSS_WINDOW_ACTUAL_OUTPUT = 3000;
+const CROSS_WINDOW_JOB_DURATION_MS = 10000;
+const SECONDS_NEAR_END_OF_MINUTE = 50;
+const ZERO_TOKENS_COUNTER = 0;
+const MS_PER_SECOND = 1000;
 
 // Refund-enables-blocked-job constants
 const FILL_JOB_COUNT = 10;
@@ -46,11 +59,76 @@ const REFUND_OUTPUT_TOKENS = 500;
 const BLOCKING_JOB_DURATION_MS = 3000;
 const BLOCKED_JOB_TIMEOUT_MS = 20_000;
 const MIN_TOKEN_USAGE = 1;
+const EXTRA_JOB_COUNT = 1;
 
 // Ensure all instances are killed when this file finishes
 afterAll(async () => {
   await killAllInstances();
 }, AFTER_ALL_TIMEOUT_MS);
+
+/** Wait until we are near end of minute (past :50) */
+const waitUntilNearMinuteEnd = async (): Promise<void> => {
+  const currentSeconds = getSecondsIntoMinute();
+  if (currentSeconds >= SECONDS_NEAR_END_OF_MINUTE) {
+    return;
+  }
+  const waitMs = (SECONDS_NEAR_END_OF_MINUTE - currentSeconds) * MS_PER_SECOND;
+  await sleep(waitMs);
+};
+
+/** Submit a long cross-window job with partial actual usage */
+const submitCrossWindowJob = async (jobId: string): Promise<number> =>
+  await submitJob({
+    baseUrl: INSTANCE_URL,
+    jobId,
+    jobType: JOB_TYPE,
+    durationMs: CROSS_WINDOW_JOB_DURATION_MS,
+    extraPayload: {
+      actualInputTokens: CROSS_WINDOW_ACTUAL_INPUT,
+      actualOutputTokens: CROSS_WINDOW_ACTUAL_OUTPUT,
+    },
+  });
+
+/**
+ * Test 9.4: Cross-Window - No Refund
+ *
+ * Submit a job near end of minute. It completes after the minute
+ * boundary passes. Even though actual < estimated, no refund occurs
+ * because the job completed in a different window than it started.
+ */
+describe('9.4 Cross-Window - No Refund', () => {
+  beforeAll(async () => {
+    await setupSingleInstance(CONFIG_PRESET);
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it(
+    'should not refund when job crosses minute boundary',
+    async () => {
+      await waitUntilNearMinuteEnd();
+
+      const jobId = `cross-window-${Date.now()}`;
+      const status = await submitCrossWindowJob(jobId);
+      expect(status).toBe(HTTP_ACCEPTED);
+
+      // Verify estimated tokens reserved in starting window
+      const statsBeforeBoundary = await fetchStats(INSTANCE_URL);
+      const tpmBefore = getTokensPerMinute(statsBeforeBoundary, MODEL_ID);
+      expect(tpmBefore).toBeDefined();
+      expect(tpmBefore?.current).toBe(ESTIMATED_TOKENS);
+
+      // Wait for minute boundary and job completion
+      await waitForMinuteBoundary();
+      await waitForJobComplete(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
+
+      // New window counter should be 0 (no refund applied to it)
+      const statsAfterBoundary = await fetchStats(INSTANCE_URL);
+      const tpmAfter = getTokensPerMinute(statsAfterBoundary, MODEL_ID);
+      expect(tpmAfter).toBeDefined();
+      expect(tpmAfter?.current).toBe(ZERO_TOKENS_COUNTER);
+    },
+    CROSS_WINDOW_TEST_TIMEOUT_MS
+  );
+});
 
 /** Submit a job with specific actual token overrides */
 const submitJobWithTokens = async (
@@ -166,5 +244,9 @@ describe('9.6 Refund Enables Blocked Job', () => {
     const tpm = getTokensPerMinute(stats, MODEL_ID);
     expect(tpm).toBeDefined();
     expect(tpm?.current).toBeGreaterThanOrEqual(MIN_TOKEN_USAGE);
+
+    const expectedTotalJobs = FILL_JOB_COUNT + EXTRA_JOB_COUNT;
+    const expectedTotalTokens = expectedTotalJobs * (REFUND_INPUT_TOKENS + REFUND_OUTPUT_TOKENS);
+    expect(tpm?.current).toBe(expectedTotalTokens);
   });
 });

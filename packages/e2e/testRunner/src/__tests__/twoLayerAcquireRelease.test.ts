@@ -16,6 +16,7 @@ import {
   CONFIG_PRESET,
   CONFIG_PRESET_EQUAL,
   EXPECTED_RUNNING_TEST_ONE,
+  INSTANCE_PORT,
   INSTANCE_URL,
   INSTANCE_URL_A,
   JOB_COMPLETE_TIMEOUT_MS,
@@ -25,13 +26,16 @@ import {
   JOB_TYPE_B,
   JOB_TYPE_B_SLOTS_TWO,
   LONG_JOB_DURATION_MS,
+  MODEL_ID,
   SUBMIT_COUNT_TEST_ONE,
   SUBMIT_JOB_TYPE_A_COUNT,
+  TOTAL_SLOTS_SINGLE,
   ZERO_COUNT,
   fetchStats,
   getAllocatedSlots,
   getInFlight,
   getJobTypeStats,
+  getPoolTotalSlots,
   killAllInstances,
   setupSingleInstance,
   setupTwoInstances,
@@ -58,11 +62,14 @@ describe('24.1 Two-Layer Check - Local Then Redis', () => {
     await setupSingleInstance(CONFIG_PRESET_EQUAL);
   }, BEFORE_ALL_TIMEOUT_MS);
 
-  it('should show correct allocated slots for jobTypeA', async () => {
+  it('should show correct allocated and pool slots for jobTypeA', async () => {
     const stats = await fetchStats(INSTANCE_URL);
     const jobTypeStats = getJobTypeStats(stats);
     const allocatedSlots = getAllocatedSlots(jobTypeStats, JOB_TYPE_A);
     expect(allocatedSlots).toBe(JOB_TYPE_A_SLOTS_SINGLE);
+
+    const poolSlots = await getPoolTotalSlots(INSTANCE_PORT, MODEL_ID);
+    expect(poolSlots).toBe(TOTAL_SLOTS_SINGLE);
   });
 
   it('should run 5 jobs and queue the 6th', async () => {
@@ -76,7 +83,10 @@ describe('24.1 Two-Layer Check - Local Then Redis', () => {
 
     const stats = await fetchStats(INSTANCE_URL);
     const jobTypeStats = getJobTypeStats(stats);
-    expect(getInFlight(jobTypeStats, JOB_TYPE_A)).toBe(EXPECTED_RUNNING_TEST_ONE);
+    const inFlight = getInFlight(jobTypeStats, JOB_TYPE_A);
+    const allocated = getAllocatedSlots(jobTypeStats, JOB_TYPE_A);
+    expect(inFlight).toBe(EXPECTED_RUNNING_TEST_ONE);
+    expect(inFlight).toBeLessThanOrEqual(allocated);
   });
 
   it('should complete all jobs without failures', async () => {

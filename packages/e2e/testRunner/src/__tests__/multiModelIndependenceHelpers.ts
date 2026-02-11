@@ -264,6 +264,15 @@ export const waitForNoActiveJobs = async (baseUrl: string, timeoutMs: number): P
   await pollUntilNoActiveJobs(baseUrl, Date.now(), timeoutMs);
 };
 
+/** Get per-model in-flight count for a specific (model, jobType) pair */
+export const getModelInFlight = (jobTypeStats: JobTypeStats, modelId: string, jobType: string): number => {
+  const info = jobTypeStats.modelJobTypes?.[modelId]?.[jobType];
+  if (info === undefined) {
+    throw new Error(`No modelJobTypes entry for ${modelId}/${jobType}`);
+  }
+  return info.inFlight;
+};
+
 // Re-export for convenience
 export { fetchAllocation, killAllInstances } from '../instanceLifecycle.js';
 export type { AllocationResponse };

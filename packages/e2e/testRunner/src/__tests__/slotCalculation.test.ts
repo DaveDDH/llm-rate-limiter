@@ -7,14 +7,17 @@
  * Formula: pools[model].totalSlots = floor((modelCapacity / avgEstimatedResource) / instanceCount)
  */
 import {
+  CONCURRENT_THREE_INSTANCES_SLOTS,
   DAILY_LIMITS_SLOTS,
   INSTANCE_A_URL,
   INSTANCE_B_URL,
+  INSTANCE_C_URL,
   MIXED_LIMITS_SLOTS,
   RPD_PER_INSTANCE,
   RPM_LIMITING_SLOTS,
   RPM_PER_INSTANCE_SPLIT,
   RPM_SLOTS_TWO_INSTANCES,
+  THREE_INSTANCES,
   TPD_PER_INSTANCE,
   TPM_AVERAGED_SLOTS,
   TPM_PER_INSTANCE_SPLIT,
@@ -24,6 +27,7 @@ import {
   getPoolSlots,
   killAllInstances,
   setupInstances,
+  setupThreeInstances,
   verifyInstanceCount,
   verifyPoolExists,
 } from './slotCalculationHelpers.js';
@@ -106,22 +110,33 @@ describe('Slot Calculation - 1.3 RPM-Only Model', () => {
   });
 });
 
-/** Test 1.4: Concurrent-Only Model → floor(100 / 2) = 50 slots */
+/** Test 1.4: Concurrent-Only Model → floor(100 / 3) = 33 slots */
 describe('Slot Calculation - 1.4 Concurrent-Only Model', () => {
-  const CONCURRENT_SLOTS_TWO_INSTANCES = 50;
-
   beforeAll(async () => {
-    await setupInstances('slotCalc-concurrent');
+    await setupThreeInstances('slotCalc-concurrent');
   }, BEFORE_ALL_TIMEOUT_MS);
 
-  it('should report 2 instances', async () => {
-    await verifyInstanceCount(INSTANCE_A_URL, TWO_INSTANCES);
+  it('should report 3 instances', async () => {
+    await verifyInstanceCount(INSTANCE_A_URL, THREE_INSTANCES);
   });
 
   it('should calculate correct pool slots for concurrent-based model', async () => {
     const response = await fetchAllocation(INSTANCE_A_URL);
     const slots = getPoolSlots(response, 'model-gamma');
-    expect(slots).toBe(CONCURRENT_SLOTS_TWO_INSTANCES);
+    expect(slots).toBe(CONCURRENT_THREE_INSTANCES_SLOTS);
+  });
+
+  it('should have consistent allocation across all three instances', async () => {
+    const responseA = await fetchAllocation(INSTANCE_A_URL);
+    const responseB = await fetchAllocation(INSTANCE_B_URL);
+    const responseC = await fetchAllocation(INSTANCE_C_URL);
+
+    const slotsA = getPoolSlots(responseA, 'model-gamma');
+    const slotsB = getPoolSlots(responseB, 'model-gamma');
+    const slotsC = getPoolSlots(responseC, 'model-gamma');
+
+    expect(slotsA).toBe(slotsB);
+    expect(slotsB).toBe(slotsC);
   });
 });
 

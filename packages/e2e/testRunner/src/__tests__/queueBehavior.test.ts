@@ -16,6 +16,7 @@ import {
   BEFORE_ALL_TIMEOUT_MS,
   CONFIG_PRESET,
   EXPECTED_ACTIVE_WITH_QUEUE,
+  EXPECTED_QUEUED_COUNT,
   FILL_CAPACITY_COUNT,
   HTTP_ACCEPTED,
   INSTANCE_URL,
@@ -27,7 +28,9 @@ import {
   SIMULTANEOUS_JOBS,
   ZERO_COUNT,
   fetchActiveJobs,
+  fetchJobHistory,
   fetchStats,
+  getInFlight,
   killAllInstances,
   setupSingleInstance,
   sleep,
@@ -63,6 +66,11 @@ describe('13.1 Job Queued When Capacity Unavailable', () => {
     // Active jobs should include all 6 (5 running + 1 queued)
     const activeJobs = await fetchActiveJobs(INSTANCE_URL);
     expect(activeJobs.count).toBe(EXPECTED_ACTIVE_WITH_QUEUE);
+
+    // Assert in-flight count matches pool limit (5 running, 1 queued)
+    const stats = await fetchStats(INSTANCE_URL);
+    const inFlight = getInFlight(stats, 'jobTypeA');
+    expect(inFlight).toBe(MAX_CONCURRENT);
   });
 });
 
@@ -86,6 +94,11 @@ describe('13.2 Queued Job Starts When Capacity Available', () => {
 
     const activeJobs = await fetchActiveJobs(INSTANCE_URL);
     expect(activeJobs.count).toBe(ZERO_COUNT);
+
+    // Assert FIFO: all jobs completed including queued one
+    const { summary } = await fetchJobHistory(INSTANCE_URL);
+    const totalJobs = FILL_CAPACITY_COUNT + EXPECTED_QUEUED_COUNT;
+    expect(summary.completed).toBe(totalJobs);
   });
 });
 
@@ -100,10 +113,13 @@ describe('13.4 Concurrent Acquires Respect Pool Limit', () => {
 
     await sleep(JOB_SETTLE_MS);
 
-    // Check concurrency stats: only 5 should be active
+    // Check JTM stats: only 5 should be in-flight
     const stats = await fetchStats(INSTANCE_URL);
-    const concurrency = stats.stats.models['model-alpha']?.concurrency;
-    expect(concurrency).toBeDefined();
-    expect(concurrency?.active).toBe(MAX_CONCURRENT);
+    const inFlight = getInFlight(stats, 'jobTypeA');
+    expect(inFlight).toBe(MAX_CONCURRENT);
+
+    // Assert total active includes both running and queued
+    const activeJobs = await fetchActiveJobs(INSTANCE_URL);
+    expect(activeJobs.count).toBe(SIMULTANEOUS_JOBS);
   });
 });

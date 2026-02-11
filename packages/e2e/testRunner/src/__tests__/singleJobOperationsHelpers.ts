@@ -27,9 +27,11 @@ export const AVAILABLE_AFTER_ACQUIRE = 4;
 export const AVAILABLE_AFTER_RELEASE = 5;
 
 // Test 4.3: Global counter
-// Mock job returns: inputTokens=7000, outputTokens=3000, requestCount=1
-// Total actual tokens = 7000 + 3000 = 10000
-export const MOCK_TOTAL_TOKENS = 10_000;
+// Mock job sends actual tokens via payload overrides: input=3000, output=2000
+// Total actual tokens = 3000 + 2000 = 5000
+export const MOCK_INPUT_TOKENS = 3000;
+export const MOCK_OUTPUT_TOKENS = 2000;
+export const MOCK_TOTAL_TOKENS = 5000;
 export const MOCK_REQUEST_COUNT = 1;
 
 // Test 4.4: Concurrent model
@@ -155,21 +157,36 @@ export const getTokensPerMinute = (stats: StatsResponse, modelId: string): Model
 export const getRequestsPerMinute = (stats: StatsResponse, modelId: string): ModelCounterStats | undefined =>
   stats.stats.models[modelId]?.requestsPerMinute;
 
+/** Optional token overrides for job payload */
+export interface TokenOverrides {
+  actualInputTokens: number;
+  actualOutputTokens: number;
+}
+
+/** Parameters for submitting a job */
+export interface SubmitJobParams {
+  baseUrl: string;
+  jobId: string;
+  jobType: string;
+  durationMs: number;
+  tokenOverrides?: TokenOverrides;
+}
+
+/** Build the job payload from submit params */
+const buildJobPayload = (params: SubmitJobParams): Record<string, unknown> => ({
+  testData: `Test job ${params.jobId}`,
+  durationMs: params.durationMs,
+  ...params.tokenOverrides,
+});
+
 /** Submit a single job to an instance via direct POST */
-export const submitJob = async (
-  baseUrl: string,
-  jobId: string,
-  jobType: string,
-  durationMs: number
-): Promise<number> => {
+export const submitJob = async (params: SubmitJobParams): Promise<number> => {
+  const payload = buildJobPayload(params);
+  const { baseUrl, jobId, jobType } = params;
   const response = await fetch(`${baseUrl}/api/queue-job`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jobId,
-      jobType,
-      payload: { testData: `Test job ${jobId}`, durationMs },
-    }),
+    body: JSON.stringify({ jobId, jobType, payload }),
   });
   return response.status;
 };

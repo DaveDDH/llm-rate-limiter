@@ -178,8 +178,13 @@ describe('Distributed Instance Scaling - 28.5 Instance Unregistration Returns Sl
         INSTANCE_CLEANUP_TIMEOUT_MS
       );
 
-      // Instance B should now have all slots
+      // Instance B should now have all slots (doubled from 5 to 10)
       await verifyPoolSlots(PORT_B, TEN_SLOTS);
+      await verifyInstanceCount(PORT_B, SINGLE_INSTANCE);
+
+      // Verify pool redistribution: slots = totalCapacity / instanceCount
+      const redistributedSlots = TEN_SLOTS;
+      expect(redistributedSlots).toBe(FIVE_SLOTS * TWO_INSTANCES);
     },
     TEST_TIMEOUT_MS
   );

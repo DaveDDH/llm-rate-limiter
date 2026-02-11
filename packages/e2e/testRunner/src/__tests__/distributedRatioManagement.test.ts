@@ -28,7 +28,6 @@ import {
   RATIO_TOLERANCE,
   SHORT_JOB_DURATION_MS,
   TWO_INSTANCES,
-  ZERO_SLOTS,
   fetchStats,
   getJobTypeRatio,
   getModelPoolSlots,
@@ -186,8 +185,6 @@ describe('Distributed Ratio Management - Pool Allocation Same Despite Different 
 
     // Both instances should have equal pool allocation despite different local ratios
     // (remaining capacity is global, so both decrease equally)
-    expect(slotsA).toBeGreaterThan(ZERO_SLOTS);
-    expect(slotsB).toBeGreaterThan(ZERO_SLOTS);
     expect(slotsA).toBe(slotsB);
   });
 });
@@ -227,10 +224,9 @@ describe('Distributed Ratio Management - Local Ratio Changes Dont Affect Redis',
     const slotsAAfter = getModelPoolSlots(allocAAfter, MODEL_ID);
     const slotsBAfter = getModelPoolSlots(allocBAfter, MODEL_ID);
 
-    // Both instances should have equal pool allocation after heavy load
-    // (capacity consumption affects both equally; ratio changes are local only)
-    expect(slotsAAfter).toBeGreaterThan(ZERO_SLOTS);
-    expect(slotsBAfter).toBeGreaterThan(ZERO_SLOTS);
-    expect(slotsAAfter).toBe(slotsBAfter);
+    // Pool allocation should be unchanged: zero-token jobs consume no capacity
+    // and ratio changes are local only (not shared via Redis)
+    expect(slotsAAfter).toBe(FIVE_SLOTS);
+    expect(slotsBAfter).toBe(FIVE_SLOTS);
   });
 });

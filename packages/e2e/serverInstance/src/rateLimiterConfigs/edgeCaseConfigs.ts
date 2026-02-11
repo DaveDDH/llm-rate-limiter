@@ -21,6 +21,7 @@ const RATIO_NINETY = 0.9;
 const RATIO_TEN = 0.1;
 
 // Capacity constants
+const TPM_5K = 5000;
 const TPM_15K = 15000;
 const TPM_20K = 20000;
 const TPM_100K = 100000;
@@ -36,6 +37,26 @@ const FREE_MEMORY_RATIO = 1.0;
 
 // maxWaitMS
 const MAX_WAIT_60S = 60000;
+
+/**
+ * 47.1: True zero from floor division.
+ * TPM=5000, estimatedTokens=10K, 2 instances.
+ * floor(5000/10000/2) = floor(0.25) = 0 slots.
+ */
+export const highestEdgeZeroFloorDivConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': { tokensPerMinute: TPM_5K, pricing: standardPricing },
+  },
+  escalationOrder: ['model-alpha'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      ratio: { initialValue: RATIO_FULL },
+      maxWaitMS: { 'model-alpha': MAX_WAIT_60S },
+    },
+  },
+};
 
 /**
  * 47.2: Floor rounding edge case.

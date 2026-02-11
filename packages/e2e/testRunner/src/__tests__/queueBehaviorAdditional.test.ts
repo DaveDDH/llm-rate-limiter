@@ -41,15 +41,23 @@ const THIRD_QUEUED_INDEX = 2;
 // Fallback timestamp for missing jobs
 const FALLBACK_TIMESTAMP = 0;
 
+// Maximum acceptable wake-up delay after capacity frees (ms)
+const MAX_WAKE_UP_DELAY_MS = 2000;
+
 afterAll(async () => {
   await killAllInstances();
 }, AFTER_ALL_TIMEOUT_MS);
 
+/** Minimal historical job fields needed for assertions */
+interface HistoryEntry {
+  jobId: string;
+  startedAt: number;
+  completedAt: number;
+}
+
 /** Find a job in history by exact jobId */
-const findJobInHistory = (
-  history: Array<{ jobId: string; completedAt: number }>,
-  jobId: string
-): { jobId: string; completedAt: number } | undefined => history.find((j) => j.jobId === jobId);
+const findJobInHistory = (history: HistoryEntry[], jobId: string): HistoryEntry | undefined =>
+  history.find((j) => j.jobId === jobId);
 
 /** Submit FIFO jobs sequentially with gaps between them */
 const submitFifoJobs = async (prefix: string, count: number): Promise<string[]> => {
@@ -130,6 +138,10 @@ describe('13.3 FIFO Queue Order Preserved', () => {
 
     const completionTimes = fifoResults.map((r) => r?.completedAt ?? FALLBACK_TIMESTAMP);
     verifyFifoOrder(completionTimes);
+
+    // Assert start times also preserve FIFO order (queued jobs dequeued in order)
+    const startTimes = fifoResults.map((r) => r?.startedAt ?? FALLBACK_TIMESTAMP);
+    verifyFifoOrder(startTimes);
   });
 });
 
@@ -162,5 +174,12 @@ describe('13.5 Job Completion Wakes Queue', () => {
     const queuedJob = history.find((j) => j.jobId === queuedJobId);
     expect(queuedJob).toBeDefined();
     expect(queuedJob?.status).toBe('completed');
+
+    // Assert wake-up delay: queued job started shortly after fill jobs ended
+    const fillJobs = history.filter((j) => j.jobId.startsWith('wake-fill'));
+    const lastFillEnd = Math.max(...fillJobs.map((j) => j.completedAt));
+    const queuedStart = queuedJob?.startedAt ?? FALLBACK_TIMESTAMP;
+    const wakeUpDelay = queuedStart - lastFillEnd;
+    expect(wakeUpDelay).toBeLessThan(MAX_WAKE_UP_DELAY_MS);
   });
 });

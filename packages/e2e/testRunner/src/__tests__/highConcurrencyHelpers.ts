@@ -44,6 +44,9 @@ export const MAX_JOBS_FIRST_MINUTE = 100;
 export const ALPHA_CAPACITY = 10;
 export const BETA_CAPACITY = 100;
 
+// Expected distribution for 100 jobs with alpha=10, beta=100
+export const EXPECTED_BETA_MIN = 90;
+
 // Timing
 export const SHORT_JOB_DURATION_MS = 100;
 export const JOB_COMPLETE_TIMEOUT_MS = 30000;

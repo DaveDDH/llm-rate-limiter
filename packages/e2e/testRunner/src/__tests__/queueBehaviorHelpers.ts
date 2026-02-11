@@ -45,6 +45,8 @@ export const FIFO_EXTRA_JOBS = 3;
 
 // Expected values
 export const EXPECTED_ACTIVE_WITH_QUEUE = 6;
+export const EXPECTED_QUEUED_COUNT = 1;
+export const EXPECTED_WAITING_CONCURRENT = 5;
 
 // Shared constants
 export const ZERO_COUNT = 0;
@@ -84,11 +86,17 @@ export interface JobHistoryResponse {
   summary: { completed: number; failed: number; total: number };
 }
 
-/** Concurrency stats from debug/stats */
-export interface ConcurrencyStats {
-  active: number;
-  limit: number | null;
-  available: number | null;
+/** Per-job-type state from JTM stats */
+export interface JobTypeState {
+  currentRatio: number;
+  inFlight: number;
+  allocatedSlots: number;
+}
+
+/** JTM stats shape */
+export interface JobTypeStats {
+  jobTypes: Record<string, JobTypeState>;
+  totalSlots: number;
 }
 
 /** Stats response from GET /api/debug/stats */
@@ -96,7 +104,8 @@ export interface StatsResponse {
   instanceId: string;
   timestamp: number;
   stats: {
-    models: Record<string, { concurrency?: ConcurrencyStats }>;
+    models: Record<string, unknown>;
+    jobTypes?: JobTypeStats;
   };
 }
 
@@ -140,6 +149,15 @@ export const fetchStats = async (baseUrl: string): Promise<StatsResponse> => {
     throw new Error('Invalid stats response');
   }
   return data;
+};
+
+/** Get inFlight count for a job type from stats */
+export const getInFlight = (stats: StatsResponse, jobType: string): number => {
+  const state = stats.stats.jobTypes?.jobTypes[jobType];
+  if (state === undefined) {
+    throw new Error(`Job type "${jobType}" not found in stats`);
+  }
+  return state.inFlight;
 };
 
 /** Parameters for submitting a job */

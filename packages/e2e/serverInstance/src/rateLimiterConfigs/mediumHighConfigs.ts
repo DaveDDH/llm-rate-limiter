@@ -279,23 +279,3 @@ export const mhEscalationMultiTimeoutConfig: RateLimiterPreset = {
     },
   },
 };
-
-/**
- * 21.4: Concurrent escalation with 5s wait.
- * model-alpha: concurrent=1, maxWaitMS=5s. model-beta: concurrent=50.
- */
-export const mhEscalationConcWait5sConfig: RateLimiterPreset = {
-  models: {
-    'model-alpha': { maxConcurrentRequests: CONCURRENT_1, pricing: standardPricing },
-    'model-beta': { maxConcurrentRequests: CONCURRENT_50, pricing: standardPricing },
-  },
-  escalationOrder: ['model-alpha', 'model-beta'],
-  resourceEstimations: {
-    jobTypeA: {
-      estimatedUsedTokens: TOKENS_10K,
-      estimatedNumberOfRequests: REQUESTS_SINGLE,
-      ratio: { initialValue: RATIO_FULL },
-      maxWaitMS: { 'model-alpha': MAX_WAIT_5S },
-    },
-  },
-};

@@ -20,7 +20,12 @@ import {
   JOB_TYPE_A,
   MODEL_ALPHA,
   MODEL_BETA,
+  PARTIAL_TOKENS_INPUT,
+  PARTIAL_TOKENS_OUTPUT,
+  PARTIAL_TOKENS_TOTAL,
   QUICK_JOB_DURATION_MS,
+  REJECT_CACHED_TOKENS,
+  REJECT_REQUEST_COUNT,
   SETTLE_MS,
   STATUS_COMPLETED,
   TPM_CONFIG,
@@ -34,6 +39,7 @@ import {
   setupSingleInstance,
   sleep,
   submitJob,
+  submitRejectJob,
   waitForNoActiveJobs,
   waitForSafeMinuteWindow,
 } from './modelEscalationCapacityTrackingHelpers.js';
@@ -72,6 +78,44 @@ describe('22.1 Primary Model Not Charged When Escalating', () => {
 
     expect(alphaTpm?.current).toBe(ESTIMATED_TOKENS);
     expect(betaTpm?.current).toBe(ESTIMATED_TOKENS);
+  });
+});
+
+describe('22.2 Partial Usage on Primary Before Escalation via reject()', () => {
+  beforeAll(async () => {
+    await setupSingleInstance(TPM_CONFIG);
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should reflect reject() usage in alpha TPM counter', async () => {
+    await waitForSafeMinuteWindow();
+    const timestamp = Date.now();
+    const rejectJobId = `partial-reject-${timestamp}`;
+    const escalateJobId = `partial-escalate-${timestamp}`;
+
+    const rejectStatus = await submitRejectJob(INSTANCE_URL, rejectJobId, {
+      inputTokens: PARTIAL_TOKENS_INPUT,
+      outputTokens: PARTIAL_TOKENS_OUTPUT,
+      cachedTokens: REJECT_CACHED_TOKENS,
+      requestCount: REJECT_REQUEST_COUNT,
+    });
+    expect(rejectStatus).toBe(HTTP_ACCEPTED);
+
+    await waitForNoActiveJobs(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
+
+    const statsAfterReject = await fetchStats(INSTANCE_URL);
+    const alphaTpm = getTokensPerMinute(statsAfterReject, MODEL_ALPHA);
+    expect(alphaTpm).toBeDefined();
+    expect(alphaTpm?.current).toBe(PARTIAL_TOKENS_TOTAL);
+
+    const escalateStatus = await submitJob(INSTANCE_URL, escalateJobId, JOB_TYPE_A, FILL_JOB_DURATION_MS);
+    expect(escalateStatus).toBe(HTTP_ACCEPTED);
+
+    await waitForNoActiveJobs(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
+
+    const { history } = await fetchJobHistory(INSTANCE_URL);
+    const escalateJob = findJobById(history, escalateJobId);
+    expect(escalateJob).toBeDefined();
+    expect(escalateJob?.status).toBe(STATUS_COMPLETED);
   });
 });
 

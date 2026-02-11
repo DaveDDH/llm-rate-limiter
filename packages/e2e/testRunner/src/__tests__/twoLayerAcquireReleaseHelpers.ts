@@ -6,7 +6,13 @@
  * - jobTypeA: ratio=0.6 (6 slots), jobTypeB: ratio=0.4 (4 slots)
  * - 1 instance: totalSlots = 10
  */
-import { bootInstance, cleanRedis, killAllInstances, waitForAllocationUpdate } from '../instanceLifecycle.js';
+import {
+  bootInstance,
+  cleanRedis,
+  fetchAllocation,
+  killAllInstances,
+  waitForAllocationUpdate,
+} from '../instanceLifecycle.js';
 import type { ConfigPresetName } from '../resetInstance.js';
 import { sleep } from '../testUtils.js';
 
@@ -51,7 +57,9 @@ export const SUBMIT_JOB_TYPE_A_COUNT = 3;
 export const SUBMIT_ADDITIONAL_A_COUNT = 1;
 export const SUBMIT_JOB_TYPE_B_COUNT = 1;
 
-// Test 24.3: Release decrements counter
+// Test 24.3: Release decrements counter (single instance, 0.6 ratio)
+// floor(10 * 0.6) = 6 slots for jobTypeA on single instance
+export const JOB_TYPE_A_SLOTS_NONEQUAL_SINGLE = 6;
 export const ACQUIRE_COUNT = 10;
 export const RELEASE_COUNT = 3;
 export const REMAINING_IN_FLIGHT = 7;
@@ -278,5 +286,15 @@ export const verifyAllJobsComplete = async (baseUrl: string, jobTypes: readonly 
   });
 };
 
+/** Get pool total slots for a model from allocation endpoint */
+export const getPoolTotalSlots = async (port: number, modelId: string): Promise<number> => {
+  const alloc = await fetchAllocation(port);
+  const pool = alloc.allocation?.pools[modelId];
+  if (pool === undefined) {
+    throw new Error(`No pool for model ${modelId}`);
+  }
+  return pool.totalSlots;
+};
+
 // Re-export for convenience
-export { killAllInstances } from '../instanceLifecycle.js';
+export { fetchAllocation, killAllInstances } from '../instanceLifecycle.js';

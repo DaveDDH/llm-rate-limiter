@@ -39,9 +39,12 @@ export const ACTUAL_REQUESTS_PARTIAL = 3;
 export const EXPECTED_TPM_REFUND = 4000;
 export const EXPECTED_RPM_REFUND = 2;
 
-// Test 26.2: Mixed refund and overage
+// Test 26.2: Mixed refund and overage (config: high-multiResource-mixedOverage)
+export const MIXED_OVERAGE_CONFIG: ConfigPresetName = 'high-multiResource-mixedOverage';
+export const MIXED_OVERAGE_ESTIMATED_REQUESTS = 1;
+export const MIXED_OVERAGE_ACTUAL_REQUESTS = 3;
 export const ACTUAL_TOKENS_REFUND = 6000;
-export const ACTUAL_REQUESTS_OVERAGE = 3;
+export const ACTUAL_REQUESTS_OVERAGE = MIXED_OVERAGE_ACTUAL_REQUESTS;
 export const EXPECTED_TOKEN_REFUND = 4000;
 export const EXPECTED_REQUEST_OVERAGE = 2;
 
@@ -155,6 +158,11 @@ export const setupSingleInstance = async (configPreset: ConfigPresetName): Promi
     (allocation) => allocation.instanceCount === SINGLE_INSTANCE_COUNT
   );
   await sleep(ALLOCATION_PROPAGATION_MS);
+};
+
+/** Boot a single instance with the mixed overage config (estimatedRequests=1) */
+export const setupMixedOverageInstance = async (): Promise<void> => {
+  await setupSingleInstance(MIXED_OVERAGE_CONFIG);
 };
 
 /** Poll until no active jobs remain */

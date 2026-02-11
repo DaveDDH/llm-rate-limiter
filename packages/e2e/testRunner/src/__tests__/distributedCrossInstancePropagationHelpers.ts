@@ -76,8 +76,16 @@ const INDEX_INCREMENT = 1;
 // Tolerance for toBeCloseTo
 export const CLOSE_TOLERANCE_NEG3 = -3;
 
-// Max slots after 75K usage
-export const MAX_SLOT_AFTER_OVERAGE = 1;
+// Slots after moderate usage: floor(12.5K/10K) = 1
+export const SLOTS_AFTER_MODERATE_OVERAGE = 1;
+// Slots after heavy usage: floor(2K/10K) = 0
+export const SLOTS_AFTER_HEAVY_OVERAGE = 0;
+
+// Expected per-instance TPM after 75K usage (25K remaining / 2 instances)
+export const TOKENS_12_5K = 12500;
+
+// Expected per-instance TPM after 25K usage (75K remaining / 2 instances)
+export const TOKENS_37_5K = 37500;
 
 // Timeout constants
 export const BEFORE_ALL_TIMEOUT_MS = 60000;

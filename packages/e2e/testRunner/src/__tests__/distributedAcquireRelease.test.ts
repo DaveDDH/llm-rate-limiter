@@ -24,7 +24,6 @@ import {
   PORT_A,
   PORT_B,
   PORT_SINGLE,
-  SHORT_JOB_DURATION_MS,
   TWO_INSTANCES,
   fetchAllocation,
   getActiveJobCount,
@@ -85,8 +84,11 @@ describe('Distributed Acquire Release - Acquire Still Goes to Redis', () => {
 
     expect(activeA + activeB).toBe(TWO_ACTIVE);
 
-    const statusC = await submitJob(PORT_A, 'job-a-2', JOB_TYPE, SHORT_JOB_DURATION_MS);
-    expect(statusC).toBe(HTTP_ACCEPTED);
+    const inFlightA = await getInFlightCount(PORT_A, JOB_TYPE);
+    const inFlightB = await getInFlightCount(PORT_B, JOB_TYPE);
+
+    expect(inFlightA).toBe(ONE_SLOT);
+    expect(inFlightB).toBe(ONE_SLOT);
   });
 });
 

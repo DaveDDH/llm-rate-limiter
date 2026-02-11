@@ -44,6 +44,7 @@ import {
 
 // Constants for token calculations
 const TOKEN_MULTIPLIER = 0.4;
+const MIN_COUNTER_VALUE = 0;
 
 // Clean up all instances after all tests
 afterAll(async () => {
@@ -146,11 +147,15 @@ describe('Distributed Request Count Tracking - Multi-Request Job', () => {
 
       await waitForJobsComplete(PORT_A, JOB_COMPLETE_TIMEOUT_MS);
 
-      // Verify both counters incremented
+      // Verify both TPM and RPM counters incremented
       const stats = await fetchStats(PORT_A);
       const tpm = getTokensPerMinute(stats);
       const rpm = getRequestsPerMinute(stats);
 
+      expect(tpm).toBeDefined();
+      expect(rpm).toBeDefined();
+      expect(tpm?.current).toBeGreaterThan(MIN_COUNTER_VALUE);
+      expect(rpm?.current).toBeGreaterThan(MIN_COUNTER_VALUE);
       expect(tpm?.current).toBe(EXPECTED_TPM_EIGHT_K);
       expect(rpm?.current).toBe(EXPECTED_RPM_THREE);
     },

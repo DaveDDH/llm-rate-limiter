@@ -50,6 +50,20 @@ const INSTANCE_SPLIT_THRESHOLD = 3;
 const TWO_SLOTS = 2;
 const LOOP_INCREMENT = 1;
 
+/** Submit a 10K token job to an instance and wait for completion */
+const submit10KJobAndWait = async (baseUrl: string, jobId: string): Promise<void> => {
+  const status = await submitJob({
+    baseUrl,
+    jobId,
+    jobType: JOB_TYPE,
+    durationMs: SHORT_JOB_DURATION_MS,
+    actualInputTokens: TOKENS_10K,
+    actualOutputTokens: ZERO_OUTPUT_TOKENS,
+  });
+  expect(status).toBe(HTTP_ACCEPTED);
+  await waitForJobComplete(baseUrl, JOB_COMPLETE_TIMEOUT_MS);
+};
+
 // Clean up all instances after all tests
 afterAll(async () => {
   await killAllInstances();
@@ -73,32 +87,17 @@ describe('Distributed Dynamic Limits - 32.1 Dynamic Limits Update Local Rate Lim
       expect(initialTpm).toBe(INITIAL_TPM_PER_INSTANCE);
 
       // Use 20K tokens globally (10K per instance)
-      const status1 = await submitJob({
-        baseUrl: INSTANCE_URL_A,
-        jobId: 'job-1',
-        jobType: JOB_TYPE,
-        durationMs: SHORT_JOB_DURATION_MS,
-        actualInputTokens: TOKENS_10K,
-        actualOutputTokens: ZERO_OUTPUT_TOKENS,
-      });
-      expect(status1).toBe(HTTP_ACCEPTED);
-      await waitForJobComplete(INSTANCE_URL_A, JOB_COMPLETE_TIMEOUT_MS);
-
-      const status2 = await submitJob({
-        baseUrl: INSTANCE_URL_B,
-        jobId: 'job-2',
-        jobType: JOB_TYPE,
-        durationMs: SHORT_JOB_DURATION_MS,
-        actualInputTokens: TOKENS_10K,
-        actualOutputTokens: ZERO_OUTPUT_TOKENS,
-      });
-      expect(status2).toBe(HTTP_ACCEPTED);
-      await waitForJobComplete(INSTANCE_URL_B, JOB_COMPLETE_TIMEOUT_MS);
+      await submit10KJobAndWait(INSTANCE_URL_A, 'job-1');
+      await submit10KJobAndWait(INSTANCE_URL_B, 'job-2');
 
       // Remaining: 100K - 20K = 80K, 40K per instance
       const updatedAlloc = await fetchAllocation(PORT_B);
       const updatedTpm = updatedAlloc.allocation?.pools[MODEL_ID]?.tokensPerMinute;
       expect(updatedTpm).toBe(TOKENS_40K);
+
+      // Dynamic limits should also reflect exact 40K TPM
+      const dynamicTpm = updatedAlloc.allocation?.dynamicLimits?.[MODEL_ID]?.tokensPerMinute;
+      expect(dynamicTpm).toBe(TOKENS_40K);
     },
     TEST_TIMEOUT_MS
   );

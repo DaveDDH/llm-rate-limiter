@@ -27,6 +27,7 @@ import {
   MARGIN_MS,
   MODEL_ID,
   SHORT_JOB_DURATION_MS,
+  TPM_LIMIT,
   VERY_SHORT_JOB_DURATION_MS,
   ZERO_COUNT,
   ZERO_OUTPUT_TOKENS,
@@ -80,6 +81,8 @@ describe('27.1 Job Completes Before Window End - Refund Occurs', () => {
     const tpm = getTokensPerMinute(stats, MODEL_ID);
     expect(tpm).toBeDefined();
     expect(tpm?.current).toBe(ACTUAL_TOKENS);
+    const remaining = tpm?.remaining ?? ZERO_COUNT;
+    expect(remaining).toBe(TPM_LIMIT - ACTUAL_TOKENS);
   });
 });
 
@@ -128,6 +131,8 @@ describe('27.2 Job Completes After Window End - No Refund', () => {
     const tpm = getTokensPerMinute(stats, MODEL_ID);
     expect(tpm).toBeDefined();
     expect(tpm?.current).toBe(ZERO_COUNT);
+    const remaining = tpm?.remaining ?? ZERO_COUNT;
+    expect(remaining).toBe(TPM_LIMIT);
   });
 });
 
@@ -135,14 +140,15 @@ describe('27.2 Job Completes After Window End - No Refund', () => {
  * Test 27.3: Job Carries Window Start Metadata
  *
  * Verify that when a job starts, it records the window start time for
- * both TPM and RPM windows.
+ * both TPM and RPM windows. After refund, counters show actual usage
+ * and remaining capacity reflects the refund.
  */
 describe('27.3 Job Carries Window Start Metadata', () => {
   beforeAll(async () => {
     await setupSingleInstance(CONFIG_PRESET);
   }, BEFORE_ALL_TIMEOUT_MS);
 
-  it('should complete job and verify window tracking', async () => {
+  it('should complete job within same window', async () => {
     const jobId = `window-metadata-${Date.now()}`;
     const status = await submitJob({
       baseUrl: INSTANCE_URL,
@@ -156,11 +162,28 @@ describe('27.3 Job Carries Window Start Metadata', () => {
     });
     expect(status).toBe(HTTP_ACCEPTED);
     await waitForJobComplete(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
+  });
 
+  it('should show actual TPM usage after same-window refund', async () => {
     const stats = await fetchStats(INSTANCE_URL);
     const tpm = getTokensPerMinute(stats, MODEL_ID);
     expect(tpm).toBeDefined();
     expect(tpm?.current).toBe(ACTUAL_TOKENS);
+  });
+
+  it('should show correct remaining TPM after same-window refund', async () => {
+    const stats = await fetchStats(INSTANCE_URL);
+    const tpm = getTokensPerMinute(stats, MODEL_ID);
+    expect(tpm).toBeDefined();
+    expect(tpm?.remaining).toBe(TPM_LIMIT - ACTUAL_TOKENS);
+  });
+
+  it('should have remaining capacity reflecting refund', async () => {
+    const stats = await fetchStats(INSTANCE_URL);
+    const tpm = getTokensPerMinute(stats, MODEL_ID);
+    expect(tpm).toBeDefined();
+    const remaining = tpm?.remaining ?? ZERO_COUNT;
+    expect(remaining).toBe(TPM_LIMIT - ACTUAL_TOKENS);
   });
 });
 
@@ -168,7 +191,8 @@ describe('27.3 Job Carries Window Start Metadata', () => {
  * Test 27.4: Cross-Window Job Has Original Window
  *
  * Submit a job that starts in one window and completes in the next.
- * Verify it maintains the original window start time.
+ * Cross-window jobs don't get refunds because the original window
+ * has already closed. The new window should have clean counters.
  */
 describe('27.4 Cross-Window Job Has Original Window', () => {
   beforeAll(async () => {
@@ -204,5 +228,12 @@ describe('27.4 Cross-Window Job Has Original Window', () => {
 
     const nowWindowStart = getCurrentWindowStart();
     expect(nowWindowStart).toBeGreaterThan(windowStart);
+  });
+
+  it('should have clean TPM counter in new window', async () => {
+    const stats = await fetchStats(INSTANCE_URL);
+    const tpm = getTokensPerMinute(stats, MODEL_ID);
+    expect(tpm).toBeDefined();
+    expect(tpm?.current).toBe(ZERO_COUNT);
   });
 });

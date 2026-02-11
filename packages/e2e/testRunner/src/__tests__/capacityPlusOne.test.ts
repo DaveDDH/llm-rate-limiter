@@ -1,15 +1,11 @@
 /**
  * Test suite: Capacity Plus One
  *
- * Validates window-based per-model-per-jobType rate limiting.
+ * Validates window-based per-model rate limiting with a dedicated config.
  *
- * Sends exactly capacity + 1 "summary" jobs distributed evenly across 2 instances.
- * The per-model-per-jobType slot calculation considers multiple dimensions (TPM, RPM,
- * TPD, RPD, totalSlots) and picks the most restrictive. For openai + summary, TPM wins:
- *
- *   Per-instance TPM for openai = 500,000 / 2 instances = 250,000
- *   Per-instance summary rate slots = floor(250,000 × 0.3 ratio / 10,000 tokens) = 7
- *   Total across 2 instances = 14 rate slots per minute window
+ * Uses the capacityPlusOne config: single job type (summary) on openai with TPM=140K.
+ * Single instance: floor(140K / 10K avgTokens / 1 instance) = 14 rate slots.
+ * JTM locally: summary ratio=1.0 → all 14 slots go to summary.
  *
  * Because TPM is rate-based (not concurrency), these 14 slots represent jobs that can
  * START per minute window. A finishing job does NOT free a rate slot — the tokens are
@@ -17,31 +13,28 @@
  *
  * Expected behavior:
  * - First 14 jobs start immediately (within the current minute's rate budget)
- * - 15th job waits until the next minute boundary, then starts on openai
- * - All 15 jobs complete (none rejected, none escalated)
+ * - 15th job waits until the next minute boundary, then starts
+ * - All 15 jobs complete (none rejected)
  */
 import type { JobRecord, TestData } from '@llm-rate-limiter/e2e-test-results';
 
 import { generateJobsOfType, runSuite } from '../suiteRunner.js';
 import {
   AFTER_ALL_TIMEOUT_MS,
-  INSTANCE_URLS,
   PROXY_URL,
-  bootInfrastructure,
+  SINGLE_INSTANCE_URLS,
+  bootSingleInstanceInfrastructure,
   teardownInfrastructure,
 } from './infrastructureHelpers.js';
 import { createEmptyTestData } from './testHelpers.js';
 
-// Per-model-per-jobType rate capacity for "summary" on openai:
-// 2 instances x floor(250000 * 0.3 / 10000) = 2 x 7 = 14 rate slots per minute
+// Per-model rate capacity for "summary" on openai (capacityPlusOne config):
+// 1 instance: floor(140000 / 10000 / 1) = 14 rate slots per minute
 const OPENAI_SUMMARY_CAPACITY = 14;
 // Send capacity + 1 to ensure exactly 1 job exceeds openai summary capacity
 const ONE_EXTRA_JOB = 1;
 const TOTAL_JOBS = OPENAI_SUMMARY_CAPACITY + ONE_EXTRA_JOB;
 const JOB_DURATION_MS = 100;
-
-// Distribute jobs evenly across both instances (1:1 ratio)
-const PROXY_RATIO = '1:1';
 
 // Periodic snapshot interval
 const SNAPSHOT_INTERVAL_MS = 500;
@@ -57,7 +50,6 @@ const QUICK_JOB_THRESHOLD_MS = 500;
 // Window duration for minute-based rate limits
 const MS_PER_MINUTE = 60_000;
 const NEXT_MINUTE_OFFSET = 1;
-const OPENAI_MODEL_PREFIX = 'openai';
 
 /**
  * Test setup data structure
@@ -80,10 +72,9 @@ const setupTestData = async (): Promise<TestSetupData> => {
   const data = await runSuite({
     suiteName: 'capacity-plus-one',
     proxyUrl: PROXY_URL,
-    instanceUrls: INSTANCE_URLS,
+    instanceUrls: SINGLE_INSTANCE_URLS,
     jobs,
     waitTimeoutMs: WAIT_TIMEOUT_MS,
-    proxyRatio: PROXY_RATIO,
     snapshotIntervalMs: SNAPSHOT_INTERVAL_MS,
     waitForMinuteBoundary: true,
   });
@@ -105,7 +96,7 @@ const createEmptyTestSetup = (): TestSetupData => ({
 /** Get the minute index (floored epoch minute) of a timestamp */
 const minuteOf = (timestamp: number): number => Math.floor(timestamp / MS_PER_MINUTE);
 
-/** Assert that the overflow job waited for the next minute window and ran on openai */
+/** Assert that the overflow job waited for the next minute window */
 const assertJobWaitedForNextWindow = (jobsSorted: JobRecord[]): void => {
   const [job15] = jobsSorted.slice(OPENAI_SUMMARY_CAPACITY);
   expect(job15).toBeDefined();
@@ -118,15 +109,13 @@ const assertJobWaitedForNextWindow = (jobsSorted: JobRecord[]): void => {
 
   // Job was sent in minute N but started in minute N+1 (after window reset)
   expect(startedMinute).toBe(sentMinute + NEXT_MINUTE_OFFSET);
-  // Job ran on openai after the window reset (not escalated)
-  expect(job15?.modelUsed?.startsWith(OPENAI_MODEL_PREFIX)).toBe(true);
 };
 
 describe('Capacity Plus One', () => {
   let testSetup: TestSetupData = createEmptyTestSetup();
 
   beforeAll(async () => {
-    await bootInfrastructure();
+    await bootSingleInstanceInfrastructure('capacityPlusOne');
     testSetup = await setupTestData();
   }, BEFORE_ALL_TIMEOUT_MS);
 
@@ -149,7 +138,7 @@ describe('Capacity Plus One', () => {
   });
 
   it('should have first 14 jobs complete quickly', () => {
-    // First 14 jobs should fit within openai summary capacity (7 per instance x 2)
+    // First 14 jobs should fit within openai summary capacity (14 per single instance)
     const first14Jobs = testSetup.jobsSortedBySentTime.slice(FIRST_INDEX, OPENAI_SUMMARY_CAPACITY);
     const quickJobs = first14Jobs.filter((j) => (j.queueDurationMs ?? FIRST_INDEX) < QUICK_JOB_THRESHOLD_MS);
 
@@ -157,7 +146,7 @@ describe('Capacity Plus One', () => {
     expect(quickJobs.length).toBe(OPENAI_SUMMARY_CAPACITY);
   });
 
-  it('should have the 15th job wait for the next minute window on openai', () => {
+  it('should have the 15th job wait for the next minute window', () => {
     assertJobWaitedForNextWindow(testSetup.jobsSortedBySentTime);
   });
 

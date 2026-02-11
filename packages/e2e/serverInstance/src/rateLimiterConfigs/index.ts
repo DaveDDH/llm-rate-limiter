@@ -7,7 +7,7 @@
 export type { RateLimiterPreset, ConfigPresetName } from './types.js';
 
 // Re-export individual configs
-export { defaultConfig } from './defaultConfig.js';
+export { capacityPlusOneConfig, defaultConfig } from './defaultConfig.js';
 export {
   localRatioTwoTypesConfig,
   localRatioThreeTypesConfig,
@@ -34,10 +34,10 @@ export {
   slotCalcUnevenRatiosConfig,
   slotCalcMemoryConfig,
   slotCalcTpdRpdConfig,
-  slotCalcTpmSingleConfig,
   slotCalcZeroSlotsConfig,
   slotCalcRpmLimitingConfig,
 } from './slotCalcRatioConfigs.js';
+export { slotCalcTpmSingleConfig } from './slotCalcInstanceScalingConfig.js';
 
 export {
   memCalcBasicConfig,
@@ -61,6 +61,8 @@ export {
   mediumMaxWaitTwoModelConfig,
   mediumQueueConcurrentConfig,
 } from './mediumTestConfigs.js';
+export { mediumMaxWaitDefaultConfig } from './mediumMaxWaitDefaultConfig.js';
+export { mediumRefundPartialRequestConfig } from './mediumRefundConfig.js';
 
 export {
   mhMemoryConstrainConfig,
@@ -73,11 +75,12 @@ export {
   mhEscalationConcConfig,
   mhEscalationMultiTimeoutConfig,
   mhEscalationTpmWait5sConfig,
-  mhEscalationConcWait5sConfig,
 } from './mediumHighConfigs.js';
+export { mhEscalationConcWait5sConfig } from './mediumHighEscalationConfigs.js';
 
 export {
   highMultiResourceConfig,
+  highMultiResourceMixedOverageConfig,
   highMultiModelConfig,
   highTwoLayerConfig,
   highTwoLayerEqualConfig,
@@ -88,6 +91,7 @@ export {
 
 export {
   highDistributedBasicConfig,
+  highDistributedDailyLimitConfig,
   highDistributedThreeConfig,
   highDistributedMixedConfig,
   highDistributedTimeWindowConfig,
@@ -98,6 +102,7 @@ export {
 
 export {
   highestMemoryDistributedConfig,
+  highestMemoryDistributedLowTpmConfig,
   highestDistributedAcquireConfig,
   highestAcquireAtomicityConfig,
   highestDistributedWaitQueueConfig,
@@ -109,6 +114,7 @@ export {
 
 export {
   highestEdgeFloorConfig,
+  highestEdgeZeroFloorDivConfig,
   highestEdgeZeroSlotsConfig,
   highestEdgeZeroMemoryConfig,
   highestEdgeLargeMemoryConfig,

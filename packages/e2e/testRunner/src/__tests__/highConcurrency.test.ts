@@ -16,17 +16,19 @@ import {
   ALPHA_CAPACITY,
   BEFORE_ALL_TIMEOUT_MS,
   CONFIG_PRESET_ESCALATION,
+  EXPECTED_BETA_MIN,
   FIFTY_JOBS,
   HTTP_ACCEPTED,
   JOB_COMPLETE_TIMEOUT_MS,
   MAX_JOBS_FIRST_MINUTE,
   MODEL_ALPHA,
   MODEL_BETA,
+  ONE_HUNDRED_FIFTY_JOBS,
   PORT_A,
   PORT_B,
   PORT_C,
   TEST_TIMEOUT_MS,
-  ZERO_COUNT,
+  TWO_INSTANCES,
   countJobsByModel,
   fetchJobResults,
   killAllInstances,
@@ -35,6 +37,9 @@ import {
   submitMultipleJobs,
   waitForAllJobsComplete,
 } from './highConcurrencyHelpers.js';
+
+/** Total jobs submitted per describe block in test 46.2 */
+const TOTAL_ESCALATION_JOBS = FIFTY_JOBS * TWO_INSTANCES;
 
 // Ensure all instances are killed when this file finishes
 afterAll(async () => {
@@ -76,8 +81,14 @@ describe('46.1 Global Limit Respected Under High Concurrency', () => {
       const resultsC = await fetchJobResults(PORT_C);
       const allResults = [...resultsA, ...resultsB, ...resultsC];
 
+      // Assert exact model distribution: all 150 jobs completed on model-alpha
+      expect(allResults.length).toBe(ONE_HUNDRED_FIFTY_JOBS);
       const alphaCount = countJobsByModel(allResults, MODEL_ALPHA);
       expect(alphaCount).toBeLessThanOrEqual(MAX_JOBS_FIRST_MINUTE);
+
+      // All jobs should have a defined model
+      const allHaveModel = allResults.every((r) => r.modelUsed !== undefined);
+      expect(allHaveModel).toBe(true);
     },
     TEST_TIMEOUT_MS
   );
@@ -117,9 +128,13 @@ describe('46.2 High-Volume Escalation', () => {
       const alphaCount = countJobsByModel(allResults, MODEL_ALPHA);
       const betaCount = countJobsByModel(allResults, MODEL_BETA);
 
+      // Alpha can handle at most 10 jobs, beta gets the rest (>= 90)
       expect(alphaCount).toBeLessThanOrEqual(ALPHA_CAPACITY);
-      expect(betaCount).toBeGreaterThan(ZERO_COUNT);
+      expect(betaCount).toBeGreaterThanOrEqual(EXPECTED_BETA_MIN);
       expect(alphaCount + betaCount).toBe(allResults.length);
+
+      // Assert total jobs matches what was submitted (global concurrency respected)
+      expect(allResults.length).toBe(TOTAL_ESCALATION_JOBS);
     },
     TEST_TIMEOUT_MS
   );

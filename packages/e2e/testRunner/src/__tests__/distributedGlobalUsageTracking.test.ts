@@ -35,9 +35,9 @@ import {
   TOKENS_5K,
   TOKENS_10K,
   TOKENS_20K,
+  TOKENS_25K,
   TOKENS_45K,
   TOKENS_50K,
-  TWO_INSTANCES,
   TWO_JOBS,
   TWO_SLOTS,
   createJobPromises,
@@ -130,7 +130,7 @@ describe('Distributed Global Usage - 29.2 Global Counter Increments', () => {
       // Remaining: 100K - 50K = 50K, 25K per instance
       const allocA = await fetchAllocation(PORT_A);
       const tpmA = allocA.allocation?.pools[MODEL_ID]?.tokensPerMinute;
-      expect(tpmA).toBeLessThanOrEqual(TOKENS_50K / TWO_INSTANCES);
+      expect(tpmA).toBe(TOKENS_25K);
     },
     TEST_TIMEOUT_MS
   );
@@ -164,7 +164,7 @@ describe('Distributed Global Usage - 29.4 Remaining Capacity Decreases', () => {
       // Remaining: 100K - 10K = 90K, 45K per instance
       const updatedAlloc = await fetchAllocation(PORT_B);
       const updatedTpm = updatedAlloc.allocation?.pools[MODEL_ID]?.tokensPerMinute;
-      expect(updatedTpm).toBeLessThan(TOKENS_50K);
+      expect(updatedTpm).toBe(TOKENS_45K);
     },
     TEST_TIMEOUT_MS
   );

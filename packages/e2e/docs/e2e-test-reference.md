@@ -57,7 +57,6 @@ This document provides detailed documentation for each e2e test file, including 
 | `distributedAcquireRelease.test.ts` | [Highest](./complexity-highest.md#39-distributed---acquirerelease) | [x] | [x] |
 | `distributedWaitQueue.test.ts` | [Highest](./complexity-highest.md#40-distributed---wait-queue) | [x] | [x] |
 | `distributedEscalation.test.ts` | [Highest](./complexity-highest.md#41-distributed---escalation) | [x] | [x] |
-| `distributedGracefulDegradation.test.ts` | [Highest](./complexity-highest.md#42-distributed---graceful-degradation) | [x] | [x] |
 | `redisKeyManagement.test.ts` | [Highest](./complexity-highest.md#43-redis-key-management) | [x] | [x] |
 | `zeroActualUsage.test.ts` | [Highest](./complexity-highest.md#44-zero-actual-usage) | [x] | [x] |
 | `jobPriority.test.ts` | [Highest](./complexity-highest.md#45-job-priority) | [x] | [x] |

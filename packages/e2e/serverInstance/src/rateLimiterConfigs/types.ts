@@ -31,6 +31,7 @@ export interface RateLimiterPreset {
 
 export type ConfigPresetName =
   | 'default'
+  | 'capacityPlusOne'
   | 'slotCalculation'
   | 'fixedRatio'
   | 'flexibleRatio'
@@ -65,6 +66,7 @@ export type ConfigPresetName =
   | 'medium-maxWait-timeout'
   | 'medium-maxWait-release'
   | 'medium-maxWait-perModel'
+  | 'medium-maxWait-default'
   | 'medium-queue-concurrent'
   | 'medium-errorMemory'
   | 'medium-fixedProtection-twoType'
@@ -92,6 +94,7 @@ export type ConfigPresetName =
   | 'high-distributedThree'
   | 'high-distributedMixed'
   | 'high-distributedTimeWindow'
+  | 'high-distributedDailyLimit'
   | 'high-distributedMultiModel'
   | 'high-distributedPubSub'
   | 'high-distributedWait'
@@ -108,4 +111,8 @@ export type ConfigPresetName =
   | 'highest-edgeZeroMemory'
   | 'highest-edgeLargeMemory'
   | 'highest-edgeAllFixed'
-  | 'highest-edgeSingleFlex';
+  | 'highest-edgeSingleFlex'
+  | 'high-multiResource-mixedOverage'
+  | 'medium-refund-partialRequest'
+  | 'highest-edgeZeroFloorDiv'
+  | 'highest-memoryDistributed-lowTPM';

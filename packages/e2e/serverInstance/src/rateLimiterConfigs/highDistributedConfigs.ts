@@ -24,6 +24,7 @@ const TPM_50K = 50000;
 const TPM_90K = 90000;
 const TPM_100K = 100000;
 const TPM_120K = 120000;
+const TPD_200K = 200000;
 const RPM_500 = 500;
 const TOKENS_10K = 10000;
 
@@ -135,6 +136,31 @@ export const highDistributedPubSubConfig: RateLimiterPreset = {
     jobTypeA: {
       estimatedUsedTokens: TOKENS_10K,
       estimatedNumberOfRequests: REQUESTS_TWO,
+      ratio: { initialValue: RATIO_FULL },
+    },
+  },
+};
+
+/**
+ * 33.3: Daily limit (TPD) tracked across minutes.
+ * model-alpha: TPM=100K, TPD=200K.
+ * Pool slots (TPM): floor(100K/10K/2) = 5 per instance
+ * Pool slots (TPD): floor(200K/10K/2) = 10 per instance
+ * TPM is the limiting factor: 5 slots per instance
+ */
+export const highDistributedDailyLimitConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': {
+      tokensPerMinute: TPM_100K,
+      tokensPerDay: TPD_200K,
+      pricing: standardPricing,
+    },
+  },
+  escalationOrder: ['model-alpha'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
       ratio: { initialValue: RATIO_FULL },
     },
   },

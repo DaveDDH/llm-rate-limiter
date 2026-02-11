@@ -25,6 +25,8 @@ import {
   JOB_COMPLETE_WAIT_MS,
   JOB_SETTLE_MS,
   LONG_JOB_DURATION_MS,
+  MOCK_INPUT_TOKENS,
+  MOCK_OUTPUT_TOKENS,
   MOCK_REQUEST_COUNT,
   MOCK_TOTAL_TOKENS,
   ONE_IN_FLIGHT,
@@ -73,7 +75,12 @@ describe('4.1 Acquire Decrements Pool Slot', () => {
     const timestamp = Date.now();
     const jobId = `acquire-test-${timestamp}`;
 
-    const status = await submitJob(INSTANCE_A_URL, jobId, 'jobTypeA', LONG_JOB_DURATION_MS);
+    const status = await submitJob({
+      baseUrl: INSTANCE_A_URL,
+      jobId,
+      jobType: 'jobTypeA',
+      durationMs: LONG_JOB_DURATION_MS,
+    });
     expect(status).toBe(HTTP_ACCEPTED);
 
     // Wait for job to start processing
@@ -94,7 +101,12 @@ describe('4.2 Release Increments Pool Slot', () => {
     const timestamp = Date.now();
     const jobId = `release-test-${timestamp}`;
 
-    await submitJob(INSTANCE_A_URL, jobId, 'jobTypeA', SHORT_JOB_DURATION_MS);
+    await submitJob({
+      baseUrl: INSTANCE_A_URL,
+      jobId,
+      jobType: 'jobTypeA',
+      durationMs: SHORT_JOB_DURATION_MS,
+    });
 
     // Wait for job to complete
     await waitForJobComplete(INSTANCE_A_URL, JOB_COMPLETE_WAIT_MS);
@@ -122,8 +134,16 @@ describe('4.3 Single Job Updates Global Counter', () => {
   it('should update token counter after job completes', async () => {
     const timestamp = Date.now();
     const jobId = `counter-test-${timestamp}`;
-
-    await submitJob(INSTANCE_A_URL, jobId, 'jobTypeA', SHORT_JOB_DURATION_MS);
+    await submitJob({
+      baseUrl: INSTANCE_A_URL,
+      jobId,
+      jobType: 'jobTypeA',
+      durationMs: SHORT_JOB_DURATION_MS,
+      tokenOverrides: {
+        actualInputTokens: MOCK_INPUT_TOKENS,
+        actualOutputTokens: MOCK_OUTPUT_TOKENS,
+      },
+    });
 
     await waitForJobComplete(INSTANCE_A_URL, JOB_COMPLETE_WAIT_MS);
 
@@ -157,7 +177,12 @@ describe('4.4 Concurrent Slots Released Immediately', () => {
     const timestamp = Date.now();
     const jobId = `concurrent-test-${timestamp}`;
 
-    await submitJob(INSTANCE_A_URL, jobId, 'jobTypeA', LONG_JOB_DURATION_MS);
+    await submitJob({
+      baseUrl: INSTANCE_A_URL,
+      jobId,
+      jobType: 'jobTypeA',
+      durationMs: LONG_JOB_DURATION_MS,
+    });
 
     // Wait for job to start processing
     await sleep(JOB_SETTLE_MS);

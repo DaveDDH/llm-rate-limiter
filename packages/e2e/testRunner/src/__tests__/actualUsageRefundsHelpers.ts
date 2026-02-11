@@ -13,6 +13,9 @@ import { sleep } from '../testUtils.js';
 // Timing constants
 const ALLOCATION_PROPAGATION_MS = 2000;
 const POLL_INTERVAL_MS = 200;
+const MINUTE_IN_MS = 60000;
+const MS_PER_SECOND = 1000;
+const BUFFER_MS = 1500;
 
 // Instance constants
 export const INSTANCE_PORT = 3001;
@@ -39,6 +42,11 @@ export const ACTUAL_TOTAL_TOKENS_PARTIAL = 6000;
 // Test 9.2: Full refund (zero actual)
 export const ZERO_TOKENS = 0;
 export const ZERO_REQUESTS = 0;
+
+// Test 9.3: Partial request count refund
+export const PARTIAL_REQUEST_CONFIG: ConfigPresetName = 'medium-refund-partialRequest';
+export const PARTIAL_REQUEST_ESTIMATED = 5;
+export const PARTIAL_REQUEST_ACTUAL = 2;
 
 // Test 9.5: Multiple refund accumulation
 export const JOB_A_INPUT = 3000;
@@ -150,6 +158,11 @@ export const setupSingleInstance = async (configPreset: ConfigPresetName): Promi
   await sleep(ALLOCATION_PROPAGATION_MS);
 };
 
+/** Boot a single instance with the partial request refund config */
+export const setupPartialRequestInstance = async (): Promise<void> => {
+  await setupSingleInstance(PARTIAL_REQUEST_CONFIG);
+};
+
 /** Poll until no active jobs remain (recursive) */
 const pollUntilNoActiveJobs = async (
   baseUrl: string,
@@ -175,6 +188,23 @@ const pollUntilNoActiveJobs = async (
 export const waitForJobComplete = async (baseUrl: string, timeoutMs: number): Promise<void> => {
   await pollUntilNoActiveJobs(baseUrl, Date.now(), timeoutMs);
 };
+
+/** Get milliseconds until next minute boundary */
+const getMsUntilNextMinute = (): number => {
+  const now = new Date();
+  const secondsIntoMinute = now.getSeconds();
+  const msIntoSecond = now.getMilliseconds();
+  return MINUTE_IN_MS - (secondsIntoMinute * MS_PER_SECOND + msIntoSecond);
+};
+
+/** Wait until a minute boundary is crossed */
+export const waitForMinuteBoundary = async (): Promise<void> => {
+  const msToWait = getMsUntilNextMinute();
+  await sleep(msToWait + BUFFER_MS);
+};
+
+/** Get seconds into current minute */
+export const getSecondsIntoMinute = (): number => new Date().getSeconds();
 
 // Re-export for convenience
 export { killAllInstances } from '../instanceLifecycle.js';

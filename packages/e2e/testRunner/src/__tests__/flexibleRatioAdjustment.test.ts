@@ -188,7 +188,11 @@ describe('Flexible Ratio Adjustment - Load Imbalance Handling', () => {
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should complete all flexJobA jobs', () => {
-    expect(countCompletedByPrefix(imbalanceData, 'imbalance-a')).toBe(INITIAL_SLOTS_PER_TYPE * DOUBLE_SLOTS);
+    const completedA = countCompletedByPrefix(imbalanceData, 'imbalance-a');
+    expect(completedA).toBe(INITIAL_SLOTS_PER_TYPE * DOUBLE_SLOTS);
+
+    // Prove ratio adjustment: flexJobA completed more jobs than initial allocation
+    expect(completedA).toBeGreaterThan(INITIAL_SLOTS_PER_TYPE);
   });
 
   it('should complete flexJobB and flexJobC jobs', () => {

@@ -16,6 +16,7 @@ import { sleep } from '../testUtils.js';
 import {
   AFTER_ALL_TIMEOUT_MS,
   BEFORE_ALL_TIMEOUT_MS,
+  ESTIMATED_TOKENS,
   HTTP_ACCEPTED,
   INSTANCE_URL,
   JOB_COMPLETE_TIMEOUT_MS,
@@ -24,12 +25,14 @@ import {
   REJECT_FULL_INPUT,
   REJECT_FULL_OUTPUT,
   REJECT_FULL_TOTAL,
+  REJECT_OVERAGE_AMOUNT,
   REJECT_OVERAGE_INPUT,
   REJECT_OVERAGE_OUTPUT,
   REJECT_OVERAGE_REQUEST_COUNT,
   REJECT_OVERAGE_TOTAL,
   REJECT_ZERO_TOTAL,
   TPM_CONFIG,
+  fetchOverages,
   fetchStats,
   getTokensPerMinute,
   killAllInstances,
@@ -122,5 +125,14 @@ describe('12.6 Reject With Overage Usage', () => {
     const tpm = getTokensPerMinute(stats, MODEL_ALPHA);
     expect(tpm).toBeDefined();
     expect(tpm?.current).toBe(REJECT_OVERAGE_TOTAL);
+  });
+
+  it('should fire onOverage callback with correct overage details', async () => {
+    const overages = await fetchOverages(INSTANCE_URL);
+    const tokenOverage = overages.overages.find((e) => e.resourceType === 'tokens');
+    expect(tokenOverage).toBeDefined();
+    expect(tokenOverage?.overage).toBe(REJECT_OVERAGE_AMOUNT);
+    expect(tokenOverage?.estimated).toBe(ESTIMATED_TOKENS);
+    expect(tokenOverage?.actual).toBe(REJECT_OVERAGE_TOTAL);
   });
 });

@@ -118,3 +118,4 @@ export const waitForJobComplete = async (baseUrl: string, timeoutMs: number): Pr
 
 // Re-export for convenience
 export { killAllInstances, sleep };
+export { fetchAllocation } from '../instanceLifecycle.js';

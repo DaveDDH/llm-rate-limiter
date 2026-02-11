@@ -219,6 +219,42 @@ export const waitForJobComplete = async (baseUrl: string, timeoutMs: number): Pr
   await pollUntilNoActiveJobs(baseUrl, Date.now(), timeoutMs);
 };
 
+/** Job type state from stats endpoint */
+export interface JobTypeState {
+  currentRatio: number;
+  initialRatio: number;
+  flexible: boolean;
+  inFlight: number;
+  allocatedSlots: number;
+}
+
+/** Stats response from debug/stats */
+export interface StatsResponse {
+  instanceId: string;
+  timestamp: number;
+  stats: {
+    jobTypes?: {
+      jobTypes: Record<string, JobTypeState>;
+      totalSlots: number;
+    };
+    models: Record<string, Record<string, unknown>>;
+  };
+}
+
+/** Type guard for StatsResponse */
+const isStatsResponse = (value: unknown): value is StatsResponse =>
+  typeof value === 'object' && value !== null && 'stats' in value;
+
+/** Fetch stats from an instance */
+export const fetchStats = async (baseUrl: string): Promise<StatsResponse> => {
+  const response = await fetch(`${baseUrl}/api/debug/stats`);
+  const data: unknown = await response.json();
+  if (!isStatsResponse(data)) {
+    throw new Error('Invalid stats response');
+  }
+  return data;
+};
+
 // Re-export for convenience
 export { killAllInstances };
 export { fetchAllocation } from '../instanceLifecycle.js';

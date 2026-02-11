@@ -41,9 +41,12 @@ export const ESTIMATED_MEMORY_MB = 10;
 export const MEMORY_SLOTS_A = 10;
 export const MEMORY_SLOTS_B = 20;
 
-// Pool slot expectations: floor(1M TPM / 10K tokens / 2 instances) = 50
-export const DISTRIBUTED_POOL_SLOTS = 50;
+// Pool slot expectations: floor(100K TPM / 10K tokens / 2 instances) = 5
+export const DISTRIBUTED_POOL_SLOTS = 5;
 export const TWO_INSTANCES = 2;
+
+// Config preset for test 38.2 (low TPM to verify Redis is unaware of memory)
+export const CONFIG_PRESET_LOW_TPM: ConfigPresetName = 'highest-memoryDistributed-lowTPM';
 
 // HTTP status
 export const HTTP_ACCEPTED = 202;
@@ -100,6 +103,20 @@ export const setupTwoInstancesWithMemory = async (): Promise<void> => {
   await bootInstance(PORT_A, CONFIG_PRESET, optionsA);
   await sleep(ALLOCATION_PROPAGATION_MS);
   await bootInstance(PORT_B, CONFIG_PRESET, optionsB);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+};
+
+/** Setup two instances with different memory limits using low TPM config */
+export const setupTwoInstancesWithMemoryLowTpm = async (): Promise<void> => {
+  await killAllInstances();
+  await cleanRedis();
+
+  const optionsA: BootInstanceOptions = { maxMemoryMB: MEMORY_A_MB };
+  const optionsB: BootInstanceOptions = { maxMemoryMB: MEMORY_B_MB };
+
+  await bootInstance(PORT_A, CONFIG_PRESET_LOW_TPM, optionsA);
+  await sleep(ALLOCATION_PROPAGATION_MS);
+  await bootInstance(PORT_B, CONFIG_PRESET_LOW_TPM, optionsB);
   await sleep(ALLOCATION_PROPAGATION_MS);
 };
 

@@ -204,6 +204,11 @@ describe('Slots Evolve - Sequential Acquire and Release', () => {
 
   it('should complete second batch after slots are freed', () => {
     expect(countCompletedByPrefix(sequentialData, 'evolve-batch2')).toBe(JOB_TYPE_A_TOTAL_SLOTS);
+
+    // Prove slots evolved: batch2 reused slots freed by batch1 (both batches completed)
+    const batch2Jobs = filterJobsByPrefix(sequentialData, 'evolve-batch2');
+    const allBatch2Completed = batch2Jobs.every((j) => j.status === 'completed');
+    expect(allBatch2Completed).toBe(true);
   });
 
   it('should not have any failed jobs', () => {
@@ -222,6 +227,11 @@ describe('Slots Evolve - Concurrent Load with Slot Reuse', () => {
 
   it('should complete all short jobs after slots freed', () => {
     expect(countCompletedByPrefix(concurrentData, 'short-wait')).toBe(JOB_TYPE_A_TOTAL_SLOTS);
+
+    // Prove slots evolved: at least some short jobs were queued while long jobs occupied slots
+    const shortJobs = filterJobsByPrefix(concurrentData, 'short-wait');
+    const queuedShortJobs = shortJobs.filter((j) => (j.queueDurationMs ?? ZERO_COUNT) > ZERO_COUNT);
+    expect(queuedShortJobs.length).toBeGreaterThan(ZERO_COUNT);
   });
 
   it('should not have any failed jobs', () => {

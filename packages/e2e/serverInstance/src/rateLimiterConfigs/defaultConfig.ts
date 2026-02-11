@@ -33,6 +33,56 @@ const REQUESTS_QUINTUPLE = 5;
 const RATIO_THIRTY_PERCENT = 0.3;
 const RATIO_FORTY_PERCENT = 0.4;
 
+// Capacity Plus One test: openai TPM=140K → floor(140K/10K/1) = 14 slots (single instance)
+const OPENAI_CPO_TPM = 140000;
+const CPO_SUMMARY_TOKENS = 10000;
+const CPO_REQUESTS_SINGLE = 1;
+const CPO_RATIO_FULL = 1.0;
+
+/**
+ * Capacity Plus One config: single job type (summary) on openai with TPM=140K.
+ * Single instance: floor(140K / 10K / 1) = 14 rate slots.
+ * Other models preserved for escalation order but not used.
+ */
+export const capacityPlusOneConfig: RateLimiterPreset = {
+  models: {
+    'openai/gpt-5.2': {
+      requestsPerMinute: OPENAI_RPM,
+      tokensPerMinute: OPENAI_CPO_TPM,
+      pricing: {
+        input: OPENAI_PRICING_INPUT,
+        cached: OPENAI_PRICING_CACHED,
+        output: OPENAI_PRICING_OUTPUT,
+      },
+    },
+    'xai/grok-4.1-fast': {
+      requestsPerMinute: XAI_RPM,
+      tokensPerMinute: XAI_TPM,
+      pricing: {
+        input: XAI_PRICING_INPUT,
+        cached: XAI_PRICING_CACHED,
+        output: XAI_PRICING_OUTPUT,
+      },
+    },
+    'deepinfra/gpt-oss-20b': {
+      maxConcurrentRequests: DEEPINFRA_MAX_CONCURRENT,
+      pricing: {
+        input: DEEPINFRA_PRICING_INPUT,
+        cached: DEEPINFRA_PRICING_CACHED,
+        output: DEEPINFRA_PRICING_OUTPUT,
+      },
+    },
+  },
+  escalationOrder: ['openai/gpt-5.2', 'xai/grok-4.1-fast', 'deepinfra/gpt-oss-20b'],
+  resourceEstimations: {
+    summary: {
+      estimatedUsedTokens: CPO_SUMMARY_TOKENS,
+      estimatedNumberOfRequests: CPO_REQUESTS_SINGLE,
+      ratio: { initialValue: CPO_RATIO_FULL },
+    },
+  },
+};
+
 export const defaultConfig: RateLimiterPreset = {
   models: {
     'openai/gpt-5.2': {

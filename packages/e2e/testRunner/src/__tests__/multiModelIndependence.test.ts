@@ -124,15 +124,20 @@ describe('25.2 Acquiring on Model A Does Not Affect Model B', () => {
     expect(betaPool?.totalSlots).toBe(BETA_SLOTS_PER_INSTANCE);
   });
 
-  it('should accept new jobs on model-beta without issue', async () => {
+  it('should accept and run a job on model-beta via instance B', async () => {
     const jobId = `beta-independent-${Date.now()}`;
     const status = await submitJob({
-      baseUrl: INSTANCE_URL_A,
+      baseUrl: INSTANCE_URL_B,
       jobId,
       jobType: JOB_TYPE_A,
       durationMs: SHORT_JOB_DURATION_MS,
     });
     expect(status).toBe(HTTP_ACCEPTED);
+
+    const betaAlloc = await fetchAllocation(INSTANCE_PORT_A);
+    const betaPool = betaAlloc.allocation?.pools[MODEL_BETA];
+    expect(betaPool).toBeDefined();
+    expect(betaPool?.totalSlots).toBe(BETA_SLOTS_PER_INSTANCE);
   });
 
   it('should complete all jobs', async () => {
@@ -152,13 +157,21 @@ describe('25.3 Same Ratios Applied Per Model', () => {
     await setupTwoInstances(CONFIG_PRESET);
   }, BEFORE_ALL_TIMEOUT_MS);
 
-  it('should show correct ratio allocation for model-alpha', async () => {
+  it('should show correct per-model per-job-type slot counts', async () => {
     const stats = await fetchStats(INSTANCE_URL_A);
     const jobTypeStats = getJobTypeStats(stats);
     expect(getModelAllocatedSlots(jobTypeStats, MODEL_ALPHA, JOB_TYPE_A)).toBe(ALPHA_JOB_A_SLOTS);
     expect(getModelAllocatedSlots(jobTypeStats, MODEL_ALPHA, JOB_TYPE_B)).toBe(ALPHA_JOB_B_SLOTS);
     expect(getModelAllocatedSlots(jobTypeStats, MODEL_BETA, JOB_TYPE_A)).toBe(BETA_JOB_A_SLOTS);
     expect(getModelAllocatedSlots(jobTypeStats, MODEL_BETA, JOB_TYPE_B)).toBe(BETA_JOB_B_SLOTS);
+  });
+
+  it('should have per-model slot sums matching pool allocations', async () => {
+    const allocation = await fetchAllocation(INSTANCE_PORT_A);
+    const alphaPool = allocation.allocation?.pools[MODEL_ALPHA];
+    const betaPool = allocation.allocation?.pools[MODEL_BETA];
+    expect(alphaPool?.totalSlots).toBe(ALPHA_SLOTS_PER_INSTANCE);
+    expect(betaPool?.totalSlots).toBe(BETA_SLOTS_PER_INSTANCE);
   });
 
   it('should verify both instances have same allocation', async () => {

@@ -37,6 +37,7 @@ export const ACTUAL_TOKENS = 6000;
 export const EXPECTED_REFUND = 4000;
 export const ZERO_COUNT = 0;
 export const ZERO_OUTPUT_TOKENS = 0;
+export const SINGLE_REQUEST_COUNT = 1;
 
 // Timing for window boundary tests
 export const ONE_MINUTE_MS = 60000;

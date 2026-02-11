@@ -16,6 +16,7 @@
  */
 import {
   CONFIG_PRESET,
+  ESTIMATED_TOKENS,
   FULL_TPM,
   HTTP_ACCEPTED,
   INSTANCE_URL,
@@ -107,11 +108,13 @@ describe('10.2 onOverage Callback Fires', () => {
     expect(overages.count).toBeGreaterThanOrEqual(ONE_COUNT);
   });
 
-  it('should have correct overage amount in the event', async () => {
+  it('should have correct overage amount and details in the event', async () => {
     const overages = await fetchOverages(INSTANCE_URL);
     const tokenOverage = overages.overages.find((e) => e.resourceType === 'tokens');
     expect(tokenOverage).toBeDefined();
     expect(tokenOverage?.overage).toBe(TOKEN_OVERAGE_AMOUNT);
+    expect(tokenOverage?.estimated).toBe(ESTIMATED_TOKENS);
+    expect(tokenOverage?.actual).toBe(OVERAGE_TOTAL_TOKENS);
   });
 });
 

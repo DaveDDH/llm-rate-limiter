@@ -11,7 +11,7 @@ import { sleep } from '../testUtils.js';
 const ALLOCATION_PROPAGATION_MS = 2000;
 const POLL_INTERVAL_MS = 200;
 const MINUTE_MS = 60000;
-const SAFE_WINDOW_MS = 15000;
+const SAFE_WINDOW_MS = 20000;
 
 // Instance constants
 export const INSTANCE_PORT = 3001;
@@ -47,6 +47,8 @@ export const WAIT_MIN_5S = 4500;
 export const WAIT_MIN_8S = 7500;
 export const WAIT_MAX_5S = 5500;
 export const WAIT_MAX_8S = 8500;
+export const MULTI_ESCALATION_MIN_MS = 7500;
+export const MULTI_ESCALATION_MAX_MS = 9000;
 
 // HTTP status
 export const HTTP_ACCEPTED = 202;

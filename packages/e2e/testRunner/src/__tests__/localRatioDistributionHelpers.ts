@@ -39,8 +39,9 @@ export const SINGLE_TYPE_TOTAL_SLOTS = 10;
 export const ZERO_ALLOCATED_SLOTS = 0;
 
 // In-flight test constants (test 2.5)
-export const SEVEN_IN_FLIGHT = 7;
-export const SEVENTY_PERCENT_LOAD = 0.7;
+// jobTypeA has ratio=0.6, totalSlots=10 → allocatedSlots=6
+export const SIX_IN_FLIGHT = 6;
+export const FULL_LOAD = 1.0;
 export const LONG_JOB_DURATION_MS = 30000;
 
 /** Job type state from the stats endpoint */

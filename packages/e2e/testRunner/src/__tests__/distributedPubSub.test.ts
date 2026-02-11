@@ -20,6 +20,7 @@ import {
   AFTER_ALL_TIMEOUT_MS,
   BEFORE_ALL_TIMEOUT_MS,
   CONFIG_PRESET,
+  EXPECTED_TPM_AFTER_8K_USAGE,
   HTTP_ACCEPTED,
   INSTANCE_URL_A,
   JOB_COMPLETE_TIMEOUT_MS,
@@ -45,7 +46,6 @@ const ZERO_OUTPUT_TOKENS = 0;
 const THREE_INSTANCES = 3;
 const TWO_INSTANCES = 2;
 const MIN_SLOTS = 0;
-const TOKEN_MULTIPLIER = 10;
 
 /** Submit a test job to instance A and wait for completion */
 const submitTestJobAndWait = async (jobId: string): Promise<void> => {
@@ -61,17 +61,40 @@ const submitTestJobAndWait = async (jobId: string): Promise<void> => {
   await waitForJobComplete(INSTANCE_URL_A, JOB_COMPLETE_TIMEOUT_MS);
 };
 
+/** Pool shape for type safety */
+interface PoolEntry {
+  totalSlots?: number;
+  tokensPerMinute?: number;
+  requestsPerMinute?: number;
+}
+
+/** Dynamic limit shape for type safety */
+interface DynamicLimitEntry {
+  tokensPerMinute?: number;
+  requestsPerMinute?: number;
+}
+
 /** Verify model pool has positive slot, TPM, and RPM values */
 const verifyModelPoolHasPositiveValues = (
-  pools:
-    | Record<string, { totalSlots?: number; tokensPerMinute?: number; requestsPerMinute?: number }>
-    | undefined,
+  pools: Record<string, PoolEntry> | undefined,
   modelId: string
 ): void => {
   expect(pools?.[modelId]).toBeDefined();
   expect(pools?.[modelId]?.totalSlots).toBeGreaterThan(MIN_SLOTS);
   expect(pools?.[modelId]?.tokensPerMinute).toBeGreaterThan(MIN_SLOTS);
   expect(pools?.[modelId]?.requestsPerMinute).toBeGreaterThan(MIN_SLOTS);
+};
+
+/** Verify dynamicLimits contains per-model TPM/RPM values */
+const verifyDynamicLimitsForModel = (
+  dynamicLimits: Record<string, DynamicLimitEntry> | undefined,
+  modelId: string
+): void => {
+  expect(dynamicLimits).toBeDefined();
+  const limits = dynamicLimits?.[modelId];
+  expect(limits).toBeDefined();
+  expect(limits?.tokensPerMinute).toBeDefined();
+  expect(limits?.requestsPerMinute).toBeDefined();
 };
 
 // Clean up all instances after all tests
@@ -108,6 +131,7 @@ describe('Distributed Pub/Sub - 31.1 Job Completion Triggers Allocation Broadcas
       const allocB = await fetchAllocation(PORT_B);
       expect(allocB.allocation).not.toBeNull();
       expect(allocB.allocation?.pools[MODEL_ALPHA]).toBeDefined();
+      expect(allocB.allocation?.dynamicLimits).toBeDefined();
     },
     TEST_TIMEOUT_MS
   );
@@ -214,6 +238,8 @@ describe('Distributed Pub/Sub - 31.4 Pub/Sub Message Contains Complete Allocatio
       verifyModelPoolHasPositiveValues(allocation?.pools, MODEL_ALPHA);
       expect(allocation?.pools[MODEL_BETA]).toBeDefined();
       expect(allocation?.pools[MODEL_BETA]?.totalSlots).toBeGreaterThan(MIN_SLOTS);
+
+      verifyDynamicLimitsForModel(allocation?.dynamicLimits, MODEL_ALPHA);
     },
     TEST_TIMEOUT_MS
   );
@@ -251,12 +277,12 @@ describe('Distributed Pub/Sub - 31.5 Release Updates Global Usage and Triggers R
       expect(allocA.allocation).not.toBeNull();
       expect(allocB.allocation).not.toBeNull();
 
-      // Global usage should be reflected in allocation
+      // Global usage: 8K used, remaining: 92K, per instance: 46K
       const tpmA = allocA.allocation?.pools[MODEL_ALPHA]?.tokensPerMinute;
       const tpmB = allocB.allocation?.pools[MODEL_ALPHA]?.tokensPerMinute;
 
-      expect(tpmA).toBeLessThan(TOKENS_8K * TOKEN_MULTIPLIER);
-      expect(tpmB).toBeLessThan(TOKENS_8K * TOKEN_MULTIPLIER);
+      expect(tpmA).toBe(EXPECTED_TPM_AFTER_8K_USAGE);
+      expect(tpmB).toBe(EXPECTED_TPM_AFTER_8K_USAGE);
     },
     TEST_TIMEOUT_MS
   );

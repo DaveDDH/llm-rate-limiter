@@ -40,15 +40,17 @@ export const TWO_INSTANCES = 2;
 export const INITIAL_ALLOCATION_PER_INSTANCE = 50_000;
 
 // Token amounts for tests
-export const TOKENS_5K = 5000;
-export const TOKENS_3K = 3000;
+export const TOKENS_1K = 1000;
 export const TOKENS_2K = 2000;
+export const TOKENS_3K = 3000;
+export const TOKENS_5K = 5000;
 export const TOKENS_10K = 10_000;
 export const TOKENS_20K = 20_000;
+export const TOKENS_25K = 25_000;
+export const TOKENS_40K = 40_000;
 export const TOKENS_45K = 45_000;
 export const TOKENS_50K = 50_000;
 export const TOKENS_60K = 60_000;
-export const TOKENS_1K = 1000;
 
 // Shared constants
 export const ZERO_COUNT = 0;
@@ -61,6 +63,8 @@ export const JOB_COMPLETE_TIMEOUT_MS = 10_000;
 export const THREE_JOBS = 3;
 export const TWO_JOBS = 2;
 export const SIX_JOBS = 6;
+export const TEN_JOBS = 10;
+export const TWENTY_JOBS = 20;
 
 // Expected slot counts
 export const TWO_SLOTS = 2;

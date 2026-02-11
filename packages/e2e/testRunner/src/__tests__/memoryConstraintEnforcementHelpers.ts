@@ -58,7 +58,7 @@ export const EFFECTIVE_SLOTS = 5;
 export const QUICK_JOB_DURATION_MS = 100;
 export const FILL_JOB_DURATION_MS = 3000;
 export const SETTLE_MS = 500;
-export const JOB_START_MAX_MS = 1000;
+export const JOB_START_MAX_MS = 200;
 export const POLL_TIMEOUT_MS = 30000;
 export const TWO_JOBS = 2;
 

@@ -9,10 +9,14 @@
  * - 9.2: Full Refund (zero actual tokens)
  * - 9.3: Request Count Refund
  *
- * Config: slotCalc-tpm-single
+ * Config: slotCalc-tpm-single (9.1, 9.2)
  * - model-alpha: TPM=100K, RPM=1000
  * - jobTypeA: estimatedTokens=10K, estimatedRequests=1, ratio=1.0
  * - 1 instance: floor(100K/10K/1) = 10 slots
+ *
+ * Config: medium-refund-partialRequest (9.3)
+ * - model-alpha: TPM=100K, RPM=1000
+ * - jobTypeA: estimatedTokens=10K, estimatedRequests=5, ratio=1.0
  */
 import {
   ACTUAL_INPUT_TOKENS_PARTIAL,
@@ -24,14 +28,15 @@ import {
   JOB_COMPLETE_TIMEOUT_MS,
   JOB_TYPE,
   MODEL_ID,
+  PARTIAL_REQUEST_ACTUAL,
   SHORT_JOB_DURATION_MS,
   ZERO_COUNT,
-  ZERO_REQUESTS,
   ZERO_TOKENS,
   fetchStats,
   getRequestsPerMinute,
   getTokensPerMinute,
   killAllInstances,
+  setupPartialRequestInstance,
   setupSingleInstance,
   submitJob,
   waitForJobComplete,
@@ -121,31 +126,32 @@ describe('9.2 Full Refund - Zero Actual Tokens', () => {
 /**
  * Test 9.3: Request Count Refund
  *
- * Send a job with actualRequestCount=0 (estimated=1).
- * RPM counter should show 0 after completion (1 request refunded).
+ * Config: medium-refund-partialRequest (estimatedRequests=5).
+ * Send a job with actualRequestCount=2 (partial refund from estimated 5).
+ * RPM counter should show 2 after completion.
  */
 describe('9.3 Request Count Refund', () => {
   beforeAll(async () => {
-    await setupSingleInstance(CONFIG_PRESET);
+    await setupPartialRequestInstance();
   }, BEFORE_ALL_TIMEOUT_MS);
 
-  it('should accept the job with zero actual requests', async () => {
+  it('should accept the job with partial actual requests', async () => {
     const jobId = `refund-requests-${Date.now()}`;
     const status = await submitJob({
       baseUrl: INSTANCE_URL,
       jobId,
       jobType: JOB_TYPE,
       durationMs: SHORT_JOB_DURATION_MS,
-      extraPayload: { actualRequestCount: ZERO_REQUESTS },
+      extraPayload: { actualRequestCount: PARTIAL_REQUEST_ACTUAL },
     });
     expect(status).toBe(HTTP_ACCEPTED);
     await waitForJobComplete(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
   });
 
-  it('should show zero request count in RPM counter', async () => {
+  it('should show actual request count in RPM counter', async () => {
     const stats = await fetchStats(INSTANCE_URL);
     const rpm = getRequestsPerMinute(stats, MODEL_ID);
     expect(rpm).toBeDefined();
-    expect(rpm?.current).toBe(ZERO_COUNT);
+    expect(rpm?.current).toBe(PARTIAL_REQUEST_ACTUAL);
   });
 });

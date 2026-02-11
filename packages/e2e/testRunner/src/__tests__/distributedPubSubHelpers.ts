@@ -40,6 +40,9 @@ export const ESTIMATED_REQUESTS = 2;
 // Token amounts
 export const TOKENS_8K = 8000;
 
+// Expected per-instance TPM after 8K usage: (100K - 8K) / 2 = 46K
+export const EXPECTED_TPM_AFTER_8K_USAGE = 46_000;
+
 // Shared constants
 export const ZERO_COUNT = 0;
 export const HTTP_ACCEPTED = 202;

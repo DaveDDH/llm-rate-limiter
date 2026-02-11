@@ -128,6 +128,11 @@ describe('18.1 Jobs Blocked When Memory Exhausted', () => {
     const memoryStats = getMemoryStats(stats);
     expect(memoryStats?.activeKB).toBe(MEMORY_50MB);
     expect(memoryStats?.availableKB).toBe(ZERO_COUNT);
+
+    // Assert running count: exactly 5 jobs actively using memory (6th is queued)
+    const activeJobs = await fetchActiveJobs(INSTANCE_URL);
+    expect(activeJobs.count).toBe(JOBS_TO_OVERFLOW_MEMORY);
+
     await waitForNoActiveJobs(INSTANCE_URL, POLL_TIMEOUT_MS);
   });
 });
@@ -182,6 +187,10 @@ describe('18.3 Memory and Ratio Interaction After Adjustment', () => {
     const stats = await fetchStats(INSTANCE_URL);
     const memoryStats = getMemoryStats(stats);
     expect(memoryStats?.activeKB).toBeGreaterThan(ZERO_COUNT);
+
+    // Assert memory-limited slot count: available capacity decreased with 2 active jobs
+    expect(memoryStats?.availableKB).toBeLessThan(MEMORY_100MB);
+
     await waitForNoActiveJobs(INSTANCE_URL, POLL_TIMEOUT_MS);
   });
 });
@@ -255,5 +264,11 @@ describe('18.5 All Limit Types Applied Simultaneously', () => {
     expect(modelStats?.requestsPerMinute).toBeDefined();
     expect(modelStats?.concurrency).toBeDefined();
     expect(memoryStats).toBeDefined();
+
+    // Assert memory max capacity reflects the config (100MB = 102400KB)
+    expect(memoryStats?.maxCapacityKB).toBe(MEMORY_100MB);
+
+    // Assert concurrency limit is configured
+    expect(modelStats?.concurrency?.limit).toBeGreaterThan(ZERO_COUNT);
   });
 });

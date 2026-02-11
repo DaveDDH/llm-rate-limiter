@@ -13,6 +13,9 @@ import { sleep } from '../testUtils.js';
 // Timing constants
 const ALLOCATION_PROPAGATION_MS = 2000;
 const POLL_INTERVAL_MS = 200;
+const MINUTE_IN_MS = 60000;
+const MS_PER_SECOND = 1000;
+const BUFFER_MS = 1500;
 
 // Instance constants
 export const INSTANCE_PORT = 3001;
@@ -197,5 +200,23 @@ export const waitForJobComplete = async (baseUrl: string, timeoutMs: number): Pr
   await pollUntilNoActiveJobs(baseUrl, Date.now(), timeoutMs);
 };
 
+/** Get milliseconds until next minute boundary */
+const getMsUntilNextMinute = (): number => {
+  const now = new Date();
+  const secondsIntoMinute = now.getSeconds();
+  const msIntoSecond = now.getMilliseconds();
+  return MINUTE_IN_MS - (secondsIntoMinute * MS_PER_SECOND + msIntoSecond);
+};
+
+/** Wait until a minute boundary is crossed */
+export const waitForMinuteBoundary = async (): Promise<void> => {
+  const msToWait = getMsUntilNextMinute();
+  await sleep(msToWait + BUFFER_MS);
+};
+
+/** Get seconds into current minute */
+export const getSecondsIntoMinute = (): number => new Date().getSeconds();
+
 // Re-export for convenience
 export { killAllInstances } from '../instanceLifecycle.js';
+export { sleep } from '../testUtils.js';

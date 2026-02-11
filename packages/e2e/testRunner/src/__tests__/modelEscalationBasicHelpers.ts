@@ -19,6 +19,7 @@ const SINGLE_INSTANCE = 1;
 // Config presets
 export const TWO_MODEL_CONFIG: ConfigPresetName = 'medium-maxWait-twoModel';
 export const THREE_MODEL_CONFIG: ConfigPresetName = 'mh-escalationThreeModel';
+export const SINGLE_MODEL_CONFIG: ConfigPresetName = 'medium-maxWait-singleModel';
 
 // Model IDs
 export const MODEL_ALPHA = 'model-alpha';
@@ -26,6 +27,7 @@ export const MODEL_BETA = 'model-beta';
 export const MODEL_GAMMA = 'model-gamma';
 export const MODEL_PRIMARY = 'model-primary';
 export const MODEL_SECONDARY = 'model-secondary';
+export const MODEL_ONLY = 'model-only';
 
 // Job types
 export const JOB_TYPE_A = 'jobTypeA';

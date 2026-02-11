@@ -888,25 +888,6 @@ instances: 2
 | Minute M+2: Tokens available | 40,000 (200,000 - 160,000) |
 | Jobs exceeding daily limit | Must wait for next day |
 
-#### 33.4 Daily Limit Reset at Day Boundary
-
-**Config:**
-```
-model-alpha: TPD = 100,000
-jobTypeA: estimatedTokens = 10,000
-2 instances
-```
-
-**Scenario:**
-1. On day N: Consume 80,000 tokens
-2. Wait for day N+1 to begin
-
-| What We Check | Expected Result |
-|---------------|-----------------|
-| Day N TPD counter | 80,000 tokens |
-| Day N+1 TPD counter | 0 tokens (fresh day) |
-| Full allocation restored | true |
-
 ---
 
 ## 34. Distributed - Request Count Tracking

@@ -22,6 +22,8 @@ import {
   MODEL_ALPHA,
   MODEL_BETA,
   MODEL_GAMMA,
+  MULTI_ESCALATION_MAX_MS,
+  MULTI_ESCALATION_MIN_MS,
   MULTI_TIMEOUT_CONFIG,
   QUICK_JOB_DURATION_MS,
   SETTLE_MS,
@@ -112,6 +114,11 @@ describe('21.2 Multiple Timeout Escalations', () => {
     expect(waitJob).toBeDefined();
     expect(waitJob?.modelUsed).toBe(MODEL_GAMMA);
     expect(waitJob?.status).toBe(STATUS_COMPLETED);
+
+    // Total wait: alpha timeout + beta timeout = ~8s
+    const totalWait = (waitJob?.completedAt ?? ZERO_COUNT) - (waitJob?.queuedAt ?? ZERO_COUNT);
+    expect(totalWait).toBeGreaterThanOrEqual(MULTI_ESCALATION_MIN_MS);
+    expect(totalWait).toBeLessThanOrEqual(MULTI_ESCALATION_MAX_MS);
   });
 });
 
@@ -132,6 +139,11 @@ describe('21.3 Reject After All Timeouts', () => {
       durationMs: FILL_JOB_DURATION_MS,
       settleMs: SETTLE_MS,
     });
+
+    // Wait for fills to fully complete (including escalation delays) so the
+    // reject job doesn't compete with fills in the same wait queues.
+    await waitForNoActiveJobs(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
+
     const rejectJobId = `reject-timeout-${timestamp}`;
     const queueTime = Date.now();
     const status = await submitJob(INSTANCE_URL, rejectJobId, JOB_TYPE_A, QUICK_JOB_DURATION_MS);

@@ -49,6 +49,10 @@ export const STATUS_COMPLETED = 'completed';
 // Aggregate token constants
 export const TWO_JOBS_TOKENS = 20000;
 
+// Reject usage constants
+export const REJECT_CACHED_TOKENS = 0;
+export const REJECT_REQUEST_COUNT = 1;
+
 // Shared constants
 export const ZERO_COUNT = 0;
 export const BEFORE_ALL_TIMEOUT_MS = 60000;
@@ -206,6 +210,32 @@ export const waitForNoActiveJobs = async (baseUrl: string, timeoutMs: number): P
 /** Find a specific job in history by jobId */
 export const findJobById = (history: HistoricalJob[], jobId: string): HistoricalJob | undefined =>
   history.find((j) => j.jobId === jobId);
+
+/** Reject usage payload shape */
+export interface RejectUsagePayload {
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  requestCount: number;
+}
+
+/** Submit a job that returns reject usage as actual usage */
+export const submitRejectJob = async (
+  baseUrl: string,
+  jobId: string,
+  rejectUsage: RejectUsagePayload
+): Promise<number> => {
+  const response = await fetch(`${baseUrl}/api/queue-job`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jobId,
+      jobType: JOB_TYPE_A,
+      payload: { testData: `Reject test ${jobId}`, durationMs: QUICK_JOB_DURATION_MS, rejectUsage },
+    }),
+  });
+  return response.status;
+};
 
 /** Get TPM counter for a model */
 export const getTokensPerMinute = (stats: StatsResponse, modelId: string): ModelCounterStats | undefined =>

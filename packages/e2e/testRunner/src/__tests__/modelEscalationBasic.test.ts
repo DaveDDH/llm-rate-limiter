@@ -23,10 +23,12 @@ import {
   MODEL_ALPHA,
   MODEL_BETA,
   MODEL_GAMMA,
+  MODEL_ONLY,
   MODEL_PRIMARY,
   MODEL_SECONDARY,
   QUICK_JOB_DURATION_MS,
   SETTLE_MS,
+  SINGLE_MODEL_CONFIG,
   STATUS_COMPLETED,
   STATUS_FAILED,
   THREE_MODELS,
@@ -168,6 +170,44 @@ describe('19.4 Escalation Follows Defined Order', () => {
     expect(job1?.modelUsed).toBe(MODEL_ALPHA);
     expect(job2?.modelUsed).toBe(MODEL_BETA);
     expect(job3?.modelUsed).toBe(MODEL_GAMMA);
+
+    // modelsTried only records the model where execution started (the final escalation target)
+    expect(job3?.modelsTried).toContain(MODEL_GAMMA);
+  });
+});
+
+describe('19.5 Single Model - No Escalation Possible', () => {
+  beforeAll(async () => {
+    await setupSingleInstance(SINGLE_MODEL_CONFIG);
+  }, BEFORE_ALL_TIMEOUT_MS);
+
+  it('should fail when single model capacity exhausted', async () => {
+    const timestamp = Date.now();
+    const fillJobId = `single-fill-${timestamp}`;
+    const overflowJobId = `single-overflow-${timestamp}`;
+
+    const fillStatus = await submitJob(INSTANCE_URL, fillJobId, JOB_TYPE_A, FILL_JOB_DURATION_MS);
+    expect(fillStatus).toBe(HTTP_ACCEPTED);
+
+    await sleep(SETTLE_MS);
+
+    const overflowStatus = await submitJob(INSTANCE_URL, overflowJobId, JOB_TYPE_A, QUICK_JOB_DURATION_MS);
+    expect(overflowStatus).toBe(HTTP_ACCEPTED);
+
+    await waitForNoActiveJobs(INSTANCE_URL, JOB_COMPLETE_TIMEOUT_MS);
+
+    const { history } = await fetchJobHistory(INSTANCE_URL);
+    const fillJob = findJobById(history, fillJobId);
+    const overflowJob = findJobById(history, overflowJobId);
+
+    expect(fillJob).toBeDefined();
+    expect(fillJob?.modelUsed).toBe(MODEL_ONLY);
+    expect(fillJob?.status).toBe(STATUS_COMPLETED);
+
+    expect(overflowJob).toBeDefined();
+    expect(overflowJob?.status).toBe(STATUS_FAILED);
+    // Job never started (rejected before execution), so verify error message instead
+    expect(overflowJob?.error).toBeDefined();
   });
 });
 
@@ -200,5 +240,6 @@ describe('19.6 Job Rejects When All Models Exhausted', () => {
     expect(rejectJob).toBeDefined();
     expect(rejectJob?.status).toBe(STATUS_FAILED);
     expect(rejectJob?.error).toBeDefined();
+    expect(rejectJob?.error).toMatch(/all models exhausted|no capacity|exhausted/iv);
   });
 });

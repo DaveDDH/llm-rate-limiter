@@ -16,14 +16,13 @@ import {
   INSTANCE_URL,
   INSTANCE_URL_A,
   JOB_TYPE_A,
-  JOB_TYPE_A_SLOTS_SINGLE,
+  JOB_TYPE_A_SLOTS_NONEQUAL_SINGLE,
   JOB_TYPE_B,
   LONG_JOB_DURATION_MS,
   MAX_CONCURRENT,
   SHORT_JOB_DURATION_MS,
   SUBMIT_JOB_TYPE_A_COUNT,
   SUBMIT_JOB_TYPE_B_COUNT,
-  ZERO_COUNT,
   ZERO_IN_FLIGHT,
   fetchStats,
   getInFlight,
@@ -78,7 +77,7 @@ describe('24.2b Cross-Type Independence', () => {
   });
 
   it('should start jobTypeB immediately', async () => {
-    await submitSingleJobAndSettle(INSTANCE_URL_A, 'cross-b', JOB_TYPE_B, SHORT_JOB_DURATION_MS);
+    await submitSingleJobAndSettle(INSTANCE_URL_A, 'cross-b', JOB_TYPE_B, LONG_JOB_DURATION_MS);
 
     const stats = await fetchStats(INSTANCE_URL_A);
     const jobTypeStats = getJobTypeStats(stats);
@@ -111,7 +110,7 @@ describe('24.3 Release Decrements In-Flight Counter', () => {
 
     const stats = await fetchStats(INSTANCE_URL);
     const jobTypeStats = getJobTypeStats(stats);
-    expect(getInFlight(jobTypeStats, JOB_TYPE_A)).toBe(JOB_TYPE_A_SLOTS_SINGLE);
+    expect(getInFlight(jobTypeStats, JOB_TYPE_A)).toBe(JOB_TYPE_A_SLOTS_NONEQUAL_SINGLE);
   });
 
   it('should decrement in-flight after jobs complete', async () => {
@@ -122,11 +121,11 @@ describe('24.3 Release Decrements In-Flight Counter', () => {
   });
 
   it('should accept new jobs after release', async () => {
-    await submitSingleJobAndSettle(INSTANCE_URL, 'release-new', JOB_TYPE_A, SHORT_JOB_DURATION_MS);
+    await submitSingleJobAndSettle(INSTANCE_URL, 'release-new', JOB_TYPE_A, LONG_JOB_DURATION_MS);
 
     const stats = await fetchStats(INSTANCE_URL);
     const jobTypeStats = getJobTypeStats(stats);
-    expect(getInFlight(jobTypeStats, JOB_TYPE_A)).toBeGreaterThan(ZERO_COUNT);
+    expect(getInFlight(jobTypeStats, JOB_TYPE_A)).toBe(SUBMIT_JOB_TYPE_B_COUNT);
   });
 
   it('should complete final jobs', async () => {

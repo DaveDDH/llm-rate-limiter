@@ -134,32 +134,24 @@ local function recalculateAllocations(instancesKey, allocationsKey, channel, mod
       table.insert(slotCandidates, math.floor(model.maxConcurrentRequests / instanceCount))
     end
 
-    -- TPM-based slots using average estimated tokens (min 1 if capacity remains)
+    -- TPM-based slots using average estimated tokens
     if isValidNumber(model.tokensPerMinute) then
-      local slots = math.floor(tpm / avgEstimates.tokens)
-      if tpm > 0 and slots < 1 then slots = 1 end
-      table.insert(slotCandidates, slots)
+      table.insert(slotCandidates, math.floor(tpm / avgEstimates.tokens))
     end
 
-    -- RPM-based slots using average estimated requests (min 1 if capacity remains)
+    -- RPM-based slots using average estimated requests
     if isValidNumber(model.requestsPerMinute) then
-      local slots = math.floor(rpm / avgEstimates.requests)
-      if rpm > 0 and slots < 1 then slots = 1 end
-      table.insert(slotCandidates, slots)
+      table.insert(slotCandidates, math.floor(rpm / avgEstimates.requests))
     end
 
-    -- TPD-based slots (min 1 if capacity remains)
+    -- TPD-based slots
     if isValidNumber(model.tokensPerDay) then
-      local slots = math.floor(tpd / avgEstimates.tokens)
-      if tpd > 0 and slots < 1 then slots = 1 end
-      table.insert(slotCandidates, slots)
+      table.insert(slotCandidates, math.floor(tpd / avgEstimates.tokens))
     end
 
-    -- RPD-based slots (min 1 if capacity remains)
+    -- RPD-based slots
     if isValidNumber(model.requestsPerDay) then
-      local slots = math.floor(rpd / avgEstimates.requests)
-      if rpd > 0 and slots < 1 then slots = 1 end
-      table.insert(slotCandidates, slots)
+      table.insert(slotCandidates, math.floor(rpd / avgEstimates.requests))
     end
 
     -- Use minimum of all candidates or fallback to 100

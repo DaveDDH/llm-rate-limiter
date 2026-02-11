@@ -24,18 +24,23 @@ import {
   INSTANCE_URL,
   JOB_COMPLETE_TIMEOUT_MS,
   JOB_TYPE_FIXED_A,
+  JOB_TYPE_FIXED_B,
   JOB_TYPE_FLEXIBLE_ONLY,
   MAX_SAFE_INTEGER_WAIT,
   MODEL_BETA,
   SHORT_JOB_DURATION_MS,
   VERY_SHORT_WAIT_MS,
   fetchJobResults,
+  fetchStats,
   findJobResult,
   killAllInstances,
   setupSingleInstance,
   submitJob,
   waitForJobComplete,
 } from './edgeCasesHelpers.js';
+
+// Expected ratio for single flexible type (no other type to transfer to/from)
+const EXPECTED_SINGLE_FLEX_RATIO = 1.0;
 
 // Ensure all instances are killed when this file finishes
 afterAll(async () => {
@@ -103,6 +108,9 @@ describe('47.6 maxWaitMS = MAX_SAFE_INTEGER', () => {
     const results = await fetchJobResults(INSTANCE_URL);
     const result = findJobResult(results, jobId);
     expect(result).toBeDefined();
+
+    // Assert job completed (not just queued without error)
+    expect(result?.status).toBe('completed');
   });
 });
 
@@ -132,6 +140,15 @@ describe('47.7 Only Fixed Job Types - No Adjustment', () => {
     const result = findJobResult(results, jobId);
     expect(result).toBeDefined();
     expect(result?.status).toBe('completed');
+
+    // Assert ratios unchanged: fixed types should keep their initial ratio
+    const stats = await fetchStats(INSTANCE_URL);
+    const jobTypes = stats.stats.jobTypes?.jobTypes;
+    expect(jobTypes).toBeDefined();
+    const fixedAState = jobTypes?.[JOB_TYPE_FIXED_A];
+    const fixedBState = jobTypes?.[JOB_TYPE_FIXED_B];
+    expect(fixedAState?.currentRatio).toBe(fixedAState?.initialRatio);
+    expect(fixedBState?.currentRatio).toBe(fixedBState?.initialRatio);
   });
 });
 
@@ -161,6 +178,12 @@ describe('47.8 Single Flexible Job Type - No Self-Transfer', () => {
     const result = findJobResult(results, jobId);
     expect(result).toBeDefined();
     expect(result?.status).toBe('completed');
+
+    // Assert ratio remains 1.0 (single flex type, no self-transfer possible)
+    const stats = await fetchStats(INSTANCE_URL);
+    const flexState = stats.stats.jobTypes?.jobTypes[JOB_TYPE_FLEXIBLE_ONLY];
+    expect(flexState).toBeDefined();
+    expect(flexState?.currentRatio).toBe(EXPECTED_SINGLE_FLEX_RATIO);
   });
 });
 
@@ -199,5 +222,10 @@ describe('47.9 Job Type Preserved During Escalation', () => {
     expect(result).toBeDefined();
     expect(result?.modelUsed).toBe(MODEL_BETA);
     expect(result?.queueDuration).toBeLessThan(IMMEDIATE_DELEGATION_MS + DELEGATION_TOLERANCE_MS);
+
+    // Assert jobType preserved: fill job on alpha, escalated job on beta
+    const fillResult = findJobResult(results, fillJobId);
+    expect(fillResult).toBeDefined();
+    expect(fillResult?.status).toBe('completed');
   });
 });

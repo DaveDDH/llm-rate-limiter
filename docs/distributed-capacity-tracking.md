@@ -452,10 +452,7 @@ When a job calls `reject(usage)`:
 2. **Fair distribution**: When one instance overuses, reduction is distributed across all instances
 3. **Time-window correctness**: Usage is tracked per window, resets at boundaries
 4. **Eventual consistency**: All instances converge to correct allocations within broadcast latency
-5. **Graceful degradation**: If Redis becomes unavailable, instances continue using their last-known dynamicLimits (not the original configured limits). This means:
-   - Instances retain the capacity they were last allocated
-   - No automatic reset to original limits (which could cause combined overuse)
-   - Operations continue at the last-known allocation until Redis reconnects
+5. **Graceful degradation**: If Redis becomes unavailable, instances continue using their last-known dynamicLimits (not the original configured limits)
 
 ## Performance Considerations
 

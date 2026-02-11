@@ -11,6 +11,7 @@ export const INSTANCE_PORT_1 = 3001;
 export const INSTANCE_PORT_2 = 3002;
 export const PROXY_URL = `http://localhost:${PROXY_PORT}`;
 export const INSTANCE_URLS = [`http://localhost:${INSTANCE_PORT_1}`, `http://localhost:${INSTANCE_PORT_2}`];
+export const SINGLE_INSTANCE_URLS = [`http://localhost:${INSTANCE_PORT_1}`];
 export const BEFORE_ALL_TIMEOUT_MS = 60000;
 export const AFTER_ALL_TIMEOUT_MS = 30000;
 
@@ -22,6 +23,17 @@ export const bootInfrastructure = async (configPreset: ConfigPresetName = 'defau
   await bootInstance(INSTANCE_PORT_1, configPreset);
   await bootInstance(INSTANCE_PORT_2, configPreset);
   await bootProxy([INSTANCE_PORT_1, INSTANCE_PORT_2], PROXY_PORT);
+};
+
+/**
+ * Boot single-instance infrastructure: clean Redis, start 1 instance, start proxy.
+ */
+export const bootSingleInstanceInfrastructure = async (
+  configPreset: ConfigPresetName = 'default'
+): Promise<void> => {
+  await cleanRedis();
+  await bootInstance(INSTANCE_PORT_1, configPreset);
+  await bootProxy([INSTANCE_PORT_1], PROXY_PORT);
 };
 
 /**

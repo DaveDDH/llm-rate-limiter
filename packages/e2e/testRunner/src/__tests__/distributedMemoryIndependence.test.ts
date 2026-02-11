@@ -28,11 +28,11 @@ import {
   TWO_INSTANCES,
   fetchAllocation,
   fetchStats,
-  getActiveJobCount,
   getAllocatedSlots,
   getModelPoolSlots,
   killAllInstances,
   setupTwoInstancesWithMemory,
+  setupTwoInstancesWithMemoryLowTpm,
   submitJob,
 } from './distributedMemoryIndependenceHelpers.js';
 
@@ -75,8 +75,8 @@ describe('Distributed Memory Independence - Memory Not Shared Via Redis', () => 
       expect(status).toBe(HTTP_ACCEPTED);
     });
 
-    const activeA = await getActiveJobCount(PORT_A);
-    expect(activeA).toBeLessThanOrEqual(MEMORY_SLOTS_A);
+    const slotsA = getAllocatedSlots(await fetchStats(PORT_A), JOB_TYPE);
+    expect(slotsA).toBe(MEMORY_SLOTS_A);
 
     const jobsBPromises = [];
     for (let i = 0; i < MEMORY_SLOTS_B; i += LOOP_INCREMENT) {
@@ -88,14 +88,14 @@ describe('Distributed Memory Independence - Memory Not Shared Via Redis', () => 
       expect(status).toBe(HTTP_ACCEPTED);
     });
 
-    const activeB = await getActiveJobCount(PORT_B);
-    expect(activeB).toBeLessThanOrEqual(MEMORY_SLOTS_B);
+    const slotsB = getAllocatedSlots(await fetchStats(PORT_B), JOB_TYPE);
+    expect(slotsB).toBe(MEMORY_SLOTS_B);
   });
 });
 
 describe('Distributed Memory Independence - Redis Allocation Unaware of Memory', () => {
   beforeAll(async () => {
-    await setupTwoInstancesWithMemory();
+    await setupTwoInstancesWithMemoryLowTpm();
   }, BEFORE_ALL_TIMEOUT_MS);
 
   afterAll(async () => {
@@ -134,8 +134,7 @@ describe('Distributed Memory Independence - Different Memory Yields Different Fi
     const slotsB = getAllocatedSlots(statsB, JOB_TYPE) ?? ZERO_FALLBACK;
 
     // Memory constrains allocated slots: A=min(50,10)=10, B=min(50,20)=20
-    expect(slotsA).toBeLessThanOrEqual(MEMORY_SLOTS_A);
-    expect(slotsB).toBeLessThanOrEqual(MEMORY_SLOTS_B);
-    expect(slotsB).toBeGreaterThan(slotsA);
+    expect(slotsA).toBe(MEMORY_SLOTS_A);
+    expect(slotsB).toBe(MEMORY_SLOTS_B);
   });
 });

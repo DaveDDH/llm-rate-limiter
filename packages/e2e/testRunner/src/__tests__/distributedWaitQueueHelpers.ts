@@ -47,7 +47,7 @@ export const HTTP_ACCEPTED = 202;
 // Job duration
 export const MEDIUM_JOB_DURATION_MS = 3000;
 export const QUEUE_DURATION_THRESHOLD_MS = 2800;
-export const REALLOCATION_WAKE_THRESHOLD_MS = 15000;
+export const REALLOCATION_WAKE_THRESHOLD_MS = 5000;
 
 // Zero-token payload: jobs complete without consuming TPM capacity
 const ZERO_TOKENS = 0;
@@ -182,6 +182,36 @@ export const killInstanceBAndWaitForReallocation = async (): Promise<void> => {
     INSTANCE_CLEANUP_TIMEOUT_MS
   );
 };
+
+// Time constants
+const MINUTE_IN_MS = 60000;
+const MS_PER_SECOND = 1000;
+const BUFFER_MS = 1500;
+
+/** Get milliseconds until next minute boundary */
+const getMsUntilNextMinute = (): number => {
+  const now = new Date();
+  const secondsIntoMinute = now.getSeconds();
+  const msIntoSecond = now.getMilliseconds();
+  return MINUTE_IN_MS - (secondsIntoMinute * MS_PER_SECOND + msIntoSecond);
+};
+
+/** Wait until a minute boundary is crossed */
+export const waitForMinuteBoundary = async (): Promise<void> => {
+  const msToWait = getMsUntilNextMinute();
+  await sleep(msToWait + BUFFER_MS);
+};
+
+/** Get seconds into current minute */
+export const getSecondsIntoMinute = (): number => new Date().getSeconds();
+
+// TPM-based payload: jobs consume TPM capacity
+export const TPM_CONSUMING_JOB: JobPayload = {
+  durationMs: MEDIUM_JOB_DURATION_MS,
+};
+
+// Wake tolerance
+export const MINUTE_BOUNDARY_WAKE_TOLERANCE_MS = 3000;
 
 // Re-export for convenience
 export { fetchAllocation, killAllInstances } from '../instanceLifecycle.js';

@@ -8,10 +8,14 @@
  * - 26.1: All resource types adjusted together (refunds)
  * - 26.2: Mixed refund and overage (tokens refunded, requests have overage)
  *
- * Config: high-multiResource
+ * Config: high-multiResource (26.1)
  * - model-alpha: TPM=100K, RPM=500, TPD=1M, RPD=10K
  * - jobTypeA: estimatedTokens=10K, estimatedRequests=5, ratio=1.0
  * - 1 instance
+ *
+ * Config: high-multiResource-mixedOverage (26.2)
+ * - Same model limits, but estimatedRequests=1
+ * - Allows testing request overage (actual=3 > estimated=1)
  */
 import {
   ACTUAL_REQUESTS_OVERAGE,
@@ -27,6 +31,7 @@ import {
   getTokensPerDay,
   getTokensPerMinute,
   killAllInstances,
+  setupMixedOverageInstance,
   setupSingleInstance,
   submitMixedUsageJob,
   submitPartialUsageJob,
@@ -88,13 +93,14 @@ describe('26.1 All Resource Types Adjusted Together', () => {
 /**
  * Test 26.2: Mixed Refund and Overage
  *
+ * Config: high-multiResource-mixedOverage (estimatedRequests=1).
  * Submit a job with estimated 10K tokens and 1 request.
- * Actual usage: 6K tokens (refund) and 3 requests (overage).
+ * Actual usage: 6K tokens (refund from 10K) and 3 requests (overage from 1).
  * Tokens should be refunded, requests should show overage.
  */
 describe('26.2 Mixed Refund and Overage', () => {
   beforeAll(async () => {
-    await setupSingleInstance(CONFIG_PRESET);
+    await setupMixedOverageInstance();
   }, BEFORE_ALL_TIMEOUT_MS);
 
   it('should accept job with mixed actual usage', async () => {

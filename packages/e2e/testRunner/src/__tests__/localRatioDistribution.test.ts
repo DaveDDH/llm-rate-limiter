@@ -16,8 +16,8 @@ import {
   EQUAL_THREE_SLOTS_C,
   INSTANCE_A_URL,
   LONG_JOB_DURATION_MS,
-  SEVEN_IN_FLIGHT,
   SINGLE_TYPE_TOTAL_SLOTS,
+  SIX_IN_FLIGHT,
   THREE_TYPE_SLOTS_A,
   THREE_TYPE_SLOTS_B,
   THREE_TYPE_SLOTS_C,
@@ -177,7 +177,7 @@ describe('Local Ratio - 2.5 Load Calculation', () => {
 
   it('should track inFlight after submitting jobs', async () => {
     // Submit long-running jobs to create in-flight state
-    const jobPromises = Array.from({ length: SEVEN_IN_FLIGHT }, async (_, i) => {
+    const jobPromises = Array.from({ length: SIX_IN_FLIGHT }, async (_, i) => {
       await submitLongRunningJob(INSTANCE_A_URL, `load-test-${i}`, 'jobTypeA');
     });
     await Promise.all(jobPromises);
@@ -188,7 +188,7 @@ describe('Local Ratio - 2.5 Load Calculation', () => {
     const stats = await fetchStats(INSTANCE_A_URL);
     const jobTypeStats = getJobTypeStats(stats);
     const inFlight = getJobTypeInFlight(jobTypeStats, 'jobTypeA');
-    expect(inFlight).toBeGreaterThan(ZERO_ALLOCATED_SLOTS);
+    expect(inFlight).toBe(SIX_IN_FLIGHT);
   });
 });
 

@@ -59,6 +59,27 @@ export const highestMemoryDistributedConfig: RateLimiterPreset = {
 };
 
 /**
+ * 38.2: Distributed memory independence with low TPM.
+ * TPM=100K (not 1M), memory=100MB, estimated=10MB.
+ * 2 instances: floor(100K/10K/2) = 5 distributed slots per instance.
+ */
+export const highestMemoryDistributedLowTpmConfig: RateLimiterPreset = {
+  models: {
+    'model-alpha': { tokensPerMinute: TPM_100K, pricing: standardPricing },
+  },
+  escalationOrder: ['model-alpha'],
+  resourceEstimations: {
+    jobTypeA: {
+      estimatedUsedTokens: TOKENS_10K,
+      estimatedNumberOfRequests: REQUESTS_SINGLE,
+      estimatedUsedMemoryKB: MEMORY_10MB_KB,
+      ratio: { initialValue: RATIO_FULL },
+    },
+  },
+  memory: { maxMemoryKB: MEMORY_100MB_KB, freeMemoryRatio: FREE_MEMORY_RATIO },
+};
+
+/**
  * 39: Distributed acquire/release.
  * TPM=20K, 2 instances → 1 slot each.
  */
