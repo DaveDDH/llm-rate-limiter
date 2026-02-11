@@ -34,14 +34,16 @@ const OPENAI_SUMMARY_CAPACITY = 14;
 // Send capacity + 1 to ensure exactly 1 job exceeds openai summary capacity
 const ONE_EXTRA_JOB = 1;
 const TOTAL_JOBS = OPENAI_SUMMARY_CAPACITY + ONE_EXTRA_JOB;
-const JOB_DURATION_MS = 100;
+// Random job duration range (5–40 seconds)
+const MIN_JOB_DURATION_MS = 5000;
+const MAX_JOB_DURATION_MS = 40000;
 
 // Periodic snapshot interval
 const SNAPSHOT_INTERVAL_MS = 500;
 
-// Longer timeout since we need to wait for rate limit reset (up to 60s)
-const WAIT_TIMEOUT_MS = 90000;
-const BEFORE_ALL_TIMEOUT_MS = 150000;
+// Longer timeout: jobs take up to 40s, plus up to 60s for rate-limit window reset
+const WAIT_TIMEOUT_MS = 180000;
+const BEFORE_ALL_TIMEOUT_MS = 240000;
 
 // Index constants
 const FIRST_INDEX = 0;
@@ -63,10 +65,10 @@ interface TestSetupData {
  * Setup test data by running the suite and sorting jobs
  */
 const setupTestData = async (): Promise<TestSetupData> => {
-  // Each job takes 100ms to process
+  // Each job runs for a random duration between 5–40 seconds
   const jobs = generateJobsOfType(TOTAL_JOBS, 'summary', {
     prefix: 'capacity-plus-one-test',
-    durationMs: JOB_DURATION_MS,
+    durationMs: { min: MIN_JOB_DURATION_MS, max: MAX_JOB_DURATION_MS },
   });
 
   const data = await runSuite({

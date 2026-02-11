@@ -265,6 +265,7 @@ export {
   generateRandomJobs,
   getRandomJobType,
   JOB_TYPES,
+  type DurationConfig,
   type GeneratedJob,
   type JobGenerationOptions,
 } from './jobGenerators.js';
