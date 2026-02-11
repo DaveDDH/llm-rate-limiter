@@ -5,12 +5,14 @@
   </p>
 </p>
 
-<p align="center">
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
-  [![Redis](https://img.shields.io/badge/Redis-Optional-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
-</p>
+<div align="center">
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Redis](https://img.shields.io/badge/Redis-Optional-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
+
+</div>
 
 <p align="center">
   <a href="#the-problem">Problem</a> •
