@@ -123,22 +123,6 @@ export function ResourceDashboard({ testData }: ResourceDashboardProps) {
   const jobTypeCount = Object.keys(testData.summary.byJobType).length;
   const resourceDimensionCount = countResourceDimensions(testData);
 
-  // Log 5 jobs with highest completion timestamps
-  const jobsByCompletion = Object.values(testData.jobs)
-    .map((job) => {
-      const lastEvent = job.events[job.events.length - 1];
-      const completedAt = lastEvent?.timestamp ?? 0;
-      return {
-        id: job.jobId,
-        status: lastEvent?.type,
-        completedAt,
-        relSec: (completedAt - testData.metadata.startTime) / MS_TO_SECONDS,
-      };
-    })
-    .sort((a, b) => b.completedAt - a.completedAt)
-    .slice(0, 5);
-  console.log('[Timing] Top 5 latest-completing jobs:', jobsByCompletion);
-
   const jobUsage = computeJobUsage(testData);
   const capacity = extractCapacity(testData);
   const realJobTypeIds = Object.keys(jobUsage.jobCount);

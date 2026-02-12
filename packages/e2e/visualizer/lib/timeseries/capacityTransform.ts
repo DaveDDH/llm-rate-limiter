@@ -55,88 +55,110 @@ function makeKey(str: string): string {
   return str.replace(KEY_REGEXP, '_');
 }
 
-/** Find the model a job is associated with (running or queued) */
-function findJobModel(job: JobRecord): string | null {
-  for (const event of job.events) {
-    if (event.type === 'started' && event.modelId) {
-      return event.modelId;
-    }
-  }
-  return job.modelUsed;
-}
-
-/** Check if a job is running (started but not completed/failed) at a given time */
-function isJobRunning(job: JobRecord, timestamp: number): boolean {
-  let started = false;
-  for (const event of job.events) {
-    if (event.timestamp > timestamp) break;
-    if (event.type === 'started') started = true;
-    if (event.type === 'completed' || event.type === 'failed') return false;
-  }
-  return started;
-}
-
-interface ActiveJobCounts {
-  running: Record<string, number>;
-  queued: Record<string, number>;
-}
-
-/** Count running and queued jobs per model/jobType from activeJobIds */
-function countActiveJobs(
+/** Count active jobs per jobType from activeJobIds */
+function countActiveByJobType(
   activeJobIds: string[],
-  jobs: Record<string, JobRecord>,
-  timestamp: number
-): ActiveJobCounts {
-  const running: Record<string, number> = {};
-  const queued: Record<string, number> = {};
+  jobs: Record<string, JobRecord>
+): Record<string, number> {
+  const counts: Record<string, number> = {};
   for (const jobId of activeJobIds) {
     const job = jobs[jobId];
     if (!job) continue;
-    const model = findJobModel(job);
-    if (!model) continue;
-    const key = `${makeKey(model)}_${makeKey(job.jobType)}`;
-    if (isJobRunning(job, timestamp)) {
-      running[key] = (running[key] ?? 0) + 1;
-    } else {
-      queued[key] = (queued[key] ?? 0) + 1;
+    counts[job.jobType] = (counts[job.jobType] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** Per-model per-jobType entry collected from a snapshot */
+interface ModelJobTypeEntry {
+  prefix: string;
+  totalSlots: number;
+  inFlight: number;
+}
+
+/** Collect model data from snapshot and populate running counts in data */
+function collectModelData(
+  shortId: string,
+  models: Record<string, { jobTypes?: Record<string, { totalSlots: number; inFlight: number }> }>
+): { data: Record<string, number>; entriesByJobType: Record<string, ModelJobTypeEntry[]> } {
+  const data: Record<string, number> = {};
+  const entriesByJobType: Record<string, ModelJobTypeEntry[]> = {};
+
+  for (const [modelId, modelState] of Object.entries(models)) {
+    const modelKey = makeKey(modelId);
+    if (!modelState.jobTypes) continue;
+
+    for (const [jobType, jtState] of Object.entries(modelState.jobTypes)) {
+      const jtKey = makeKey(jobType);
+      const prefix = `${shortId}_${modelKey}_${jtKey}`;
+
+      data[`${prefix}_slots`] = jtState.totalSlots;
+      data[`${prefix}_running`] = jtState.inFlight;
+      data[`${prefix}_queued`] = 0;
+
+      if (!entriesByJobType[jobType]) {
+        entriesByJobType[jobType] = [];
+      }
+      entriesByJobType[jobType].push({ prefix, totalSlots: jtState.totalSlots, inFlight: jtState.inFlight });
     }
   }
-  return { running, queued };
+
+  return { data, entriesByJobType };
+}
+
+/** Attribute queued jobs to the bottleneck model (highest utilization ratio) */
+function attributeQueuedJobs(
+  activeByType: Record<string, number>,
+  entriesByJobType: Record<string, ModelJobTypeEntry[]>,
+  data: Record<string, number>
+): void {
+  for (const [jobType, activeCount] of Object.entries(activeByType)) {
+    const entries = entriesByJobType[jobType];
+    if (!entries || entries.length === 0) continue;
+
+    const totalRunning = entries.reduce((sum, e) => sum + e.inFlight, 0);
+    const queued = Math.max(0, activeCount - totalRunning);
+    if (queued === 0) continue;
+
+    const bottleneck = findBottleneckEntry(entries);
+    data[`${bottleneck.prefix}_queued`] = queued;
+  }
+}
+
+/** Find the model entry with the highest utilization ratio */
+function findBottleneckEntry(entries: ModelJobTypeEntry[]): ModelJobTypeEntry {
+  let best = entries[0];
+  let highestRatio = 0;
+  for (const entry of entries) {
+    const ratio = entry.totalSlots > 0 ? entry.inFlight / entry.totalSlots : 0;
+    if (ratio > highestRatio) {
+      highestRatio = ratio;
+      best = entry;
+    }
+  }
+  return best;
 }
 
 /** Extract per-jobType per-model data from a snapshot */
 function extractSnapshotData(
   snapshot: StateSnapshot | null,
   instanceIdMap: Map<string, string>,
-  jobs: Record<string, JobRecord>,
-  visualTimestamp: number
+  jobs: Record<string, JobRecord>
 ): Record<string, number> {
-  const data: Record<string, number> = {};
+  if (!snapshot) return {};
 
-  if (!snapshot) return data;
+  const result: Record<string, number> = {};
 
   for (const [fullId, state] of Object.entries(snapshot.instances)) {
     const shortId = instanceIdMap.get(fullId) ?? fullId;
-    const counts = countActiveJobs(state.activeJobIds, jobs, visualTimestamp);
+    const activeByType = countActiveByJobType(state.activeJobIds, jobs);
+    const { data, entriesByJobType } = collectModelData(shortId, state.models);
 
-    for (const [modelId, modelState] of Object.entries(state.models)) {
-      const modelKey = makeKey(modelId);
-
-      if (modelState.jobTypes) {
-        for (const [jobType, jtState] of Object.entries(modelState.jobTypes)) {
-          const jtKey = makeKey(jobType);
-          const prefix = `${shortId}_${modelKey}_${jtKey}`;
-          const activeKey = `${modelKey}_${jtKey}`;
-
-          data[`${prefix}_slots`] = jtState.totalSlots;
-          data[`${prefix}_running`] = counts.running[activeKey] ?? 0;
-          data[`${prefix}_queued`] = counts.queued[activeKey] ?? 0;
-        }
-      }
-    }
+    Object.assign(result, data);
+    attributeQueuedJobs(activeByType, entriesByJobType, result);
   }
 
-  return data;
+  return result;
 }
 
 /** Build data point from snapshot */
@@ -172,8 +194,7 @@ function buildDataPoints(
     const intervalMidpoint = intervalStart + intervalDuration / 2;
 
     const snapshot = findSnapshotAtTime(testData.snapshots, intervalMidpoint);
-    const snapshotData = extractSnapshotData(snapshot, instanceIdMap, testData.jobs, intervalMidpoint);
-
+    const snapshotData = extractSnapshotData(snapshot, instanceIdMap, testData.jobs);
     const point = buildIntervalDataPoint(i, intervalMidpoint, minTime, snapshotData);
     points.push(point);
   }

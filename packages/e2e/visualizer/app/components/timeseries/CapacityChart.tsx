@@ -22,6 +22,7 @@ interface BarLog {
 }
 
 const DEFAULT_HEIGHT = 80;
+const MIN_ACTIVE_BAR_HEIGHT = 3;
 
 // Colors
 const ALLOCATED_COLOR = '#0000FF'; // Pure blue
@@ -91,18 +92,22 @@ function renderChart(
 
     // Blue bar is always full height (shows capacity)
     const blueHeight = totalSlots > 0 ? height : 0;
-    // Queued + Running stacked, scaled relative to totalSlots
+    // Queued + Running stacked; scale to max(totalSlots, totalActive)
+    // so queued bars stay visible even when active exceeds capacity
     const totalActive = runningVal + queuedVal;
-    const totalActiveH = totalSlots > 0 ? (totalActive / totalSlots) * height : 0;
-    const runningH = totalSlots > 0 ? (runningVal / totalSlots) * height : 0;
+    const activeScale = Math.max(totalSlots, totalActive);
+    const rawRunningH = activeScale > 0 ? (runningVal / activeScale) * height : 0;
+    const runningH = runningVal > 0 ? Math.max(MIN_ACTIVE_BAR_HEIGHT, rawRunningH) : 0;
+    const rawQueuedH = activeScale > 0 ? (queuedVal / activeScale) * height : 0;
+    const queuedH = queuedVal > 0 ? Math.max(MIN_ACTIVE_BAR_HEIGHT, rawQueuedH) : 0;
 
     // Draw blue (allocated capacity)
     ctx.fillStyle = ALLOCATED_COLOR;
     ctx.fillRect(barX, height - blueHeight, barWidth, blueHeight);
 
-    // Draw yellow (queued) - full active height from bottom
+    // Draw green (queued) stacked above orange
     ctx.fillStyle = QUEUED_COLOR;
-    ctx.fillRect(barX, height - totalActiveH, barWidth, totalActiveH);
+    ctx.fillRect(barX, height - runningH - queuedH, barWidth, queuedH);
 
     // Draw orange (running) - from bottom up to running height
     ctx.fillStyle = RUNNING_COLOR;
@@ -114,7 +119,7 @@ function renderChart(
       w: barWidth,
       blue: { slots: totalSlots, h: blueHeight },
       orange: { running: runningVal, h: runningH },
-      yellow: { queued: queuedVal, h: totalActiveH - runningH },
+      yellow: { queued: queuedVal, h: queuedH },
       totalSlots,
     });
   }
@@ -145,13 +150,6 @@ function renderChart(
       extraBarX = extraBarIndex * step;
     }
   }
-  const last20 = barLog.slice(-20);
-  console.log(`[CapacityChart] ${metricLabel} Last 20 bars:`, last20.map((b) => ({
-    i: b.i,
-    slots: b.blue.slots,
-    running: b.orange.running,
-    queued: b.yellow.queued,
-  })));
 }
 
 function formatValue(value: number): string {
